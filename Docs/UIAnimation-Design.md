@@ -329,13 +329,27 @@ gauge.SetNormalized("Fill", hp / maxHp);
 
 ## 10. 폴더와 단계
 
+레포는 **개발용 Unity 프로젝트**이고, 배포 대상은 `package.json`이 들어 있는 `Assets/UIAnimation/` 폴더 하나입니다. LitMotion(`Assets/LitMotion`)과 UniTask(`Assets/Plugins/UniTask`)도 같은 방식으로 배포합니다.
+
 ```
-Assets/UIAnimation/
-  Runtime/   (asmdef UIAnimation)          — 데이터, 컴파일, 러너, 라이터, 트리거, 스크롤
-  Editor/    (asmdef UIAnimation.Editor)   — UI Animation Editor 창, 프리뷰, Validator
-  Tests/     (asmdef UIAnimation.Tests)    — EditMode(오버라이드 해석·원본 불변) / PlayMode / Performance
-  Presets/                                 — 공용 프리셋 (선택)
+Assets/
+  UIAnimation/                              ← 배포 대상 (Git URL로 이 폴더만 설치됨)
+    package.json                            — com.seobyp.timelineanimation, "UI Timeline Animation", 0.0.x 동안은 내부 사용
+    Runtime/      (asmdef SeoBYP.TimelineAnimation)              — 데이터, 컴파일, 러너, 라이터, 트리거, 스크롤
+    Editor/       (asmdef SeoBYP.TimelineAnimation.Editor)       — UI Animation Editor 창, 프리뷰, Validator
+    Tests/Editor/ (asmdef SeoBYP.TimelineAnimation.Tests.Editor) — 오버라이드 해석, 원본 Prefab 불변 테스트
+    Samples~/                               — (배포 시) 검증된 예제를 옮겨 옴. `~` 폴더는 Unity가 임포트하지 않음
+  Scenes/  Prefabs/                         ← 개발·검증용 (배포 안 됨)
+Docs/                                       ← 설계 문서 (배포 안 됨)
 ```
+
+- **배포 경계 규칙**: `Assets/UIAnimation` 안의 코드는 `Scenes`나 `Prefabs`를 참조하면 안 됩니다. asmdef가 분리되어 있어서 스크립트 참조는 컴파일러가 막아 줍니다.
+
+- **의존성**: LitMotion과 UniTask는 Unity 공식 레지스트리에 없습니다. 그래서 설치하는 쪽 프로젝트가 Git URL로 직접 추가하거나 OpenUPM scoped registry를 등록해야 합니다. 이 내용은 배포할 때 README에 명시합니다.
+- **배포 절차**: 직접 써 보고 검증한 뒤 `package.json`을 `0.1.0`으로 올리고 태그 `v0.1.0`을 붙입니다. 설치 URL은 아래와 같습니다.
+  ```
+  https://github.com/SeoBYP/UGUITimelineAnimation.git?path=Assets/UIAnimation#v0.1.0
+  ```
 
 | 단계 | 내용 |
 |---|---|

@@ -1,0 +1,12 @@
+{
+    "name": "SeoBYP.TimelineAnimation.Editor",
+    "rootNamespace": "SeoBYP.TimelineAnimation.Editor",
+    "references": [
+        "SeoBYP.TimelineAnimation",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "LitMotion",
+        "UniTask"
+    ],
+    "includePlatforms": [ "Editor" ]
+}

@@ -1,0 +1,11 @@
+{
+    "name": "SeoBYP.TimelineAnimation",
+    "rootNamespace": "SeoBYP.TimelineAnimation",
+    "references": [
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "LitMotion",
+        "UniTask"
+    ],
+    "autoReferenced": true
+}

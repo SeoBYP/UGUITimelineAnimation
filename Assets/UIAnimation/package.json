@@ -1,0 +1,14 @@
+{
+  "name": "com.seobyp.timelineanimation",
+  "version": "0.0.1",
+  "displayName": "UI Timeline Animation",
+  "description": "Prefab-scoped uGUI animation system with a custom timeline editor, live edit-mode preview and per-prefab overrides.",
+  "unity": "6000.0",
+  "author": { "name": "SeoBYP", "url": "https://github.com/SeoBYP" },
+  "repository": { "type": "git", "url": "https://github.com/SeoBYP/UGUITimelineAnimation.git" },
+  "dependencies": {
+    "com.unity.ugui": "2.0.0",
+    "com.annulusgames.lit-motion": "2.0.2",
+    "com.cysharp.unitask": "2.5.11"
+  }
+}
