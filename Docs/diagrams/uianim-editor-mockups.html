@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor UI Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&family=Instrument+Serif&family=Noto+Serif+KR:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#1b1c1f; --paper-2:#26282c; --ink:#f2f3f5; --muted:#d0d4da; --soft:#b4bac3;
+  --rule:#4a4f57; --accent:#6cb2ff; --accent-bg:rgba(108,178,255,.18); --link:#ffb54d;
+  --field:#141517; --lock-bg:rgba(180,186,195,.08);
+  --sans:'Geist','Noto Sans KR',sans-serif; --mono:'Geist Mono','Noto Sans KR',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink)}
+body{font:13px/1.45 var(--sans);padding:32px 16px 48px}
+.page{max-width:960px;margin:0 auto}
+h1{font:400 34px/1.15 'Instrument Serif','Noto Serif KR',serif;margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 28px;font-size:14px}
+section{margin:0 0 40px}
+h2{font:600 15px/1.3 var(--sans);margin:0 0 10px;color:var(--ink)}
+h2 .n{font-family:var(--mono);color:var(--accent);margin-right:8px}
+.scroll{overflow-x:auto;max-width:100%}
+.cap{color:var(--muted);font-size:13px;margin:8px 0 0}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)} .soft{color:var(--soft)}
+
+/* generic editor chrome */
+.win{border:1px solid var(--rule);border-radius:4px;background:var(--paper);min-width:0}
+.bar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--paper-2);border-bottom:1px solid var(--rule);white-space:nowrap}
+.title{font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink);font:500 13px var(--sans);white-space:nowrap}
+.btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.btn.amber{border-color:var(--link);color:var(--link)}
+.btn.ico{width:26px;justify-content:center;padding:0}
+.dd{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;height:24px;padding:0 8px;border:1px solid var(--rule);border-radius:3px;background:var(--field);color:var(--ink);font:13px var(--mono);white-space:nowrap}
+.dd::after{content:"▾";color:var(--muted);font-family:var(--sans)}
+.fld{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--rule);border-radius:3px;background:var(--field);font:13px var(--mono);white-space:nowrap}
+.sep{width:1px;align-self:stretch;background:var(--rule)}
+.badge{display:inline-block;font:500 11.5px/1 var(--mono);padding:3px 5px;border-radius:3px;border:1px solid var(--rule);color:var(--muted);letter-spacing:.02em;white-space:nowrap}
+.b-own{border-color:var(--accent);color:var(--accent)}
+.b-ovr{border-color:var(--link);color:var(--link)}
+.b-src{color:var(--soft)}
+.ph{font:600 12.5px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:6px 10px;background:var(--paper-2);border-bottom:1px solid var(--rule)}
+
+/* window grid */
+.w1{width:960px}
+.tabs{display:flex;background:var(--paper-2);border-bottom:1px solid var(--rule);padding:0 10px}
+.tab{padding:7px 14px;color:var(--muted);border-bottom:2px solid transparent;font-weight:500}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent)}
+.body3{display:grid;grid-template-columns:196px 1fr 248px;min-height:400px}
+.body3>div{min-width:0}
+.col{border-right:1px solid var(--rule)}
+.tree .row{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 8px;border-left:2px solid transparent;flex-wrap:wrap}
+.tree .row.sel{border-left-color:var(--accent);background:var(--accent-bg)}
+.tree .nm{font-weight:500}
+.tree .ind1{padding-left:22px} .tree .ind2{padding-left:36px}
+.tree .meta{width:100%;display:flex;gap:4px;flex-wrap:wrap;padding-left:14px}
+
+/* timeline */
+.tl{position:relative}
+.trow{display:grid;grid-template-columns:178px 1fr;border-bottom:1px solid var(--rule);min-height:32px}
+.th{padding:6px 8px;border-right:1px solid var(--rule);background:var(--paper-2);font-size:13px;display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap}
+.th.two{white-space:normal;line-height:1.25;align-items:flex-start}
+.th .k{font-family:var(--mono);font-size:12px;color:var(--soft)}
+.lane{position:relative}
+.ruler .lane{height:26px;background:var(--paper-2)}
+.tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--rule);font:12px var(--mono);color:var(--muted);padding:5px 0 0 3px}
+.clip{display:flex;align-items:center;position:absolute;top:5px;bottom:5px;border:1px solid var(--accent);border-radius:3px;background:rgba(108,178,255,.10);padding:0 6px;font:12.5px/20px var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden}
+.clip.sel{background:rgba(108,178,255,.30);border-width:2px;line-height:18px}
+.clip.call{border-color:var(--muted);background:rgba(208,212,218,.10)}
+.clip.lock{border-color:var(--soft);border-style:dashed;background:var(--lock-bg);color:var(--soft)}
+.child .th{padding-left:22px;background:#212226}
+.child{background:rgba(255,181,77,.04)}
+.lockrow .th,.lockrow .lane{color:var(--soft)}
+.marker{position:absolute;top:4px;width:12px;height:12px;background:var(--link);transform:translateX(-6px) rotate(45deg)}
+.mlabel{position:absolute;top:6px;font:12.5px var(--mono);color:var(--link);margin-left:10px}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--accent);left:calc(178px + (100% - 178px) * .6);pointer-events:none}
+.playhead::before{content:"0.27";position:absolute;top:2px;left:-17px;background:var(--accent);color:#0d1420;font:600 11.5px/1 var(--mono);padding:3px 4px;border-radius:2px}
+.tl-empty{height:40px}
+
+/* inspector */
+.insp .r{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:6px;padding:4px 10px}
+.insp .r>span:first-child{color:var(--muted)}
+.insp .grp{border-top:1px solid var(--rule);margin-top:4px;padding-top:4px}
+.insp .inl{display:flex;gap:4px;align-items:center;min-width:0}
+.insp .inl .fld{flex:1;min-width:0}
+.insp .dd{width:100%}
+.curve{margin:4px 10px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--field);display:block}
+
+/* bottom */
+.bottom{border-top:1px solid var(--rule)}
+.btabs{display:flex;background:var(--paper-2);border-bottom:1px solid var(--rule);padding:0 10px}
+.ev{display:grid;grid-template-columns:150px 18px 120px 120px 1fr auto;gap:8px;align-items:center;padding:5px 10px;border-bottom:1px solid var(--rule)}
+.ev .arr{color:var(--muted);text-align:center}
+
+/* override strips */
+.strip{width:720px;margin-bottom:14px}
+.banner{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--rule);font-size:13.5px}
+.banner.ro{background:rgba(180,186,195,.10);border-left:3px solid var(--soft)}
+.banner.ov{background:rgba(255,181,77,.12);border-left:3px solid var(--link)}
+.banner .grow{flex:1}
+.hl{color:var(--link);font-weight:700;border-bottom:2px solid var(--link)}
+.tag{font:600 12px var(--mono);color:var(--ink);background:var(--rule);padding:2px 6px;border-radius:3px}
+.strip .trow{grid-template-columns:200px 1fr}
+.ed .clip{cursor:default}
+
+/* clip close-up */
+.w3{width:760px;display:grid;grid-template-columns:300px 1fr;gap:0}
+.menu{position:absolute;left:88px;top:28px;width:200px;background:var(--paper-2);border:1px solid var(--accent);border-radius:4px;padding:3px 0;z-index:2}
+.menu div{padding:4px 10px;font:13px var(--mono);border-left:2px solid transparent}
+.menu .on{border-left-color:var(--accent);background:var(--accent-bg)}
+.menu .hr{border-top:1px solid var(--rule);margin:3px 0;padding:0}
+.vm{padding:10px 14px}
+.vm .opt{display:grid;grid-template-columns:22px 110px 1fr;gap:6px;align-items:start;padding:7px 8px;border-left:2px solid transparent;border-bottom:1px solid var(--rule)}
+.vm .opt.on{border-left-color:var(--accent);background:var(--accent-bg)}
+.radio{width:14px;height:14px;border:1px solid var(--muted);border-radius:50%;margin-top:3px;position:relative}
+.on .radio{border-color:var(--accent)}
+.on .radio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+
+/* events */
+.w4{width:900px}
+.w4 .ev{grid-template-columns:170px 18px 120px 130px 1fr auto}
+.slider{display:flex;align-items:center;gap:8px}
+.track{position:relative;flex:1;height:4px;background:var(--rule);border-radius:2px;min-width:80px}
+.track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:2px}
+.track .knob{position:absolute;top:-6px;width:14px;height:14px;border-radius:50%;background:var(--ink);border:2px solid var(--accent);transform:translateX(-7px)}
+.evhead{display:grid;grid-template-columns:170px 18px 120px 130px 1fr auto;gap:8px;padding:6px 10px;color:var(--muted);font-size:12.5px;border-bottom:1px solid var(--rule);background:var(--paper-2)}
+
+/* debug */
+.w5{width:760px}
+.pl{display:grid;grid-template-columns:1fr 120px 200px;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--rule)}
+.prog{height:6px;background:var(--rule);border-radius:3px;position:relative}
+.prog i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>UI Animation Editor — 화면 목업</h1>
+<p class="sub">설계 문서 §3 데이터 모델 · §4 오버라이드 범위 · §5 이벤트 · §8 에디터 기준. 정적 목업입니다.</p>
+
+<!-- 1. FULL WINDOW -->
+<section id="m-window">
+<h2><span class="n">01</span>UI Animation Editor — 전체 창</h2>
+<div class="scroll"><div class="win w1">
+  <div class="bar">
+    <span class="title">UI Animation Editor</span><span class="sep"></span>
+    <span class="mono">Popup.prefab <span class="muted">▸</span> Popup</span><span class="sep"></span>
+    <span class="btn ico">▶</span><span class="btn ico on">❚❚</span><span class="btn ico">■</span>
+    <span class="btn on">⟲ Loop</span><span class="dd">1x</span>
+    <span class="fld"><b>0.27</b>&nbsp;<span class="muted">/ 0.45</span></span>
+    <span style="flex:1"></span><span class="btn on">⌗ Snap 0.01</span>
+  </div>
+  <div class="tabs"><span class="tab on">Show</span><span class="tab">Hide</span><span class="tab">Select</span><span class="tab">Press</span><span class="tab">+</span></div>
+  <div class="body3">
+    <div class="col tree">
+      <div class="ph">Hierarchy</div>
+      <div class="row"><span class="nm">Popup</span><span class="badge b-own">OWN</span></div>
+      <div class="row ind1 sel"><span class="nm">OkButton</span>
+        <div class="meta"><span class="badge">CALLED</span><span class="badge b-ovr">OVERRIDDEN</span></div></div>
+      <div class="row ind1"><span class="nm">CloseButton</span>
+        <div class="meta"><span class="badge">CALLED</span><span class="badge b-src">🔒 SOURCE</span></div></div>
+      <div class="row ind1"><span class="nm">ItemList</span>
+        <div class="meta"><span class="badge">CALLED</span><span class="badge">Cascade</span></div></div>
+      <div class="row ind2"><span class="nm">Item <span class="mono muted">×N</span></span><span class="badge b-src">SOURCE</span></div>
+    </div>
+    <div class="col tl">
+      <div class="trow ruler"><div class="th muted">Show · 0.45s</div><div class="lane">
+        <span class="tick" style="left:0">0.00</span><span class="tick" style="left:22.2%">0.10</span><span class="tick" style="left:44.4%">0.20</span><span class="tick" style="left:66.7%">0.30</span><span class="tick" style="left:88.9%">0.40</span>
+      </div></div>
+      <div class="trow"><div class="th">Root <span class="k">· Scale</span></div><div class="lane"><span class="clip" style="left:0;width:55.6%">0.8 → 1 OutBack</span></div></div>
+      <div class="trow"><div class="th">Dim <span class="k">· CanvasGroup.Alpha</span></div><div class="lane"><span class="clip" style="left:0;width:33.3%">0 → 1</span></div></div>
+      <div class="trow"><div class="th two">▾ <span><span class="k">ChildState</span><br>OkButton ▸ Show</span></div><div class="lane"><span class="clip call" style="left:22.2%;width:66.7%">OkButton.Show</span></div></div>
+      <div class="trow child"><div class="th" style="gap:6px"><span class="badge b-ovr">Popup 전용 오버라이드</span></div><div class="lane"></div></div>
+      <div class="trow child"><div class="th">BG <span class="k">· Graphic.Alpha</span></div><div class="lane"><span class="clip sel" style="left:22.2%;width:44.4%">Flicker 12Hz</span></div></div>
+      <div class="trow child"><div class="th">Label <span class="k">· Scale</span></div><div class="lane"><span class="clip" style="left:33.3%;width:55.6%">0.9 → 1</span></div></div>
+      <div class="trow lockrow"><div class="th two">▸ <span><span class="k">ChildState</span><br>CloseButton ▸ Show</span></div><div class="lane"><span class="clip lock" style="left:33.3%;width:66.7%">🔒 원본 CommonButton.prefab</span></div></div>
+      <div class="trow"><div class="th" style="color:var(--link)">◆ Signals</div><div class="lane"><span class="marker" style="left:44.4%"></span><span class="mlabel" style="right:55.6%;margin:0 12px 0 0">Impact</span></div></div>
+      <div class="tl-empty"></div>
+      <div class="playhead"></div>
+    </div>
+    <div class="insp">
+      <div class="ph">Clip</div>
+      <div class="r"><span>Target</span><span class="dd">BG (Image)</span></div>
+      <div class="r"><span>Property</span><span class="dd">Graphic.Alpha</span></div>
+      <div class="r"><span>Time</span><span class="inl"><span class="fld">0.10</span><span class="fld">0.20s</span></span></div>
+      <div class="grp"></div>
+      <div class="r"><span>Effect</span><span class="dd">Flicker</span></div>
+      <div class="r"><span>Frequency</span><span class="fld">12</span></div>
+      <div class="r"><span>Duty</span><span class="fld">0.5</span></div>
+      <div class="grp"></div>
+      <div class="r"><span>From</span><span class="inl"><span class="fld">0</span><span class="btn">Capture</span></span></div>
+      <div class="r"><span>To</span><span class="inl"><span class="fld">1</span><span class="btn">Capture</span></span></div>
+      <div class="r"><span>Value mode</span><span class="dd">Absolute</span></div>
+      <div class="r"><span>Ease</span><span class="dd">OutQuad</span></div>
+      <svg class="curve" width="226" height="74" viewBox="0 0 226 74">
+        <line x1="8" y1="66" x2="218" y2="66" stroke="#4a4f57"/><line x1="8" y1="8" x2="8" y2="66" stroke="#4a4f57"/>
+        <line x1="8" y1="66" x2="218" y2="8" stroke="#4a4f57" stroke-dasharray="3 3"/>
+        <path d="M8 66 Q113 8 218 8" fill="none" stroke="#6cb2ff" stroke-width="2"/>
+      </svg>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="btabs"><span class="tab on">Events</span><span class="tab">Signals</span></div>
+    <div class="ev"><span class="dd">OnEnable</span><span class="arr">→</span><span class="dd">Show</span><span class="dd">Restart</span><span></span><span class="btn">Simulate</span></div>
+    <div class="ev"><span class="dd">PointerEnter</span><span class="arr">→</span><span class="dd">Hover</span><span class="dd">FromCurrent</span><span></span><span class="btn">Simulate</span></div>
+    <div class="ev" style="border-bottom:0"><span class="dd">PointerDown</span><span class="arr">→</span><span class="dd">Press</span><span class="dd">FromCurrent</span><span class="muted">+ 4개 더…</span><span class="btn">Simulate</span></div>
+  </div>
+</div></div>
+<p class="cap">Popup.prefab의 Show 편집 중 — OkButton은 Popup 전용 오버라이드라 편집 가능, CloseButton은 원본이라 잠금.</p>
+</section>
+
+<!-- 2. OVERRIDE FLOW -->
+<section id="m-override">
+<h2><span class="n">02</span>오버라이드 배너 — 전 / 후</h2>
+<div class="scroll">
+  <div class="win strip">
+    <div class="bar"><span class="tag">BEFORE</span><span class="mono">ChildState · CloseButton ▸ Show</span></div>
+    <div class="banner ro"><span>🔒</span><span class="grow"><b class="mono">CommonButton.prefab</b> 원본 — 여기서는 읽기 전용</span><span class="btn amber">Popup에서 오버라이드</span></div>
+    <div class="trow lockrow"><div class="th">🔒 BG <span class="k">· Graphic.Alpha</span></div><div class="lane"><span class="clip lock" style="left:0;width:50%">Tween 0 → 1</span></div></div>
+    <div class="trow lockrow"><div class="th">🔒 Root <span class="k">· Scale</span></div><div class="lane"><span class="clip lock" style="left:0;width:70%">0.9 → 1 OutQuad</span></div></div>
+  </div>
+  <div class="win strip">
+    <div class="bar"><span class="tag">AFTER</span><span class="mono">ChildState · CloseButton ▸ Show</span><span class="badge b-ovr">OVERRIDDEN</span></div>
+    <div class="banner ov"><span class="grow"><b>Popup 전용 오버라이드</b> — <span class="hl">원본은 변경되지 않음</span></span><span class="btn">되돌리기</span></div>
+    <div class="trow ed"><div class="th">BG <span class="k">· Graphic.Alpha</span></div><div class="lane"><span class="clip sel" style="left:0;width:50%">Tween 0 → 1</span></div></div>
+    <div class="trow ed"><div class="th">Root <span class="k">· Scale</span></div><div class="lane"><span class="clip" style="left:0;width:70%">0.9 → 1 OutQuad</span></div></div>
+  </div>
+</div>
+<p class="cap">오버라이드는 원본 상태를 복사해 Popup.prefab의 overrides에 저장 — CommonButton.prefab 파일은 그대로입니다.</p>
+</section>
+
+<!-- 3. CLIP INSPECTOR -->
+<section id="m-clip">
+<h2><span class="n">03</span>클립 인스펙터 — Capture · Ease · Value mode</h2>
+<div class="scroll"><div class="win w3">
+  <div class="insp col" style="position:relative">
+    <div class="ph">Clip</div>
+    <div class="r"><span>Target</span><span class="dd">Root (RectTransform)</span></div>
+    <div class="r"><span>Property</span><span class="dd">Scale</span></div>
+    <div class="r"><span>From</span><span class="inl"><span class="fld">0.8</span><span class="btn">Capture</span></span></div>
+    <div class="r"><span>To</span><span class="inl"><span class="fld">1</span><span class="btn">Capture</span></span></div>
+    <div class="r" style="position:relative"><span>Ease</span><span class="dd" style="border-color:var(--accent)">OutBack</span>
+      <div class="menu" style="left:94px;top:30px">
+        <div>Linear</div><div>OutQuad</div><div>OutCubic</div><div class="on">OutBack</div><div>InOutSine</div><div class="hr"></div><div>Custom Curve…</div>
+      </div></div>
+    <div style="height:180px"></div>
+    <div class="r"><span>Value mode</span><span class="dd">Absolute</span></div>
+    <p class="muted" style="margin:6px 10px 10px">Capture: 씬에서 옮긴 현재 값을 그대로 From/To에 저장.</p>
+  </div>
+  <div class="vm">
+    <div class="ph" style="margin:-10px -14px 8px">Value mode</div>
+    <div class="opt on"><span class="radio"></span><span class="mono">Absolute</span><span>지정한 값 그대로 씀</span></div>
+    <div class="opt"><span class="radio"></span><span class="mono">Relative</span><span>원래 값 기준 상대값 (원래 + From/To)</span></div>
+    <div class="opt" style="border-bottom:0"><span class="radio"></span><span class="mono">FromCurrent</span><span>재생 시작 순간의 값에서 출발 — 끊겨도 값이 튀지 않음</span></div>
+  </div>
+</div></div>
+<p class="cap">Ease 드롭다운을 연 상태 — 프리셋 5개와 Custom Curve, 오른쪽은 valueMode 세 가지의 의미.</p>
+</section>
+
+<!-- 4. EVENTS -->
+<section id="m-events">
+<h2><span class="n">04</span>Events 패널</h2>
+<div class="scroll"><div class="win w4">
+  <div class="btabs"><span class="tab on">Events</span><span class="tab">Signals</span></div>
+  <div class="evhead"><span>Event</span><span></span><span>State</span><span>Option</span><span></span><span></span></div>
+  <div class="ev"><span class="dd">OnEnable</span><span class="arr">→</span><span class="dd">Show</span><span class="dd">Restart</span><span></span><span class="btn">Simulate</span></div>
+  <div class="ev"><span class="dd">PointerEnter</span><span class="arr">→</span><span class="dd">Hover</span><span class="dd">FromCurrent</span><span></span><span class="btn">Simulate</span></div>
+  <div class="ev"><span class="dd">PointerDown</span><span class="arr">→</span><span class="dd">Press</span><span class="dd">FromCurrent</span><span></span><span class="btn">Simulate</span></div>
+  <div class="ev"><span class="dd">Select</span><span class="arr">→</span><span class="dd">Select</span><span class="dd">Restart</span><span></span><span class="btn">Simulate</span></div>
+  <div class="ev"><span class="dd">Toggle On/Off</span><span class="arr">→</span><span class="dd">On / Off</span><span class="dd">FromCurrent</span><span></span><span class="btn">Simulate</span></div>
+  <div class="ev"><span class="dd">Slider Value</span><span class="arr">→</span><span class="dd">Gauge</span><span class="dd">Scrub</span>
+    <span class="slider"><span class="track"><span class="fill" style="width:62%"></span><span class="knob" style="left:62%"></span></span><span class="mono muted">0.62</span></span><span class="btn">Simulate</span></div>
+  <div class="ev"><span class="dd">EnterViewport</span><span class="arr">→</span><span class="dd">Show</span><span class="dd">Restart</span><span></span><span class="btn">Simulate</span></div>
+  <div class="ev" style="border-bottom:0"><span class="btn">+ 이벤트 추가</span></div>
+</div></div>
+<p class="cap">이벤트 → 상태 → 옵션, Slider Value는 값(0~1)을 상태 시간으로 스크럽.</p>
+</section>
+
+<!-- 5. DEBUG -->
+<section id="m-debug">
+<h2><span class="n">05</span>Play 모드 디버그</h2>
+<div class="scroll"><div class="win w5">
+  <div class="bar"><span class="title">UIAnimation Debug</span><span class="badge b-ovr">PLAY MODE</span></div>
+  <div class="pl" style="grid-template-columns:200px 1fr 60px">
+    <span class="mono">UIAnimation.GlobalSpeed</span>
+    <span class="slider"><span class="track"><span class="fill" style="width:10%"></span><span class="knob" style="left:10%"></span></span></span>
+    <span class="mono" style="color:var(--accent)">0.2x</span>
+  </div>
+  <div class="evhead" style="grid-template-columns:1fr 120px 200px"><span>Playing</span><span>Time</span><span>Progress</span></div>
+  <div class="pl"><span><b>Popup</b> <span class="mono muted">Show</span></span><span class="mono">0.12 / 0.45</span><span class="prog"><i style="width:26.7%"></i></span></div>
+  <div class="pl" style="border-bottom:0"><span><b>OkButton</b> <span class="mono muted">Show</span> <span class="badge b-ovr">override</span></span><span class="mono">0.03 / 0.30</span><span class="prog"><i style="width:10%"></i></span></div>
+</div></div>
+<p class="cap">전역 속도를 0.2x로 낮춰 재생 중인 상태와 오버라이드 적용 여부를 확인.</p>
+</section>
+</div>
+</body>
+</html>

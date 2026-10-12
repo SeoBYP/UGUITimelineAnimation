@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>데이터 모델 · UML class</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #fafaf8;
+      --color-ink:     #121417;
+      --color-muted:   #2f3640;
+      --color-accent:  #0956c0;
+      --font-sans:     'Geist', 'Noto Sans KR', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif', 'Noto Serif KR', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1280px; width: 100%; min-width: 0; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 1280px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">UML class · UIAnimation v2</p>
+    <h1>데이터 모델</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="uianim-data-model-title uianim-data-model-desc">
+        <title id="uianim-data-model-title">UIAnimation 데이터 모델</title>
+        <desc id="uianim-data-model-desc">UIAnimation owns its states and its child overrides; each state owns abstract tracks, PropertyTrack and ChildStateTrack extend UIAnimTrack, PropertyTrack owns clips, ChildStateTrack calls a child UIAnimation, and each override owns a copied replacement state.</desc>
+        <defs>
+          <marker id="uml-triangle" markerWidth="16" markerHeight="12" refX="15" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 16 6, 0 12" fill="#fafaf8" stroke="#121417" stroke-width="1.2"/>
+          </marker>
+          <marker id="uml-diamond-filled" markerWidth="18" markerHeight="10" refX="0" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 5, 9 0, 18 5, 9 10" fill="#121417"/>
+          </marker>
+          <marker id="uml-diamond-hollow" markerWidth="18" markerHeight="10" refX="0" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 5, 9 0, 18 5, 9 10" fill="#fafaf8" stroke="#121417" stroke-width="1.2"/>
+          </marker>
+          <marker id="uml-open" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L9,4 L0,8" fill="none" stroke="#2f3640" stroke-width="1.2"/>
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#fafaf8"/>
+
+        <g transform="translate(0,32)">
+        <!-- ===== Relationships (drawn before boxes) ===== -->
+        <!-- UIAnimation ◆ overrides → UIAnimOverride -->
+        <line x1="180" y1="240" x2="180" y2="200" stroke="#2f3640" stroke-width="1.2" marker-start="url(#uml-diamond-filled)"/>
+        <!-- UIAnimation ◆ states → UIAnimState -->
+        <line x1="320" y1="300" x2="440" y2="300" stroke="#2f3640" stroke-width="1.2" marker-start="url(#uml-diamond-filled)"/>
+        <!-- UIAnimOverride ◆ replacement → UIAnimState -->
+        <path d="M 320,140 H 552 Q 560,140 560,148 V 240" fill="none" stroke="#2f3640" stroke-width="1.2" marker-start="url(#uml-diamond-filled)"/>
+        <!-- UIAnimState ◆ tracks → UIAnimTrack -->
+        <line x1="680" y1="300" x2="840" y2="300" stroke="#2f3640" stroke-width="1.2" marker-start="url(#uml-diamond-filled)"/>
+        <!-- ChildStateTrack extends UIAnimTrack -->
+        <line x1="880" y1="400" x2="880" y2="324" stroke="#121417" stroke-width="1.2" marker-end="url(#uml-triangle)"/>
+        <!-- PropertyTrack extends UIAnimTrack -->
+        <line x1="1080" y1="400" x2="1080" y2="324" stroke="#121417" stroke-width="1.2" marker-end="url(#uml-triangle)"/>
+        <!-- PropertyTrack ◆ clips → UIAnimClip -->
+        <line x1="1200" y1="400" x2="1200" y2="240" stroke="#2f3640" stroke-width="1.2" marker-start="url(#uml-diamond-filled)"/>
+        <!-- ChildStateTrack → UIAnimation (calls) -->
+        <path d="M 760,480 H 188 Q 180,480 180,472 V 384" fill="none" stroke="#2f3640" stroke-width="1.2" marker-end="url(#uml-open)"/>
+
+        <!-- ===== Labels and multiplicities (masked) ===== -->
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="600" fill="#121417" text-anchor="middle">
+          <!-- overrides 0..* (beside vertical) -->
+          <rect x="188" y="206" width="28" height="12" rx="2" fill="#fafaf8"/>
+          <text x="202" y="215">0..*</text>
+          <!-- states 1..* -->
+          <rect x="400" y="282" width="28" height="12" rx="2" fill="#fafaf8"/>
+          <text x="414" y="291">1..*</text>
+          <!-- replacement 1 (beside vertical) -->
+          <rect x="568" y="220" width="16" height="12" rx="2" fill="#fafaf8"/>
+          <text x="576" y="229">1</text>
+          <!-- tracks 0..* -->
+          <rect x="800" y="282" width="28" height="12" rx="2" fill="#fafaf8"/>
+          <text x="814" y="291">0..*</text>
+          <!-- clips 0..* (beside vertical) -->
+          <rect x="1164" y="248" width="28" height="12" rx="2" fill="#fafaf8"/>
+          <text x="1178" y="257">0..*</text>
+          <!-- calls: 0..* at ChildStateTrack, 1 at UIAnimation -->
+          <rect x="716" y="462" width="28" height="12" rx="2" fill="#fafaf8"/>
+          <text x="730" y="471">0..*</text>
+          <rect x="188" y="392" width="16" height="12" rx="2" fill="#fafaf8"/>
+          <text x="196" y="401">1</text>
+        </g>
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="8" fill="#2f3640" text-anchor="middle" letter-spacing="0.06em">
+          <rect x="408" y="146" width="72" height="12" rx="2" fill="#fafaf8"/>
+          <text x="444" y="155">REPLACEMENT</text>
+          <rect x="452" y="462" width="40" height="12" rx="2" fill="#fafaf8"/>
+          <text x="472" y="471">CALLS</text>
+        </g>
+
+        <!-- ===== Callout ===== -->
+        <path d="M 592,100 Q 460,100 324,112" fill="none" stroke="#2f3640" stroke-width="1" stroke-dasharray="4,3"/>
+        <circle cx="322" cy="112" r="2.5" fill="#121417"/>
+        <text font-family="'Instrument Serif', 'Noto Serif KR', serif" font-style="italic" font-size="14" fill="#121417">
+          <tspan x="600" y="96">overrides는 바깥 Prefab에 저장 —</tspan>
+          <tspan x="600" y="116">원본 Prefab은 수정되지 않음</tspan>
+        </text>
+
+        <!-- ===== Classes ===== -->
+        <!-- UIAnimOverride (focal 2) -->
+        <rect x="40" y="80" width="280" height="120" rx="6" fill="#fafaf8"/>
+        <rect x="40" y="80" width="280" height="120" rx="6" fill="rgba(9,86,192,0.10)" stroke="#0956c0" stroke-width="1.5"/>
+        <line x1="40" y1="120" x2="320" y2="120" stroke="#0956c0" stroke-width="1"/>
+        <text x="180" y="105" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">UIAnimOverride</text>
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="9" fill="#121417">
+          <text x="56" y="140">+ child: UIAnimation</text>
+          <text x="56" y="160">+ state: UIStateId</text>
+          <text x="56" y="180">+ replacement: UIAnimState</text>
+        </g>
+
+        <!-- UIAnimation (focal 1) -->
+        <rect x="40" y="240" width="280" height="144" rx="6" fill="#fafaf8"/>
+        <rect x="40" y="240" width="280" height="144" rx="6" fill="rgba(9,86,192,0.10)" stroke="#0956c0" stroke-width="1.5"/>
+        <line x1="40" y1="280" x2="320" y2="280" stroke="#0956c0" stroke-width="1"/>
+        <line x1="40" y1="332" x2="320" y2="332" stroke="#0956c0" stroke-width="1"/>
+        <text x="180" y="265" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">UIAnimation : MonoBehaviour</text>
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="9" fill="#121417">
+          <text x="56" y="300">+ states: List&lt;UIAnimState&gt;</text>
+          <text x="56" y="320">+ overrides: List&lt;UIAnimOverride&gt;</text>
+          <text x="56" y="352">+ PlayAsync(state): UniTask&lt;UIAnimResult&gt;</text>
+          <text x="56" y="372">+ SetTime(state, seconds): void</text>
+        </g>
+
+        <!-- UIAnimState -->
+        <rect x="440" y="240" width="240" height="120" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <line x1="440" y1="280" x2="680" y2="280" stroke="#9aa0a8" stroke-width="1"/>
+        <text x="560" y="265" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">UIAnimState</text>
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="9" fill="#121417">
+          <text x="456" y="300">+ name: UIStateId</text>
+          <text x="456" y="320">+ tracks: UIAnimTrack[]</text>
+          <text x="456" y="340">+ loop: bool</text>
+        </g>
+
+        <!-- UIAnimTrack (abstract) -->
+        <rect x="840" y="276" width="280" height="48" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <text x="980" y="293" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">«abstract» [SerializeReference]</text>
+        <text x="980" y="312" fill="#121417" font-size="12" font-weight="600" font-style="italic" font-family="'Geist', sans-serif" text-anchor="middle">UIAnimTrack</text>
+
+        <!-- ChildStateTrack -->
+        <rect x="760" y="400" width="240" height="120" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <line x1="760" y1="440" x2="1000" y2="440" stroke="#9aa0a8" stroke-width="1"/>
+        <text x="880" y="425" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">ChildStateTrack</text>
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="9" fill="#121417">
+          <text x="776" y="460">+ child: UIAnimation</text>
+          <text x="776" y="480">+ state: UIStateId</text>
+          <text x="776" y="500">+ start: float</text>
+        </g>
+
+        <!-- PropertyTrack -->
+        <rect x="1040" y="400" width="200" height="120" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <line x1="1040" y1="440" x2="1240" y2="440" stroke="#9aa0a8" stroke-width="1"/>
+        <text x="1140" y="425" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">PropertyTrack</text>
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="9" fill="#121417">
+          <text x="1056" y="460">+ target: Component</text>
+          <text x="1056" y="480">+ property: enum</text>
+          <text x="1056" y="500">+ clips: UIAnimClip[]</text>
+        </g>
+
+        <!-- UIAnimClip -->
+        <rect x="1040" y="80" width="200" height="160" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <line x1="1040" y1="120" x2="1240" y2="120" stroke="#9aa0a8" stroke-width="1"/>
+        <text x="1140" y="105" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">UIAnimClip</text>
+        <g font-family="'Geist Mono', ui-monospace, monospace" font-size="9" fill="#121417">
+          <text x="1056" y="140">+ start, duration: float</text>
+          <text x="1056" y="160">+ from, to: value</text>
+          <text x="1056" y="180">+ valueMode: enum</text>
+          <text x="1056" y="200">+ ease | curve</text>
+          <text x="1056" y="220">+ effect: enum</text>
+        </g>
+
+        </g>
+
+        <!-- ===== Legend: relationship vocabulary ===== -->
+        <line x1="40" y1="652" x2="1240" y2="652" stroke="#9aa0a8" stroke-width="0.8"/>
+        <text x="40" y="672" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.18em">LEGEND · RELATIONSHIPS</text>
+        <g font-size="9" font-family="'Geist', sans-serif" fill="#2f3640">
+          <line x1="40" y1="692" x2="72" y2="692" stroke="#121417" stroke-width="1.2" marker-end="url(#uml-triangle)"/>
+          <text x="80" y="695">Inheritance</text>
+          <line x1="236" y1="692" x2="268" y2="692" stroke="#121417" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#uml-triangle)"/>
+          <text x="276" y="695">Realization</text>
+          <line x1="432" y1="692" x2="464" y2="692" stroke="#2f3640" stroke-width="1.2" marker-start="url(#uml-diamond-filled)"/>
+          <text x="472" y="695">Composition · owns</text>
+          <line x1="628" y1="692" x2="660" y2="692" stroke="#2f3640" stroke-width="1.2" marker-start="url(#uml-diamond-hollow)"/>
+          <text x="668" y="695">Aggregation · has</text>
+          <line x1="824" y1="692" x2="856" y2="692" stroke="#2f3640" stroke-width="1.2" marker-end="url(#uml-open)"/>
+          <text x="864" y="695">Association</text>
+          <line x1="1020" y1="692" x2="1052" y2="692" stroke="#2f3640" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#uml-open)"/>
+          <text x="1060" y="695">Dependency · uses</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

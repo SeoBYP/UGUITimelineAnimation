@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오버라이드 범위</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #fafaf8;
+      --color-ink:     #121417;
+      --color-muted:   #2f3640;
+      --color-accent:  #0956c0;
+      --font-sans:     'Geist', 'Noto Sans KR', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif', 'Noto Serif KR', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1200px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+    svg { width: 100%; min-width: 1280px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Nested · UIAnimation §4</p>
+    <h1>오버라이드는 현재 Prefab 안에서만</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="uianim-override-scope-title uianim-override-scope-desc">
+        <title id="uianim-override-scope-title">오버라이드는 현재 Prefab 안에서만</title>
+        <desc id="uianim-override-scope-desc">CommonButton.prefab 원본의 Show=Scale은 수정되지 않고, Popup.prefab의 UIAnimation.overrides에 저장된 복사본만 그 안의 OkButton을 Flicker로 바꾸며, ShopPopup.prefab의 BuyButton은 원본 Scale을 그대로 읽는다.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2f3640"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0956c0"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a14f00"/></marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#fafaf8"/>
+
+        <!-- ===== Containers (zones) ===== -->
+        <!-- SOURCE: CommonButton.prefab -->
+        <rect x="40" y="256" width="280" height="184" rx="8" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <rect x="56" y="248" width="176" height="16" fill="#fafaf8"/>
+        <text x="64" y="261" fill="#121417" font-size="14" font-weight="600" font-family="'Geist', system-ui, sans-serif">CommonButton.prefab</text>
+
+        <!-- Popup.prefab -->
+        <rect x="520" y="104" width="720" height="224" rx="8" fill="rgba(18,20,23,0.03)" stroke="#2f3640" stroke-width="1"/>
+        <rect x="536" y="96" width="120" height="16" fill="#fafaf8"/>
+        <text x="544" y="109" fill="#121417" font-size="14" font-weight="600" font-family="'Geist', system-ui, sans-serif">Popup.prefab</text>
+
+        <!-- Popup · UIAnimation.overrides (inner scope) -->
+        <rect x="872" y="132" width="336" height="136" rx="8" fill="#fafaf8" stroke="#2f3640" stroke-width="1"/>
+        <text x="888" y="156" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">Popup · UIAnimation.overrides</text>
+
+        <!-- ShopPopup.prefab -->
+        <rect x="520" y="376" width="720" height="216" rx="8" fill="rgba(18,20,23,0.03)" stroke="#2f3640" stroke-width="1"/>
+        <rect x="536" y="368" width="152" height="16" fill="#fafaf8"/>
+        <text x="544" y="381" fill="#121417" font-size="14" font-weight="600" font-family="'Geist', system-ui, sans-serif">ShopPopup.prefab</text>
+
+        <!-- ===== Arrows ===== -->
+        <!-- Source -> OkButton (read only) -->
+        <path d="M296,332 H392 Q400,332 400,324 V220 Q400,212 408,212 H552" fill="none" stroke="#2f3640" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+        <!-- Source -> BuyButton (read only) -->
+        <path d="M296,364 H392 Q400,364 400,372 V476 Q400,484 408,484 H552" fill="none" stroke="#2f3640" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+        <!-- overrides entry -> OkButton (focal) -->
+        <path d="M896,212 H792" fill="none" stroke="#0956c0" stroke-width="1.6" marker-end="url(#arrow-accent)"/>
+
+        <!-- ===== Arrow labels ===== -->
+        <rect x="408" y="244" width="52" height="12" rx="2" fill="#fafaf8"/>
+        <text x="412" y="253" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">READ ONLY</text>
+        <rect x="408" y="260" width="64" height="16" rx="2" fill="#fafaf8"/>
+        <text x="412" y="273" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">원본 참조</text>
+
+        <rect x="408" y="400" width="52" height="12" rx="2" fill="#fafaf8"/>
+        <text x="412" y="409" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em">READ ONLY</text>
+        <rect x="408" y="416" width="64" height="16" rx="2" fill="#fafaf8"/>
+        <text x="412" y="429" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">원본 참조</text>
+
+        <rect x="808" y="192" width="48" height="12" rx="2" fill="#fafaf8"/>
+        <text x="832" y="201" fill="#0956c0" font-size="8" font-weight="500" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.06em">OVERRIDE</text>
+        <rect x="816" y="220" width="32" height="16" rx="2" fill="#fafaf8"/>
+        <text x="832" y="233" fill="#0956c0" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif" text-anchor="middle">적용</text>
+
+        <!-- ===== Nodes ===== -->
+        <!-- Source UIAnimation -->
+        <rect x="64" y="300" width="232" height="96" rx="6" fill="#fafaf8"/>
+        <rect x="64" y="300" width="232" height="96" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <rect x="76" y="310" width="44" height="14" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+        <text x="98" y="320" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">SOURCE</text>
+        <text x="76" y="346" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">UIAnimation</text>
+        <text x="76" y="370" fill="#121417" font-size="11" font-family="'Geist Mono', ui-monospace, monospace">Show = Scale</text>
+        <text x="64" y="424" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">원본 — 수정되지 않음</text>
+
+        <!-- OkButton instance -->
+        <rect x="552" y="160" width="240" height="104" rx="6" fill="#fafaf8"/>
+        <rect x="552" y="160" width="240" height="104" rx="6" fill="#ffffff" stroke="#2f3640" stroke-width="1"/>
+        <rect x="564" y="170" width="44" height="14" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+        <text x="586" y="180" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">NESTED</text>
+        <text x="564" y="206" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">OkButton <tspan fill="#2f3640" font-weight="500">(CommonButton)</tspan></text>
+        <text x="564" y="228" fill="#121417" font-size="11" font-family="'Geist Mono', ui-monospace, monospace">Show = Flicker</text>
+        <text x="564" y="248" fill="#2f3640" font-size="9" font-family="'Geist Mono', ui-monospace, monospace">effective · from overrides</text>
+
+        <!-- Override entry (focal) -->
+        <rect x="896" y="180" width="288" height="64" rx="6" fill="#fafaf8"/>
+        <rect x="896" y="180" width="288" height="64" rx="6" fill="rgba(9,86,192,0.10)" stroke="#0956c0" stroke-width="1.6"/>
+        <text x="908" y="206" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">OkButton.Show → Flicker <tspan fill="#0956c0">(복사본)</tspan></text>
+        <text x="908" y="228" fill="#2f3640" font-size="9" font-family="'Geist Mono', ui-monospace, monospace">{child, state, state copy}</text>
+
+        <!-- BuyButton instance -->
+        <rect x="552" y="432" width="240" height="104" rx="6" fill="#fafaf8"/>
+        <rect x="552" y="432" width="240" height="104" rx="6" fill="#ffffff" stroke="#2f3640" stroke-width="1"/>
+        <rect x="564" y="442" width="44" height="14" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+        <text x="586" y="452" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">NESTED</text>
+        <text x="564" y="478" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">BuyButton <tspan fill="#2f3640" font-weight="500">(CommonButton)</tspan></text>
+        <text x="564" y="500" fill="#121417" font-size="11" font-family="'Geist Mono', ui-monospace, monospace">Show = Scale</text>
+        <text x="564" y="520" fill="#2f3640" font-size="9" font-family="'Geist Mono', ui-monospace, monospace">effective · inherited</text>
+
+        <!-- ShopPopup overrides (empty) -->
+        <rect x="872" y="452" width="336" height="64" rx="6" fill="#fafaf8"/>
+        <rect x="872" y="452" width="336" height="64" rx="6" fill="rgba(18,20,23,0.02)" stroke="#4a525e" stroke-width="1" stroke-dasharray="4,3"/>
+        <text x="888" y="478" fill="#2f3640" font-size="12" font-weight="600" font-family="'Geist', system-ui, sans-serif">ShopPopup · UIAnimation.overrides</text>
+        <text x="888" y="500" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">비어 있음 — 원본 그대로</text>
+
+        <!-- ===== Callout ===== -->
+        <text fill="#2f3640" font-size="14" font-style="italic" font-family="'Instrument Serif', 'Noto Serif', 'Noto Serif KR', serif">
+          <tspan x="40" y="488">오버라이드는 Popup.prefab 파일에만 저장</tspan>
+          <tspan x="40" y="510">→ Apply to Prefab 경로 없음</tspan>
+        </text>
+
+        <!-- ===== Legend ===== -->
+        <line x1="40" y1="652" x2="1240" y2="652" stroke="#9aa0a8" stroke-width="0.8"/>
+        <text x="40" y="688" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND</text>
+
+        <rect x="124" y="676" width="24" height="16" rx="3" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+        <text x="160" y="688" fill="#121417" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">SOURCE</text>
+        <text x="204" y="689" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">원본 Prefab의 연출</text>
+
+        <rect x="384" y="676" width="24" height="16" rx="3" fill="rgba(9,86,192,0.10)" stroke="#0956c0" stroke-width="1.6"/>
+        <line x1="412" y1="684" x2="436" y2="684" stroke="#0956c0" stroke-width="1.6"/>
+        <text x="448" y="688" fill="#0956c0" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">OVERRIDE</text>
+        <text x="504" y="689" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">바깥 Prefab에 저장된 복사본</text>
+
+        <line x1="728" y1="684" x2="760" y2="684" stroke="#2f3640" stroke-width="1.2" stroke-dasharray="5,4"/>
+        <text x="772" y="688" fill="#121417" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.08em">INHERITED</text>
+        <text x="828" y="689" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">원본을 읽기 전용으로 참조</text>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
