@@ -4,6 +4,8 @@
     "references": [
         "SeoBYP.TimelineAnimation",
         "SeoBYP.TimelineAnimation.Editor",
+        "UnityEngine.UI",
+        "LitMotion",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
