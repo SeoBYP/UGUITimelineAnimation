@@ -494,9 +494,18 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
-    signals:
+    events:
     - time: 0.2
       name: Shown
+      dataType: PopupSoundEvent, Assembly-CSharp
+      dataJson: '{"clip":"popup_open","volume":0.800000011920929}'
+    childCalls:
+    - time: 0.3
+      child: {fileID: 8250529368727914200}
+      state: Hover
+    - time: 0.6
+      child: {fileID: 8250529368727914200}
+      state: Unhover
   - name: Close
     actions: []
     tracks:
@@ -614,7 +623,8 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
-    signals: []
+    events: []
+    childCalls: []
 --- !u!1 &8584557259412121170
 GameObject:
   m_ObjectHideFlags: 0
@@ -860,3 +870,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 8907896905305175111, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
   m_PrefabInstance: {fileID: 2817176170284776525}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &8250529368727914200 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6153986863182936725, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
+  m_PrefabInstance: {fileID: 2817176170284776525}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f4151e9e2fa11c409df6f34bf5b0519, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation

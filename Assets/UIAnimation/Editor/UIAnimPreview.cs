@@ -27,7 +27,8 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         readonly AnimationModeDriver _driver;
         readonly List<(UIAnimTrack track, Vector4 value)> _snapshot = new();
-        readonly List<(TMP_Text text, string value)> _texts = new();   // scramble rewrites text; restored on stop
+        readonly List<(TMP_Text text, string value)> _texts = new();
+        readonly List<(UIAnimTrack track, Vector4 value)> _childRest = new();   // called child states: their rest before the call   // scramble rewrites text; restored on stop
         double _lastTick;
         bool _inPrefabStage;
 
@@ -67,13 +68,14 @@ namespace SeoBYP.TimelineAnimation.Editor
 
             _snapshot.Clear();
             _texts.Clear();
-            foreach (var s in target.states)
-            foreach (var track in s.tracks)
-                if (track.target != null)
-                {
-                    _snapshot.Add((track, UIAnimation.Read(track.target, track.property)));
-                    if (track.target is TMP_Text text) _texts.Add((text, text.text));
-                }
+            _childRest.Clear();
+            foreach (var s in target.states) SnapshotTracks(s, false);
+            // Child UIAnimations called from this one: same snapshot/restore, and their rest is shown until their call.
+            foreach (var child in CalledChildren(target))
+            {
+                child.CaptureRest();
+                foreach (var s in child.states) SnapshotTracks(s, true);
+            }
 
             // Prefab Mode only redraws values written inside a sampling block (as the Animation window samples), and
             // there EndSampling would revert registered properties; so nothing is registered and the snapshot restore
@@ -95,8 +97,45 @@ namespace SeoBYP.TimelineAnimation.Editor
                 UIAnimation.Evaluate(from, from.Duration);
             }
 
-            UIAnimation.Resolve(state);
+            UIAnimation.ResolveTree(state);
             Seek(t);
+        }
+
+        void SnapshotTracks(UIAnimState state, bool child)
+        {
+            foreach (var track in state.tracks)
+            {
+                if (track.target == null) continue;
+                var value = UIAnimation.Read(track.target, track.property);
+                _snapshot.Add((track, value));
+                if (child) _childRest.Add((track, value));
+                if (track.target is TMP_Text text) _texts.Add((text, text.text));
+            }
+        }
+
+        static List<UIAnimation> CalledChildren(UIAnimation root)
+        {
+            var found = new List<UIAnimation>();
+            var pending = new Queue<UIAnimation>();
+            pending.Enqueue(root);
+            while (pending.Count > 0 && found.Count < 64)
+            {
+                foreach (var s in pending.Dequeue().states)
+                foreach (var call in s.childCalls)
+                    if (call.child != null && call.child != root && !found.Contains(call.child))
+                    {
+                        found.Add(call.child);
+                        pending.Enqueue(call.child);
+                    }
+            }
+            return found;
+        }
+
+        // Children start from their rest pose at every seek, so scrubbing back before a call shows them untouched.
+        void EvaluateAt(float t)
+        {
+            foreach (var (track, value) in _childRest) UIAnimation.Write(track.target, track.property, value);
+            UIAnimation.EvaluateTree(State, t);
         }
 
         // A state bound to the second half of an event pair (Exit, Up, Deselect, ToggleOff) is previewed from the end
@@ -148,10 +187,10 @@ namespace SeoBYP.TimelineAnimation.Editor
             if (_inPrefabStage)
             {
                 AnimationMode.BeginSampling();
-                UIAnimation.Evaluate(State, Time);
+                EvaluateAt(Time);
                 AnimationMode.EndSampling();
             }
-            else UIAnimation.Evaluate(State, Time);
+            else EvaluateAt(Time);
             Repaint();
             Changed?.Invoke();
         }
@@ -196,6 +235,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 if (track.target is TMP_Text text) text.ForceMeshUpdate();
             _snapshot.Clear();
             _texts.Clear();
+            _childRest.Clear();
 
             Target = null;
             State = null;

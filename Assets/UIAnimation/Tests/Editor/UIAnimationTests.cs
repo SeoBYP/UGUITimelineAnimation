@@ -285,12 +285,12 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.AreEqual(1f, _image.fillAmount, 1e-4f);
         }
 
-        // ---------- 시그널 ----------
+        // ---------- 애니메이션 이벤트 ----------
 
-        UIAnimState WithSignals(string name, params (float time, string name)[] signals)
+        UIAnimState WithSignals(string name, params (float time, string name)[] events)
         {
             var state = Fade(name, 0f);
-            foreach (var (time, signal) in signals) state.signals.Add(new UIAnimSignal { time = time, name = signal });
+            foreach (var (time, e) in events) state.events.Add(new UIAnimEventMarker { time = time, name = e });
             _anim.states.Add(state);
             return state;
         }
@@ -298,12 +298,12 @@ namespace SeoBYP.TimelineAnimation.Tests
         List<string> Record()
         {
             var raised = new List<string>();
-            _anim.SignalRaised += (state, signal) => raised.Add($"{state}:{signal}");
+            _anim.EventRaised += (in UIAnimEventInfo e) => raised.Add($"{e.State}:{e.Name}");
             return raised;
         }
 
         [Test]
-        public void 시그널은_그_시간을_지날_때_한_번씩_발생한다()
+        public void 애니메이션_이벤트는_그_시간을_지날_때_한_번씩_발생한다()
         {
             WithSignals("Close", (0.3f, "A"), (0.6f, "B"));
             var raised = Record();
@@ -319,7 +319,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void 영초_시그널은_재생을_시작하자마자_발생한다()
+        public void 영초_이벤트는_재생을_시작하자마자_발생한다()
         {
             WithSignals("Open", (0f, "Start"));
             var raised = Record();
@@ -328,7 +328,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void Complete로_건너뛰면_남은_시그널이_순서대로_발생한다()
+        public void Complete로_건너뛰면_남은_이벤트가_순서대로_발생한다()
         {
             WithSignals("Close", (0.3f, "A"), (0.6f, "B"), (0.9f, "C"));
             var raised = Record();
@@ -340,7 +340,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void 취소되면_남은_시그널은_발생하지_않는다()
+        public void 취소되면_남은_이벤트는_발생하지_않는다()
         {
             WithSignals("Close", (0.3f, "A"), (0.6f, "B"));
             _anim.states.Add(Fade("Open", 1f));
@@ -353,16 +353,199 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void WaitSignalAsync는_그_시그널이_오면_완료된다()
+        public void WaitEventAsync는_그_이벤트가_오면_완료된다()
         {
             WithSignals("Close", (0.3f, "A"), (0.6f, "Impact"));
             var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
-            var wait = _anim.WaitSignalAsync("Impact");
+            var wait = _anim.WaitEventAsync("Impact");
 
             UIAnimation.Step(playback, 0.4f);
-            Assert.AreEqual(UniTaskStatus.Pending, wait.Status, "다른 시그널(A)로는 끝나지 않는다");
+            Assert.AreEqual(UniTaskStatus.Pending, wait.Status, "다른 이벤트(A)로는 끝나지 않는다");
             UIAnimation.Step(playback, 0.7f);
             Assert.AreEqual(UniTaskStatus.Succeeded, wait.Status);
         }
+
+        // ---------- 자식 상태 호출 ----------
+
+        UIAnimation Child(out Image image)
+        {
+            var go = new GameObject("Child", typeof(RectTransform));
+            go.transform.SetParent(_go.transform, false);
+            image = go.AddComponent<Image>();
+            image.color = new Color(1, 1, 1, 0);
+            var child = go.AddComponent<UIAnimation>();
+            child.states.Add(State("Show", Track(image, UIAnimProperty.GraphicAlpha, false, false, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)))));
+            return child;
+        }
+
+        UIAnimState Caller(UIAnimation child, float time)
+        {
+            var parent = State("Open");
+            parent.childCalls.Add(new UIAnimChildCall { time = time, child = child, state = "Show" });
+            _anim.states.Add(parent);
+            return parent;
+        }
+
+        [Test]
+        public void 부모가_지정한_시간에_자식_상태를_재생한다()
+        {
+            var child = Child(out _);
+            Caller(child, 0.3f);
+            var playback = _anim.Prepare("Open", UIAnimInterrupt.Cancel, null);
+
+            UIAnimation.Step(playback, 0.2f);
+            Assert.IsFalse(child.IsPlaying("Show"));
+            UIAnimation.Step(playback, 0.4f);
+            Assert.IsTrue(child.IsPlaying("Show"));
+        }
+
+        [Test]
+        public void 부모_길이는_자식_상태가_끝나는_시간까지_포함한다()
+        {
+            var parent = Caller(Child(out _), 0.5f);
+            Assert.AreEqual(1.5f, parent.Duration, 1e-4f, "호출 0.5초 + 자식 길이 1초");
+        }
+
+        [Test]
+        public void 부모를_Complete하면_자식도_끝_값이_된다()
+        {
+            var child = Child(out var image);
+            Caller(child, 0.3f);
+            var playback = _anim.Prepare("Open", UIAnimInterrupt.Cancel, null);
+            UIAnimation.Step(playback, 0.2f);   // 아직 호출 전
+
+            _anim.Complete("Open");
+            Assert.AreEqual(1f, image.color.a, 1e-4f);
+            Assert.IsFalse(child.IsPlaying("Show"));
+        }
+
+        [Test]
+        public void 미리보기는_자식_상태를_호출_후_지난_시간으로_그린다()
+        {
+            var child = Child(out var image);
+            var parent = Caller(child, 0.5f);
+
+            UIAnimation.ResolveTree(parent);
+            UIAnimation.EvaluateTree(parent, 0.8f);
+            Assert.AreEqual(0.3f, image.color.a, 1e-4f);
+        }
+
+        [Test]
+        public void 부모와_자식이_서로_호출해도_무한히_반복하지_않는다()
+        {
+            var child = Child(out _);
+            Caller(child, 0f);
+            child.states[0].childCalls.Add(new UIAnimChildCall { time = 0f, child = _anim, state = "Open" });
+
+            Assert.DoesNotThrow(() => _ = _anim.states[0].Duration);
+            Assert.DoesNotThrow(() => _anim.Prepare("Open", UIAnimInterrupt.Cancel, null));
+        }
+
+        // ---------- 커스텀 struct 이벤트와 인스펙터 리스너 ----------
+
+        UIAnimEventMarker WithData<T>(string state, float time, string name, T data) where T : struct, IUIAnimEventData
+        {
+            var marker = new UIAnimEventMarker
+            {
+                time = time, name = name,
+                dataType = UIAnimEventMarker.TypeKey(typeof(T)), dataJson = JsonUtility.ToJson(data),
+            };
+            var s = Fade(state, 0f);
+            s.events.Add(marker);
+            _anim.states.Add(s);
+            return marker;
+        }
+
+        [Test]
+        public void 커스텀_struct_데이터를_AddListener로_받는다()
+        {
+            WithData("Hit", 0.5f, "Impact", new TestHitEvent { damage = 12f, sfx = "hit" });
+            TestHitEvent received = default;
+            var count = 0;
+            _anim.AddListener((in UIAnimEventInfo e, in TestHitEvent hit) =>
+            {
+                received = hit;
+                count++;
+            });
+            var playback = _anim.Prepare("Hit", UIAnimInterrupt.Cancel, null);
+
+            UIAnimation.Step(playback, 0.6f);
+            Assert.AreEqual(1, count);
+            Assert.AreEqual(12f, received.damage, 1e-4f);
+            Assert.AreEqual("hit", received.sfx);
+        }
+
+        [Test]
+        public void 다른_struct를_기다리는_리스너는_호출되지_않는다()
+        {
+            WithData("Hit", 0.5f, "Impact", new TestHitEvent { damage = 1f });
+            var other = 0;
+            _anim.AddListener((in UIAnimEventInfo e, in TestSoundEvent sound) => other++);
+            var playback = _anim.Prepare("Hit", UIAnimInterrupt.Cancel, null);
+
+            UIAnimation.Step(playback, 0.6f);
+            Assert.AreEqual(0, other);
+        }
+
+        [Test]
+        public void 리스너를_Dispose하면_더_이상_받지_않는다()
+        {
+            WithData("Hit", 0.5f, "Impact", new TestHitEvent { damage = 1f });
+            var count = 0;
+            var subscription = _anim.AddListener((in UIAnimEventInfo e, in TestHitEvent hit) => count++);
+            subscription.Dispose();
+            var playback = _anim.Prepare("Hit", UIAnimInterrupt.Cancel, null);
+
+            UIAnimation.Step(playback, 0.6f);
+            Assert.AreEqual(0, count);
+        }
+
+        [Test]
+        public void 이벤트_정보로_struct_데이터를_꺼낼_수_있다()
+        {
+            WithData("Hit", 0.5f, "Impact", new TestHitEvent { damage = 7f });
+            float damage = 0f;
+            var hasSound = true;
+            _anim.EventRaised += (in UIAnimEventInfo e) =>
+            {
+                if (e.TryGetData(out TestHitEvent hit)) damage = hit.damage;
+                hasSound = e.TryGetData(out TestSoundEvent _);
+            };
+            var playback = _anim.Prepare("Hit", UIAnimInterrupt.Cancel, null);
+
+            UIAnimation.Step(playback, 0.6f);
+            Assert.AreEqual(7f, damage, 1e-4f);
+            Assert.IsFalse(hasSound);
+        }
+
+        [Test]
+        public void 인스펙터_리스너는_이름이_같은_이벤트에_UnityEvent를_호출한다()
+        {
+            WithSignals("Close", (0.3f, "A"), (0.6f, "B"));
+            var listener = _go.AddComponent<UIAnimEventListener>();
+            var count = 0;
+            var binding = new UIAnimEventListener.Binding { eventName = "B" };
+            binding.onRaised.AddListener(() => count++);
+            listener.bindings.Add(binding);
+            listener.OnEnable();   // EditMode tests do not run OnEnable for added components
+            var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
+
+            UIAnimation.Step(playback, 0.4f);
+            Assert.AreEqual(0, count, "A는 연결되지 않음");
+            UIAnimation.Step(playback, 0.7f);
+            Assert.AreEqual(1, count);
+            listener.OnDisable();
+        }
+    }
+
+    public struct TestHitEvent : IUIAnimEventData
+    {
+        public float damage;
+        public string sfx;
+    }
+
+    public struct TestSoundEvent : IUIAnimEventData
+    {
+        public string clip;
     }
 }
