@@ -5,7 +5,8 @@
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "LitMotion",
-        "UniTask"
+        "UniTask",
+        "Unity.Mathematics"
     ],
     "autoReferenced": true
 }

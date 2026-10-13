@@ -322,7 +322,6 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
   - name: Off
-    previewFrom: On
     actions: []
     tracks:
     - target: {fileID: 4032267328304889109}

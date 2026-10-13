@@ -34,7 +34,6 @@ namespace SeoBYP.TimelineAnimation.Editor
         VisualElement _tabs, _body, _inspector;
         Label _targetLabel, _timeLabel, _status;
         Button _play, _loop;
-        ToolbarMenu _from;
         UIAnimTimelineView _timeline;
 
         UIAnimState CurrentState => _target != null && _state < _target.states.Count ? _target.states[_state] : null;
@@ -84,8 +83,6 @@ namespace SeoBYP.TimelineAnimation.Editor
             _timeLabel = new Label();
             _timeLabel.AddToClassList("uia-time");
             topbar.Add(_timeLabel);
-            _from = new ToolbarMenu { tooltip = "미리보기를 어떤 상태에서 시작할지. 예) Off는 On이 끝난 모습에서 시작해야 움직임이 보입니다.", style = { marginLeft = 8 } };
-            topbar.Add(_from);
             topbar.Add(new VisualElement { style = { flexGrow = 1 } });
             _status = new Label();
             _status.AddToClassList("uia-status");
@@ -292,7 +289,14 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             var time = CurrentState.Duration > 0f ? CurrentState.Duration : 0.2f;
             var key = new UIAnimKey { time = time, value = UIAnimation.Read(target, property) };
-            CurrentState.tracks.Add(new UIAnimTrack { target = target, property = property, keys = { key } });
+            // Text tracks animate absolute values (reveal 0→1, per-character effects), so they never start from the live value.
+            var text = IsTextProperty(property);
+            CurrentState.tracks.Add(new UIAnimTrack
+            {
+                target = target, property = property, startFromCurrent = !text,
+                stagger = UIAnimTextChars.IsCharProperty(property) ? 0.05f : 0f,
+                keys = { key },
+            });
             _track = CurrentState.tracks.Count - 1;
             _selection.Clear();
             _selection.Add(key);
@@ -303,6 +307,8 @@ namespace SeoBYP.TimelineAnimation.Editor
             track.target = target;
             track.property = property;
         });
+
+        static bool IsTextProperty(UIAnimProperty p) => p == UIAnimProperty.TextReveal || UIAnimTextChars.IsCharProperty(p);
 
         // The value a new key should get: what the track's keys say at that time, or the live value for an empty track.
         static Vector4 RawValueAt(UIAnimTrack track, float time)
@@ -368,34 +374,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             _tabs.Add(add);
 
             _timeline.SetState(_target, CurrentState, _track, _selection);
-            RebuildFromMenu();
             RebuildInspector();
-        }
-
-        // "Preview from" dropdown: the original pose, or the end of another state (stored on the state, shared with the team).
-        void RebuildFromMenu()
-        {
-            var state = CurrentState;
-            _from.style.display = state != null ? DisplayStyle.Flex : DisplayStyle.None;
-            if (state == null) return;
-
-            var valid = _target.states.Any(s => s != state && s.name == state.previewFrom);
-            _from.text = valid ? $"시작: {state.previewFrom} 끝" : "시작: 원래 모습";
-            _from.menu.ClearItems();
-            _from.menu.AppendAction("원래 모습", _ => SetPreviewFrom(""), _ => valid ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Checked);
-            foreach (var other in _target.states.Where(s => s != state))
-            {
-                var name = other.name;
-                _from.menu.AppendAction($"{name} 끝", _ => SetPreviewFrom(name),
-                    _ => valid && state.previewFrom == name ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
-            }
-        }
-
-        void SetPreviewFrom(string stateName)
-        {
-            var state = CurrentState;
-            Modify("Preview From", () => state.previewFrom = stateName);
-            if (_preview.IsActive) _preview.Begin(_target, state, _preview.Time);   // show the new starting pose right away
         }
 
         void RebuildInspector()
@@ -477,6 +456,28 @@ namespace SeoBYP.TimelineAnimation.Editor
             var change = new Button { text = $"{TrackTitle(track)}   ▾", tooltip = "다른 오브젝트/속성으로 변경", style = { unityTextAlign = TextAnchor.MiddleLeft } };
             change.clicked += () => ShowPropertyMenu(change.worldBound, track);
             section.Add(change);
+            if (IsTextProperty(track.property))
+            {
+                if (UIAnimTextChars.IsCharProperty(track.property))
+                {
+                    var stagger = new FloatField("글자 간격 (s)") { value = track.stagger, isDelayed = true, tooltip = "각 글자가 앞 글자보다 이만큼 늦게 시작합니다. 0이면 모든 글자가 함께 움직입니다." };
+                    stagger.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.stagger = Mathf.Max(0f, e.newValue)));
+                    section.Add(stagger);
+                    var perChar = new FloatField("글자당 길이 (s)") { value = track.durationPerChar, isDelayed = true, tooltip = "0보다 크면 i번째 글자가 키 전체를 i × 이 값(초) 동안 재생합니다. 뒤 글자일수록 길게 움직입니다. 0이면 키 시간 그대로." };
+                    perChar.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.durationPerChar = Mathf.Max(0f, e.newValue)));
+                    section.Add(perChar);
+                    section.Add(Hint("키는 글자 하나의 움직임입니다. 글자마다 '글자 간격'만큼 늦게 같은 움직임을 재생합니다."));
+                }
+                else
+                {
+                    var scramble = new EnumField("스크램블", track.scramble) { tooltip = "아직 나오지 않은 글자를 무작위 문자로 채웁니다." };
+                    scramble.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.scramble = (ScrambleMode)e.newValue));
+                    section.Add(scramble);
+                    section.Add(Hint("0 = 글자 없음, 1 = 전체 표시. 리치 텍스트 태그는 글자 수에 포함되지 않습니다."));
+                }
+                _inspector.Add(section);
+                return;
+            }
             var fromCurrent = new Toggle("현재 값에서 시작") { value = track.startFromCurrent, tooltip = "첫 키가 재생 시작 순간의 값이 됩니다. 중간에 끊겨도 값이 튀지 않습니다. 첫 키를 뒤로 옮기면 그만큼 기다렸다가 시작합니다(딜레이). 키가 하나면 현재 값 → 그 키." };
             fromCurrent.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.startFromCurrent = e.newValue));
             var relative = new Toggle("원래 값 기준") { value = track.relativeToRest, tooltip = "키 값을 원래 값에 더합니다. 예: -14 = 원래 크기보다 14 작게." };
@@ -507,8 +508,8 @@ namespace SeoBYP.TimelineAnimation.Editor
                     : "'현재 값에서 시작': 이 키는 재생 시작 순간의 값입니다."));
             else
             {
-                section.Add(ValueField(track.relativeToRest ? "값 (원래 값 +)" : "값", track, key));
-                if (!track.relativeToRest && track.target != null)
+                section.Add(ValueField(key.IsVibration ? "세기" : track.relativeToRest ? "값 (원래 값 +)" : "값", track, key));
+                if (!track.relativeToRest && track.target != null && !IsTextProperty(track.property))
                     section.Add(new Button(() =>
                     {
                         _preview.Stop();   // capture the real value, not a previewed one
@@ -541,11 +542,20 @@ namespace SeoBYP.TimelineAnimation.Editor
             var type = new EnumField("방식", first.curveType) { showMixedValue = keys.Any(k => k.curveType != first.curveType) };
             type.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.curveType = (UIAnimCurveType)e.newValue; }));
             arrival.Add(type);
-            if (keys.All(k => k.curveType == UIAnimCurveType.Ease))
+            if (keys.All(k => k.curveType != UIAnimCurveType.Curve))
             {
                 var ease = new EnumField("Ease", first.ease) { showMixedValue = keys.Any(k => k.ease != first.ease) };
                 ease.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.ease = (Ease)e.newValue; }));
                 arrival.Add(ease);
+            }
+            if (keys.All(k => k.IsVibration))
+            {
+                var frequency = new FloatField("초당 진동 수") { value = first.frequency, isDelayed = true, showMixedValue = keys.Any(k => k.frequency != first.frequency) };
+                frequency.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.frequency = Mathf.Max(0f, e.newValue); }));
+                var damping = new FloatField("감쇠") { value = first.damping, isDelayed = true, showMixedValue = keys.Any(k => k.damping != first.damping) };
+                damping.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.damping = Mathf.Max(0f, e.newValue); }));
+                arrival.Add(frequency);
+                arrival.Add(damping);
             }
             else if (keys.All(k => k.curveType == UIAnimCurveType.Curve))
             {
@@ -555,7 +565,8 @@ namespace SeoBYP.TimelineAnimation.Editor
             }
 
             // Only when the selected keys share one shape; a mixed selection has nothing single to draw.
-            var sameShape = keys.All(k => k.curveType == first.curveType && (k.curveType == UIAnimCurveType.Curve || k.ease == first.ease));
+            var sameShape = keys.All(k => k.curveType == first.curveType && (k.curveType == UIAnimCurveType.Curve || k.ease == first.ease)
+                                          && k.frequency == first.frequency && k.damping == first.damping);
             if (sameShape) arrival.Add(new UIAnimEaseGraph(first.Weight, color));
             return arrival;
         }
@@ -570,7 +581,28 @@ namespace SeoBYP.TimelineAnimation.Editor
             switch (track.property)
             {
                 case UIAnimProperty.Scale:
+                case UIAnimProperty.CharScale:
                     return ScaleField(label, v, key, relative, Set);
+                case UIAnimProperty.CharOffset:
+                case UIAnimProperty.CharRotation:
+                {
+                    var f = new Vector3Field(label) { value = v };
+                    f.RegisterValueChangedCallback(e => Set(e.newValue));
+                    return f;
+                }
+                case UIAnimProperty.CharColor:
+                {
+                    var f = new ColorField(label) { value = v };
+                    f.RegisterValueChangedCallback(e => Set(e.newValue));
+                    return f;
+                }
+                case UIAnimProperty.CharAlpha:
+                case UIAnimProperty.TextReveal:
+                {
+                    var f = new Slider(label, 0f, 1f) { value = v.x, showInputField = true };
+                    f.RegisterValueChangedCallback(e => Set(new Vector4(e.newValue, 0, 0, 0)));
+                    return f;
+                }
                 case UIAnimProperty.SizeDelta:
                 case UIAnimProperty.AnchoredPosition:
                 {

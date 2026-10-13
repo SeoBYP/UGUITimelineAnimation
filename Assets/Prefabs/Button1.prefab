@@ -380,7 +380,6 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
   - name: Unhover
-    previewFrom: Hover
     actions: []
     tracks:
     - target: {fileID: 2185232995185939713}
@@ -519,7 +518,6 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
   - name: Release
-    previewFrom: Press
     actions: []
     tracks:
     - target: {fileID: 8907896905305175111}

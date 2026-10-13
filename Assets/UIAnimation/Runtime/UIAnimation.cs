@@ -16,6 +16,12 @@ namespace SeoBYP.TimelineAnimation
         GraphicColor,       // Graphic.color
         GraphicAlpha,       // Graphic.color.a
         FontSize,           // TMP_Text.fontSize
+        TextReveal,         // TMP_Text.maxVisibleCharacters as 0..1 of the text (typewriter)
+        CharScale,          // per character, around its center
+        CharOffset,         // per character, local position offset
+        CharRotation,       // per character, euler angles around its center
+        CharColor,          // per character vertex color
+        CharAlpha,          // per character vertex alpha
     }
 
     /// <summary>How a new state treats states that are still playing on the same properties.</summary>
@@ -29,6 +35,8 @@ namespace SeoBYP.TimelineAnimation
     {
         Ease,       // LitMotion ease preset
         Curve,      // AnimationCurve over the segment: 0 = previous key's value, 1 = this key's value
+        Punch,      // LMotion.Punch: oscillates around the previous value with this key's value as strength, ends back there
+        Shake,      // LMotion.Shake: like Punch but each component jitters randomly every frame
     }
 
     public enum UIAnimActionType
@@ -45,13 +53,28 @@ namespace SeoBYP.TimelineAnimation
         public UIAnimCurveType curveType = UIAnimCurveType.Ease;
         public Ease ease = Ease.OutSine;
         public AnimationCurve curve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+        [Tooltip("Punch/Shake: oscillations per second. The count over the segment is (int)(length x this), like LitMotion's frequency.")]
+        public float frequency = 10f;
+        [Tooltip("Punch/Shake: how fast the oscillation dies out (LitMotion dampingRatio).")]
+        public float damping = 1f;
 
         [NonSerialized] internal Vector4 resolved;
 
-        /// <summary>Segment progress (0..1) → interpolation weight. Not clamped, so curves may overshoot.</summary>
-        public float Weight(float t01) => curveType == UIAnimCurveType.Curve && curve != null
-            ? curve.Evaluate(t01)
-            : EaseUtility.Evaluate(t01, ease);
+        public bool IsVibration => curveType is UIAnimCurveType.Punch or UIAnimCurveType.Shake;
+
+        /// <summary>Oscillation count over a segment of this many seconds.</summary>
+        internal int Oscillations(float seconds) => (int)(seconds * frequency + 1e-4f);
+
+        /// <summary>
+        /// Segment progress (0..1) to interpolation weight. Not clamped, so curves may overshoot.
+        /// For Punch/Shake this is the (1-second) envelope, used for drawing; sampling uses the real segment length.
+        /// </summary>
+        public float Weight(float t01) => curveType switch
+        {
+            UIAnimCurveType.Curve when curve != null => curve.Evaluate(t01),
+            UIAnimCurveType.Punch or UIAnimCurveType.Shake => UIAnimVibration.Envelope(Oscillations(1f), damping, EaseUtility.Evaluate(t01, ease)),
+            _ => EaseUtility.Evaluate(t01, ease),
+        };
     }
 
     [Serializable]
@@ -63,34 +86,78 @@ namespace SeoBYP.TimelineAnimation
         public bool startFromCurrent = true;
         [Tooltip("Key values are added to the value the property had on Awake (e.g. -14 = 14 smaller than the original size).")]
         public bool relativeToRest;
+        [Tooltip("Per-character tracks only: each character starts this many seconds after the previous one.")]
+        public float stagger;
+        [Tooltip("Per-character tracks only: when above 0, character i plays the keys over i x this many seconds (character 0 stays still).")]
+        public float durationPerChar;
+        [Tooltip("Text Reveal only: characters not yet revealed are shown as random characters (LitMotion WithScrambleChars).")]
+        public ScrambleMode scramble = ScrambleMode.None;
         public List<UIAnimKey> keys = new();      // sorted by time
 
         [NonSerialized] internal Vector4 rest;          // value captured on Awake, base for relativeToRest
         [NonSerialized] internal Vector4 startValue;    // value at state start, when startFromCurrent
         [NonSerialized] internal bool released;         // another playing state took this property over
 
-        public float End => keys.Count > 0 ? keys[keys.Count - 1].time : 0f;
+        public float End
+        {
+            get
+            {
+                if (keys.Count == 0) return 0f;
+                var end = keys[keys.Count - 1].time;
+                if (UIAnimTextChars.IsCharProperty(property) && target is TMP_Text text && text.textInfo != null)
+                {
+                    // The last character starts (count - 1) x stagger later and, with durationPerChar, also lasts longest.
+                    var last = Mathf.Max(0, text.textInfo.characterCount - 1);
+                    end = last * stagger + (durationPerChar > 0f ? last * durationPerChar : end);
+                }
+                return end;
+            }
+        }
 
-        /// <summary>Value at time t. Before the first key it holds (or comes from the start value), after the last it holds.</summary>
-        internal Vector4 Sample(float t)
+        /// <summary>
+        /// Value at time t. Before the first key it holds (or comes from the start value), after the last it holds.
+        /// <paramref name="timeScale"/> stretches the key times (per-character durationPerChar).
+        /// </summary>
+        internal Vector4 Sample(float t, float timeScale = 1f)
         {
             var first = keys[0];
+            var firstTime = first.time * timeScale;
             // A single key is a "go to" track: implicit segment from the live start value to that key.
-            if (startFromCurrent && keys.Count == 1 && first.time > 0f && t < first.time)
-                return Vector4.LerpUnclamped(startValue, first.resolved, first.Weight(t / first.time));
-            if (t <= first.time) return first.resolved;   // holds until the first key (a delay when it sits after 0)
+            if (startFromCurrent && keys.Count == 1 && firstTime > 0f && t < firstTime)
+                return Segment(startValue, first, t, firstTime);
+            if (t <= firstTime) return first.resolved;   // holds until the first key (a delay when it sits after 0)
 
             for (var i = 1; i < keys.Count; i++)
             {
                 var key = keys[i];
-                if (t >= key.time) continue;
-                var prev = keys[i - 1];
-                var span = key.time - prev.time;
-                var p = span > 0f ? (t - prev.time) / span : 1f;
-                return Vector4.LerpUnclamped(prev.resolved, key.resolved, key.Weight(p));
+                if (t >= key.time * timeScale) continue;
+                var prevTime = keys[i - 1].time * timeScale;
+                return Segment(keys[i - 1].resolved, key, t - prevTime, key.time * timeScale - prevTime);
             }
             return keys[keys.Count - 1].resolved;
         }
+
+        // From a value to a key over `span` seconds, at `local` seconds into the segment.
+        Vector4 Segment(Vector4 from, UIAnimKey key, float local, float span)
+        {
+            var p = span > 0f ? Mathf.Clamp01(local / span) : 1f;
+            if (!key.IsVibration) return Vector4.LerpUnclamped(from, key.resolved, key.Weight(p));
+
+            // Punch/Shake: key.value is the strength; the motion oscillates around `from` and ends back on it.
+            var envelope = UIAnimVibration.Envelope(key.Oscillations(span), key.damping, EaseUtility.Evaluate(p, key.ease));
+            var strength = key.value * envelope;
+            if (key.curveType == UIAnimCurveType.Shake)
+                strength = Vector4.Scale(strength, UIAnimVibration.RandomSigned(0u, local, Dimensions(property)));
+            return from + strength;
+        }
+
+        static int Dimensions(UIAnimProperty p) => p switch
+        {
+            UIAnimProperty.SizeDelta or UIAnimProperty.AnchoredPosition => 2,
+            UIAnimProperty.Scale or UIAnimProperty.CharScale or UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => 3,
+            UIAnimProperty.GraphicColor or UIAnimProperty.CharColor => 4,
+            _ => 1,
+        };
     }
 
     [Serializable]
@@ -104,8 +171,6 @@ namespace SeoBYP.TimelineAnimation
     public sealed class UIAnimState
     {
         public string name = "State";
-        [Tooltip("Editor preview only: this state is applied to its end first, so e.g. 'Off' is previewed starting from 'On'.")]
-        public string previewFrom = "";
         public List<UIAnimAction> actions = new();
         public List<UIAnimTrack> tracks = new();
 
@@ -179,6 +244,9 @@ namespace SeoBYP.TimelineAnimation
             }
         }
 
+        /// <summary>For UnityEvents (e.g. a Button's OnClick), which can only pass one argument.</summary>
+        public void PlayState(string stateName) => Play(stateName);
+
         public void Play(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
             PointerEventData pointer = null)
         {
@@ -188,7 +256,6 @@ namespace SeoBYP.TimelineAnimation
             var duration = playback.state.Duration;
             if (duration <= 0f)
             {
-                Evaluate(playback.state, 0f);
                 playback.active = false;
                 return;
             }
@@ -216,6 +283,8 @@ namespace SeoBYP.TimelineAnimation
             foreach (var track in playback.state.tracks) track.released = false;
             foreach (var action in playback.state.actions) Run(action, pointer);
             Resolve(playback.state);
+            // Show t = 0 right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
+            Evaluate(playback.state, 0f);
 
             playback.active = true;
             return playback;
@@ -278,13 +347,31 @@ namespace SeoBYP.TimelineAnimation
             foreach (var track in state.tracks)
             {
                 if (track.target == null || track.keys.Count == 0) continue;
+                if (IsText(track.property)) ((TMP_Text)track.target).ForceMeshUpdate();   // character count for duration/stagger
+                if (UIAnimTextChars.IsCharProperty(track.property))
+                {
+                    // Character values are absolute per character (scale 1 = unchanged); there is no live/rest value per character.
+                    foreach (var key in track.keys) key.resolved = key.value;
+                    HoldThroughVibrations(track);
+                    continue;
+                }
+                if (track.property == UIAnimProperty.TextReveal && track.scramble != ScrambleMode.None)
+                    UIAnimTextChars.For((TMP_Text)track.target).CaptureSource();
                 track.startValue = Read(track.target, track.property);
                 foreach (var key in track.keys)
                     key.resolved = track.relativeToRest ? track.rest + key.value : key.value;
                 // The first key becomes the live value, so the track starts where the property is. With 2+ keys it holds
                 // until its time (= a delay); a lone key keeps its value and is reached through the implicit segment.
                 if (track.startFromCurrent && (track.keys.Count > 1 || track.keys[0].time <= 0f)) track.keys[0].resolved = track.startValue;
+                HoldThroughVibrations(track);
             }
+        }
+
+        // A punch/shake key's value is a strength, not a destination: after it the track is back where it started.
+        static void HoldThroughVibrations(UIAnimTrack track)
+        {
+            for (var i = 1; i < track.keys.Count; i++)
+                if (track.keys[i].IsVibration) track.keys[i].resolved = track.keys[i - 1].resolved;
         }
 
         /// <summary>Writes the state at time t. Shared by runtime playback, tests and the editor preview.</summary>
@@ -293,9 +380,16 @@ namespace SeoBYP.TimelineAnimation
             foreach (var track in state.tracks)
             {
                 if (track.released || track.target == null || track.keys.Count == 0) continue;
-                Write(track.target, track.property, track.Sample(t));
+                if (UIAnimTextChars.IsCharProperty(track.property)) UIAnimTextChars.For((TMP_Text)track.target).Accumulate(track, t);
+                else if (track.property == UIAnimProperty.TextReveal && track.scramble != ScrambleMode.None)
+                    UIAnimTextChars.For((TMP_Text)track.target).Scramble(track.Sample(t).x, track.scramble, t);
+                else Write(track.target, track.property, track.Sample(t));
             }
+            // After every plain write (a reveal changes which characters exist), so character effects land on the final mesh.
+            UIAnimTextChars.FlushAll();
         }
+
+        static bool IsText(UIAnimProperty p) => p == UIAnimProperty.TextReveal || UIAnimTextChars.IsCharProperty(p);
 
         static void Run(UIAnimAction action, PointerEventData pointer)
         {
@@ -320,8 +414,19 @@ namespace SeoBYP.TimelineAnimation
             UIAnimProperty.GraphicColor => ((Graphic)target).color,
             UIAnimProperty.GraphicAlpha => new Vector4(((Graphic)target).color.a, 0, 0, 0),
             UIAnimProperty.FontSize => new Vector4(((TMP_Text)target).fontSize, 0, 0, 0),
+            UIAnimProperty.TextReveal => new Vector4(RevealOf((TMP_Text)target), 0, 0, 0),
+            UIAnimProperty.CharScale => Vector3.one,
+            UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => Vector4.zero,
+            UIAnimProperty.CharColor => ((TMP_Text)target).color,
+            UIAnimProperty.CharAlpha => new Vector4(1f, 0, 0, 0),
             _ => throw new ArgumentOutOfRangeException(nameof(property)),
         };
+
+        static float RevealOf(TMP_Text text)
+        {
+            var count = text.textInfo?.characterCount ?? 0;
+            return count == 0 || text.maxVisibleCharacters >= count ? 1f : (float)text.maxVisibleCharacters / count;
+        }
 
         public static void Write(Component target, UIAnimProperty property, Vector4 v)
         {
@@ -338,6 +443,17 @@ namespace SeoBYP.TimelineAnimation
                     g.color = c;
                     break;
                 case UIAnimProperty.FontSize: ((TMP_Text)target).fontSize = v.x; break;
+                case UIAnimProperty.TextReveal:
+                    var text = (TMP_Text)target;
+                    // 1 = everything (also covers text that grows later); below that, a share of the current characters.
+                    text.maxVisibleCharacters = v.x >= 0.9999f ? 99999 : Mathf.RoundToInt(Mathf.Max(0f, v.x) * text.textInfo.characterCount);
+                    break;
+                case UIAnimProperty.CharScale:
+                case UIAnimProperty.CharOffset:
+                case UIAnimProperty.CharRotation:
+                case UIAnimProperty.CharColor:
+                case UIAnimProperty.CharAlpha:
+                    break;   // per-character tracks are applied through UIAnimTextChars, not as a single value
                 default: throw new ArgumentOutOfRangeException(nameof(property));
             }
         }

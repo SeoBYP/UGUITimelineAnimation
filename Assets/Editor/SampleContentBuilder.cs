@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
-// Dev-only: rebuilds sample content from annulusgames/UGUIAnimationSamples (2_Button, 4_Toggle)
+// Dev-only: rebuilds sample content from annulusgames/UGUIAnimationSamples (2_Button, 3_Text, 4_Toggle)
 // with UIAnimation instead of hand-written LitMotion code. Not part of the UIAnimation package.
 static class SampleContentBuilder
 {
@@ -20,6 +20,8 @@ static class SampleContentBuilder
     const string Toggle1Path = "Assets/Prefabs/Toggle1.prefab";
     const string Toggle2Path = "Assets/Prefabs/Toggle2.prefab";
     const string TogglesScene = "Assets/Scenes/Toggles.unity";
+    const string TextDemoPath = "Assets/Prefabs/TextDemo.prefab";
+    const string TextScene = "Assets/Scenes/Text.unity";
 
     static readonly Color Red = new(1f, 0.3254902f, 0.3254902f, 1f);
     static Color Clear(Color c) => new(c.r, c.g, c.b, 0f);
@@ -29,6 +31,9 @@ static class SampleContentBuilder
     {
         if (!System.IO.File.Exists(Button1Path) || IsOldFormat(Button1Path)) EditorApplication.delayCall += BuildButtons;
         if (!System.IO.File.Exists(Toggle1Path)) EditorApplication.delayCall += BuildToggles;
+        // Rebuild when missing or from before the Scramble/Punch/Shake states existed.
+        if (!System.IO.File.Exists(TextDemoPath) || !System.IO.File.ReadAllText(TextDemoPath).Contains("name: Scramble"))
+            EditorApplication.delayCall += BuildText;
     }
 
     // Prefabs saved before the keyframe model serialized clips instead of keys. Checked on the file,
@@ -210,17 +215,115 @@ static class SampleContentBuilder
         };
     }
 
+    // ---------- 3_Text ----------
+
+    const string SampleText = "<color=#FF5353>Grumpy wizards</color> make <b>toxic brew</b> for the evil <i>Queen</i> and <i>Jack</i>.";
+    const int SampleTextLength = 59;   // characters without rich-text tags; the sample types 0.05s per character
+
+    [MenuItem("Tools/UIAnimation Dev/Rebuild Sample Text")]
+    static void BuildText()
+    {
+        if (!EnsureTmp(BuildText)) return;
+        var font = LoadOrCreateFont();
+        var demo = SavePrefab(BuildTextDemo(font), TextDemoPath);
+        var button = AssetDatabase.LoadAssetAtPath<GameObject>(Button1Path);
+        // Generated scene: rebuilt so new states get buttons, unless it is open right now (never overwrite an open scene).
+        var open = UnityEngine.SceneManagement.SceneManager.GetSceneByPath(TextScene).isLoaded;
+        if (!open && System.IO.File.Exists(TextScene)) AssetDatabase.DeleteAsset(TextScene);
+        var scene = open ? " (Text.unity is open, so its buttons were not rebuilt)" : BuildSceneIfMissing(TextScene, font, "- Text -", 190f, panel => PopulateTextScene(panel, demo, button));
+        Debug.Log($"[SampleContentBuilder] Built {TextDemoPath}{scene}");
+    }
+
+    // Sample 3_Text: one text, one state per effect (the sample's TextAnimation.cs Animation1/3/4/5/6).
+    static GameObject BuildTextDemo(TMP_FontAsset font)
+    {
+        var root = Rect("TextDemo", null);
+        root.sizeDelta = new Vector2(600, 200);
+        var text = root.gameObject.AddComponent<TextMeshProUGUI>();
+        text.font = font;
+        text.text = SampleText;
+        text.fontSize = 30;
+        text.alignment = TextAlignmentOptions.Center;
+
+        var anim = root.gameObject.AddComponent<UIAnimation>();
+        anim.States(
+            // Animation1: typewriter, 0.05s per character, rich text kept
+            State("Typewriter", Keys(text, UIAnimProperty.TextReveal, 0f, (0f, Vector4.zero, Ease.Linear), (SampleTextLength * 0.05f, new Vector4(1, 0), Ease.Linear))),
+            // Animation2: same typewriter, unrevealed characters shown as random lowercase letters
+            State("Scramble", Scrambled(Keys(text, UIAnimProperty.TextReveal, 0f, (0f, Vector4.zero, Ease.Linear), (SampleTextLength * 0.05f, new Vector4(1, 0), Ease.Linear)), ScrambleMode.Lowercase)),
+            // Animation3: each character flips in around Y (-90 -> 0, OutBack 0.25s), 0.05s apart
+            State("Flip", Keys(text, UIAnimProperty.CharRotation, 0.05f, (0f, new Vector3(0, -90, 0), Ease.Linear), (0.25f, Vector3.zero, Ease.OutBack))),
+            // Animation4: scale 0 -> 1 and rise 50px (0.2s), then turn red 0.3s later; 0.05s apart
+            State("PopUp",
+                Keys(text, UIAnimProperty.CharScale, 0.05f, (0f, Vector3.zero, Ease.Linear), (0.2f, Vector3.one, Ease.OutSine)),
+                Keys(text, UIAnimProperty.CharOffset, 0.05f, (0f, new Vector3(0, -50, 0), Ease.Linear), (0.2f, Vector3.zero, Ease.OutSine)),
+                Keys(text, UIAnimProperty.CharColor, 0.05f, (0.3f, Color.white, Ease.Linear), (0.5f, Red, Ease.OutSine))),
+            // Animation5: LMotion.Punch(1, 0.7, 1.4s).WithEase(OutQuad).WithFrequency(7), 0.025s apart (7 over 1.4s = 5 per second)
+            State("Punch", Vibrate(Keys(text, UIAnimProperty.CharScale, 0.025f, (0f, Vector3.one, Ease.Linear)),
+                UIAnimCurveType.Punch, 1.4f, Vector3.one * 0.7f, Ease.OutQuad, 5f)),
+            // Animation6: flash red -> white (0.07s, 0.025s apart) and LMotion.Shake(0, 30, 1.4 x i x 0.025s) with
+            // frequency (int)(duration / 0.2) = 5 per second, damping 1: every character starts at once and shakes longer the later it is
+            State("Shake",
+                Keys(text, UIAnimProperty.CharColor, 0.025f, (0f, Red, Ease.Linear), (0.07f, Color.white, Ease.OutSine)),
+                PerCharDuration(Vibrate(Keys(text, UIAnimProperty.CharOffset, 0f, (0f, Vector4.zero, Ease.Linear)),
+                    UIAnimCurveType.Shake, 1f, new Vector3(30, 30, 30), Ease.Linear, 5f), 1.4f * 0.025f)));
+        return root.gameObject;
+    }
+
+    static void PopulateTextScene(RectTransform panel, GameObject demo, GameObject button)
+    {
+        var text = (GameObject)PrefabUtility.InstantiatePrefab(demo, panel);
+        var rt = (RectTransform)text.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchoredPosition = new Vector2(0, -170);
+        var anim = text.GetComponent<UIAnimation>();
+
+        var states = new[] { "Typewriter", "Scramble", "Flip", "PopUp", "Punch", "Shake" };
+        var positions = new[] { new Vector2(-220, -120), new Vector2(0, -120), new Vector2(220, -120), new Vector2(-220, -200), new Vector2(0, -200), new Vector2(220, -200) };
+        for (var i = 0; i < states.Length; i++)
+        {
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(button, panel);
+            instance.name = $"Button {states[i]}";
+            ((RectTransform)instance.transform).anchoredPosition = positions[i];
+            instance.GetComponentInChildren<TMP_Text>().text = states[i];
+            UnityEditor.Events.UnityEventTools.AddStringPersistentListener(instance.GetComponent<Button>().onClick, anim.PlayState, states[i]);
+        }
+    }
+
+    // Keys at absolute values (text tracks never start from the live value).
+    static UIAnimTrack Keys(Component target, UIAnimProperty property, float stagger, params (float time, Vector4 value, Ease ease)[] keys)
+    {
+        var track = new UIAnimTrack { target = target, property = property, startFromCurrent = false, stagger = stagger };
+        foreach (var (time, value, ease) in keys) track.keys.Add(new UIAnimKey { time = time, value = value, ease = ease });
+        return track;
+    }
+
+    static UIAnimTrack Scrambled(UIAnimTrack reveal, ScrambleMode mode)
+    {
+        reveal.scramble = mode;
+        return reveal;
+    }
+
+    // Adds a Punch/Shake key: the track oscillates around its previous value with this strength and ends back on it.
+    static UIAnimTrack Vibrate(UIAnimTrack track, UIAnimCurveType type, float time, Vector4 strength, Ease ease, float perSecond)
+    {
+        track.keys.Add(new UIAnimKey { time = time, value = strength, curveType = type, ease = ease, frequency = perSecond, damping = 1f });
+        return track;
+    }
+
+    static UIAnimTrack PerCharDuration(UIAnimTrack track, float seconds)
+    {
+        track.durationPerChar = seconds;
+        return track;
+    }
+
     // ---------- track helpers ----------
 
     static UIAnimState State(string name, params UIAnimTrack[] tracks) => new() { name = name, tracks = new List<UIAnimTrack>(tracks) };
 
-    // Return states preview from the end of the state they undo, so their motion is visible in the editor.
-    static readonly Dictionary<string, string> PreviewFrom = new() { ["Unhover"] = "Hover", ["Release"] = "Press", ["Off"] = "On" };
-
     static void States(this UIAnimation anim, params UIAnimState[] states)
     {
-        foreach (var s in states)
-            if (PreviewFrom.TryGetValue(s.name, out var from)) s.previewFrom = from;
         anim.states = new List<UIAnimState>(states);
     }
 
@@ -324,7 +427,17 @@ static class SampleContentBuilder
     }
 
     // The scene only places the prefabs; instances pick up prefab changes, so an existing scene is never overwritten (it may be open).
-    static string BuildSceneIfMissing(string path, TMP_FontAsset font, string titleText, params (GameObject prefab, float x)[] items)
+    static string BuildSceneIfMissing(string path, TMP_FontAsset font, string titleText, params (GameObject prefab, float x)[] items) =>
+        BuildSceneIfMissing(path, font, titleText, 100f, panel =>
+        {
+            foreach (var (prefab, x) in items)
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, panel);
+                ((RectTransform)instance.transform).anchoredPosition = new Vector2(x, 0);
+            }
+        });
+
+    static string BuildSceneIfMissing(string path, TMP_FontAsset font, string titleText, float titleY, System.Action<RectTransform> populate)
     {
         if (System.IO.File.Exists(path)) return "";
 
@@ -351,17 +464,13 @@ static class SampleContentBuilder
 
         var title = Rect("Title", panel).gameObject.AddComponent<TextMeshProUGUI>();
         title.rectTransform.sizeDelta = new Vector2(400, 50);
-        title.rectTransform.anchoredPosition = new Vector2(0, 100);
+        title.rectTransform.anchoredPosition = new Vector2(0, titleY);
         title.font = font;
         title.text = titleText;
         title.fontSize = 35;
         title.alignment = TextAlignmentOptions.Center;
 
-        foreach (var (prefab, x) in items)
-        {
-            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, panel);
-            ((RectTransform)instance.transform).anchoredPosition = new Vector2(x, 0);
-        }
+        populate(panel);
 
         new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem), typeof(InputSystemUIInputModule));
 

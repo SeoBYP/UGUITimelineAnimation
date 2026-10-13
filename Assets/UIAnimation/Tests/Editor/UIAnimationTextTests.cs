@@ -1,0 +1,189 @@
+using System.Collections.Generic;
+using LitMotion;
+using NUnit.Framework;
+using TMPro;
+using UnityEngine;
+
+namespace SeoBYP.TimelineAnimation.Tests
+{
+    public sealed class UIAnimationTextTests
+    {
+        GameObject _canvas;
+        TextMeshProUGUI _text;
+        UIAnimation _anim;
+
+        [SetUp]
+        public void SetUp()
+        {
+            if (TMP_Settings.defaultFontAsset == null) Assert.Ignore("TMP Essential Resources are not imported.");
+            _canvas = new GameObject("Canvas", typeof(Canvas));
+            var go = new GameObject("Text", typeof(RectTransform));
+            go.transform.SetParent(_canvas.transform, false);
+            ((RectTransform)go.transform).sizeDelta = new Vector2(400, 100);
+            _text = go.AddComponent<TextMeshProUGUI>();
+            _text.font = TMP_Settings.defaultFontAsset;
+            _text.text = "ABCD";
+            _text.ForceMeshUpdate();
+            _anim = go.AddComponent<UIAnimation>();
+        }
+
+        [TearDown]
+        public void TearDown() => Object.DestroyImmediate(_canvas);
+
+        UIAnimState Add(UIAnimProperty property, float stagger, params UIAnimKey[] keys)
+        {
+            var state = new UIAnimState
+            {
+                name = property.ToString(),
+                tracks = { new UIAnimTrack { target = _text, property = property, startFromCurrent = false, stagger = stagger, keys = new List<UIAnimKey>(keys) } },
+            };
+            _anim.states.Add(state);
+            _anim.Prepare(state.name, UIAnimInterrupt.Cancel, null);
+            return state;
+        }
+
+        static UIAnimKey Key(float time, Vector4 value) => new() { time = time, value = value, ease = Ease.Linear };
+
+        [Test]
+        public void 공개_비율만큼_글자가_보인다()
+        {
+            var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
+
+            UIAnimation.Evaluate(reveal, 0.5f);
+            Assert.AreEqual(2, _text.maxVisibleCharacters);
+            UIAnimation.Evaluate(reveal, 1f);
+            Assert.GreaterOrEqual(_text.maxVisibleCharacters, 4, "Fully revealed.");
+        }
+
+        [Test]
+        public void 글자_간격만큼_마지막_글자가_늦어져_길이가_늘어난다()
+        {
+            // 4 characters: the last one starts 3 × 0.1s later than the first.
+            var pop = Add(UIAnimProperty.CharScale, 0.1f, Key(0f, Vector3.zero), Key(0.2f, Vector3.one));
+            Assert.AreEqual(0.5f, pop.Duration, 1e-4f);
+        }
+
+        [Test]
+        public void 글자_크기는_각_글자_중심_기준으로_줄었다가_돌아온다()
+        {
+            var pop = Add(UIAnimProperty.CharScale, 0f, Key(0f, Vector3.zero), Key(1f, Vector3.one));
+            var ch = _text.textInfo.characterInfo[0];
+
+            UIAnimation.Evaluate(pop, 0f);
+            var verts = _text.textInfo.meshInfo[ch.materialReferenceIndex].vertices;
+            Assert.AreEqual(verts[ch.vertexIndex], verts[ch.vertexIndex + 2], "Scale 0: the quad collapses to one point.");
+
+            UIAnimation.Evaluate(pop, 1f);
+            verts = _text.textInfo.meshInfo[ch.materialReferenceIndex].vertices;
+            Assert.AreNotEqual(verts[ch.vertexIndex], verts[ch.vertexIndex + 2], "Scale 1: the character is back to normal.");
+        }
+
+        [Test]
+        public void Punch_키는_흔들린_뒤_이전_값으로_돌아온다()
+        {
+            var track = new UIAnimTrack { keys = { Key(0f, Vector3.one),
+                new UIAnimKey { time = 1f, value = Vector3.one * 0.5f, curveType = UIAnimCurveType.Punch, ease = Ease.Linear, frequency = 5f, damping = 1f } } };
+            track.keys[0].resolved = Vector3.one;
+            track.keys[1].resolved = Vector3.one;   // vibration keys hold the previous value
+
+            Assert.AreEqual(1f, track.Sample(0f).x, 1e-4f);
+            Assert.AreEqual(1f, track.Sample(1f).x, 1e-4f, "Ends at rest.");
+            var moved = false;
+            for (var t = 0.05f; t < 1f; t += 0.05f) moved |= Mathf.Abs(track.Sample(t).x - 1f) > 0.01f;
+            Assert.IsTrue(moved, "Oscillates in between.");
+        }
+
+        [Test]
+        public void 스크램블은_글자_수를_유지하고_끝나면_원문이_된다()
+        {
+            var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
+            reveal.tracks[0].scramble = ScrambleMode.Lowercase;
+            UIAnimation.Resolve(reveal);
+
+            UIAnimation.Evaluate(reveal, 0.5f);
+            StringAssert.StartsWith("AB", _text.text);
+            Assert.AreEqual(4, _text.text.Length);
+            UIAnimation.Evaluate(reveal, 1f);
+            Assert.AreEqual("ABCD", _text.text);
+        }
+
+        [Test]
+        public void 스크램블은_공백을_유지해서_줄바꿈이_바뀌지_않는다()
+        {
+            var sb = new System.Text.StringBuilder();
+            var result = UIAnimVibration.Scramble("<b>ab</b> cd ef", 0.25f, ScrambleMode.Lowercase, 0u, 1.0, sb);
+            Assert.AreEqual(8, result.Length - "<b></b>".Length, "Same visible length.");
+            StringAssert.StartsWith("<b>ab</b>", result);
+            Assert.AreEqual(' ', result[9]);
+            Assert.AreEqual(' ', result[12]);
+        }
+
+        // ---------- 대사창: 같은 TMP의 text를 바꿔 가며 재생 ----------
+
+        [Test]
+        public void 텍스트를_바꾸고_다시_재생하면_새_글자수로_공개된다()
+        {
+            var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
+            UIAnimation.Evaluate(reveal, 1f);
+
+            _text.text = "ABCDEFGH";
+            _anim.Prepare(reveal.name, UIAnimInterrupt.Cancel, null);
+            UIAnimation.Evaluate(reveal, 0.5f);
+            Assert.AreEqual(4, _text.maxVisibleCharacters, "8글자의 절반");
+        }
+
+        [Test]
+        public void 텍스트를_바꾸고_재생하면_첫_프레임부터_새_텍스트가_숨겨져_있다()
+        {
+            var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
+            UIAnimation.Evaluate(reveal, 1f);   // 이전 대사가 다 나온 상태
+
+            _text.text = "NEXT LINE";
+            _anim.Prepare(reveal.name, UIAnimInterrupt.Cancel, null);   // Evaluate 없이 바로 확인
+            Assert.AreEqual(0, _text.maxVisibleCharacters);
+        }
+
+        [Test]
+        public void 텍스트를_바꾸면_글자_간격으로_늘어나는_길이도_새_글자수로_계산된다()
+        {
+            var state = Add(UIAnimProperty.CharScale, 0.1f, Key(0f, Vector3.zero), Key(1f, Vector3.one));
+            Assert.AreEqual(1.3f, state.Duration, 1e-4f, "4글자: 1 + 3 x 0.1");
+
+            _text.text = "ABCDEFGH";
+            _anim.Prepare(state.name, UIAnimInterrupt.Cancel, null);
+            Assert.AreEqual(1.7f, state.Duration, 1e-4f, "8글자: 1 + 7 x 0.1");
+        }
+
+        [Test]
+        public void 스크램블_텍스트를_바꾸고_다시_재생하면_새_텍스트로_공개된다()
+        {
+            var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
+            reveal.tracks[0].scramble = ScrambleMode.Lowercase;
+            _anim.Prepare(reveal.name, UIAnimInterrupt.Cancel, null);
+            UIAnimation.Evaluate(reveal, 1f);
+            Assert.AreEqual("ABCD", _text.text);
+
+            _text.text = "WXYZ";
+            _anim.Prepare(reveal.name, UIAnimInterrupt.Cancel, null);
+            UIAnimation.Evaluate(reveal, 0.5f);
+            StringAssert.StartsWith("WX", _text.text);
+            UIAnimation.Evaluate(reveal, 1f);
+            Assert.AreEqual("WXYZ", _text.text);
+        }
+
+        [Test]
+        public void 스크램블_재생_중에_텍스트를_바꾸면_새_텍스트를_덮어쓰지_않는다()
+        {
+            var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
+            reveal.tracks[0].scramble = ScrambleMode.Lowercase;
+            _anim.Prepare(reveal.name, UIAnimInterrupt.Cancel, null);
+            UIAnimation.Evaluate(reveal, 0.5f);
+
+            _text.text = "WXYZ";   // 다시 재생하지 않고 바꿈
+            UIAnimation.Evaluate(reveal, 0.75f);
+            StringAssert.StartsWith("WXY", _text.text);
+            UIAnimation.Evaluate(reveal, 1f);
+            Assert.AreEqual("WXYZ", _text.text);
+        }
+    }
+}

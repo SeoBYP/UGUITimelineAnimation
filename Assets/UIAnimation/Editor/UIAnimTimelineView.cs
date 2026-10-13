@@ -63,6 +63,9 @@ namespace SeoBYP.TimelineAnimation.Editor
             UIAnimProperty.GraphicColor => new Color32(229, 115, 115, 255),
             UIAnimProperty.GraphicAlpha => new Color32(230, 160, 60, 255),
             UIAnimProperty.FontSize => new Color32(124, 179, 66, 255),
+            UIAnimProperty.TextReveal => new Color32(171, 207, 92, 255),
+            UIAnimProperty.CharScale or UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => new Color32(77, 182, 172, 255),
+            UIAnimProperty.CharColor or UIAnimProperty.CharAlpha => new Color32(240, 98, 146, 255),
             _ => Color.gray,
         };
 
@@ -74,6 +77,12 @@ namespace SeoBYP.TimelineAnimation.Editor
             UIAnimProperty.GraphicColor => "Color",
             UIAnimProperty.GraphicAlpha => "Alpha",
             UIAnimProperty.FontSize => "Font Size",
+            UIAnimProperty.TextReveal => "Reveal (타자기)",
+            UIAnimProperty.CharScale => "글자 Scale",
+            UIAnimProperty.CharOffset => "글자 Position",
+            UIAnimProperty.CharRotation => "글자 Rotation",
+            UIAnimProperty.CharColor => "글자 Color",
+            UIAnimProperty.CharAlpha => "글자 Alpha",
             _ => property.ToString(),
         };
 
@@ -204,6 +213,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             var lane = new VisualElement { userData = trackIndex, style = { marginRight = LaneRight } };
             lane.AddToClassList("uia-lane");
             lane.generateVisualContent += ctx => DrawTrackLine(ctx, lane, track);
+            lane.RegisterCallback<PointerMoveEvent>(e => lane.tooltip = TailTooltip(track, e.localPosition.x));
             lane.AddManipulator(new ContextualMenuManipulator(e =>
             {
                 var t = XToTime(e.localMousePosition.x);
@@ -236,12 +246,35 @@ namespace SeoBYP.TimelineAnimation.Editor
                 p.Stroke();
             }
             if (track.keys.Count < 2) return;
+            var last = track.keys[track.keys.Count - 1].time;
             p.strokeColor = new Color(color.r, color.g, color.b, 0.85f);
             p.lineWidth = 4f;
             p.BeginPath();
             p.MoveTo(new Vector2(TimeToX(first.time), y));
-            p.LineTo(new Vector2(TimeToX(track.keys[track.keys.Count - 1].time), y));
+            p.LineTo(new Vector2(TimeToX(last), y));
             p.Stroke();
+
+            // Character tracks: the keys are the first character's motion; later characters finish at track.End.
+            if (track.End > last)
+            {
+                p.strokeColor = new Color(color.r, color.g, color.b, 0.3f);
+                p.BeginPath();
+                p.MoveTo(new Vector2(TimeToX(last), y));
+                p.LineTo(new Vector2(TimeToX(track.End), y));
+                p.Stroke();
+            }
+        }
+
+        // Explains the faded tail while hovering it.
+        string TailTooltip(UIAnimTrack track, float x)
+        {
+            if (track.keys.Count < 2) return "";
+            var last = track.keys[track.keys.Count - 1].time;
+            var end = track.End;
+            if (end <= last || x < TimeToX(last) || x > TimeToX(end)) return "";
+            return $"글자 지연 +{end - last:0.00}s (끝 {end:0.00}s)\n" +
+                   "키는 첫 글자의 움직임이고, 뒤 글자는 '글자 간격'만큼 늦게 시작해서 여기까지 재생됩니다.\n" +
+                   "줄이려면 트랙을 선택하고 '글자 간격' 또는 '글자당 길이'를 줄이세요.";
         }
 
         static Button SmallButton(string text, string tooltip, Action onClick)
@@ -260,16 +293,21 @@ namespace SeoBYP.TimelineAnimation.Editor
             return el;
         }
 
+        static readonly float[] Steps = { 0.05f, 0.1f, 0.25f, 0.5f, 1f, 2f, 5f, 10f };
+
         void Layout()
         {
             _ruler.Clear();
             if (_state == null) return;
 
-            var step = Range > 1.5f ? 0.25f : Range > 0.6f ? 0.1f : 0.05f;
+            // Widest labels ("10.25") need ~44px; pick the finest step that keeps them apart at this zoom.
+            var step = Steps[Steps.Length - 1];
+            foreach (var s in Steps)
+                if (s * PxPerSecond >= 44f) { step = s; break; }
             for (var i = 0; i * step <= Range + 0.0001f; i++)
             {
                 var t = i * step;
-                var tick = new Label(t.ToString("0.00")) { pickingMode = PickingMode.Ignore, style = { left = TimeToX(t) } };
+                var tick = new Label(t.ToString(step < 0.1f ? "0.00" : step < 1f ? "0.0#" : "0")) { pickingMode = PickingMode.Ignore, style = { left = TimeToX(t) } };
                 tick.AddToClassList("uia-tick");
                 _ruler.Add(tick);
             }

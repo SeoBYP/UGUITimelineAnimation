@@ -36,7 +36,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         static UIAnimKey Key(float time, Vector4 value) => new() { time = time, value = value, ease = Ease.Linear };
 
         [Test]
-        public void ThreeKeys_GiveTheMiddleValue()
+        public void 키_3개면_가운데_키_값을_지난다()
         {
             // 1 → 1.2 → 1
             var pulse = State("Pulse", Track(_go.transform, UIAnimProperty.Scale, false, false,
@@ -53,7 +53,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void SingleKey_StartsFromCurrentValue()
+        public void 키_하나면_현재_값에서_출발한다()
         {
             // Hover: whatever alpha it has now → 1.
             var hover = State("Hover", Track(_image, UIAnimProperty.GraphicAlpha, true, false, Key(1f, new Vector4(1, 0))));
@@ -70,7 +70,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void FirstKeyAfterZero_IsADelay_WhenStartingFromCurrent()
+        public void 현재값에서_시작할_때_첫_키가_0초_뒤면_지연이_된다()
         {
             // Toggle1 sample: hold the current value for 0.5s, then go to 2.
             var delayed = State("Delayed", Track(_go.transform, UIAnimProperty.Scale, true, false,
@@ -87,7 +87,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void Relative_IsMeasuredFromTheRestValue_EvenAfterItMoved()
+        public void 상대값은_움직인_뒤에도_원래_값_기준이다()
         {
             // Button1 sample: press shrinks the rest size by (14, 7); release returns to rest from wherever it is.
             var press = State("Press", Track(_go.transform, UIAnimProperty.SizeDelta, true, true, Key(0.07f, new Vector4(-14, -7))));
@@ -108,7 +108,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void KeyEase_ShapesTheArrivalAtThatKey()
+        public void 키의_Ease가_그_키로_도착하는_모양을_정한다()
         {
             var key = Key(1f, Vector3.one * 2f);
             key.curveType = UIAnimCurveType.Curve;
@@ -122,7 +122,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void Cancel_NewStateTakesOverOnlyItsOwnProperties()
+        public void Cancel_새_상태는_자기_속성만_가져간다()
         {
             // Press animates alpha + scale; Release only alpha. Press keeps scale.
             var press = State("Press",
@@ -142,7 +142,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void Cancel_StateLosingEveryPropertyStops()
+        public void Cancel_속성을_모두_뺏긴_상태는_멈춘다()
         {
             var hover = State("Hover", Track(_image, UIAnimProperty.GraphicAlpha, true, false, Key(1f, new Vector4(1, 0))));
             var unhover = State("Unhover", Track(_image, UIAnimProperty.GraphicAlpha, true, false, Key(1f, Vector4.zero)));
@@ -157,7 +157,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
-        public void Complete_SnapsTheInterruptedStateToItsEnd()
+        public void Complete_중단된_상태를_끝_값으로_맞춘다()
         {
             // Button2 sample: releasing mid-press first completes the press (fill fully grown).
             var press = State("Press",

@@ -56,7 +56,16 @@ namespace SeoBYP.TimelineAnimation.Editor
                 yield return (graphic, UIAnimProperty.GraphicAlpha);
             }
             var text = tr.GetComponent<TMP_Text>();
-            if (text != null) yield return (text, UIAnimProperty.FontSize);
+            if (text != null)
+            {
+                yield return (text, UIAnimProperty.FontSize);
+                yield return (text, UIAnimProperty.TextReveal);
+                yield return (text, UIAnimProperty.CharScale);
+                yield return (text, UIAnimProperty.CharOffset);
+                yield return (text, UIAnimProperty.CharRotation);
+                yield return (text, UIAnimProperty.CharColor);
+                yield return (text, UIAnimProperty.CharAlpha);
+            }
         }
 
         void CreateGUI()

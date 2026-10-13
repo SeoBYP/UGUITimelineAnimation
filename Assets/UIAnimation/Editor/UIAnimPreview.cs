@@ -27,6 +27,7 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         readonly AnimationModeDriver _driver;
         readonly List<(UIAnimTrack track, Vector4 value)> _snapshot = new();
+        readonly List<(TMP_Text text, string value)> _texts = new();   // scramble rewrites text; restored on stop
         double _lastTick;
 
         public UIAnimPreview()
@@ -37,6 +38,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
             EditorSceneManager.sceneSaving += OnSceneSaving;
+            EditorSceneManager.sceneClosing += OnSceneClosing;
             PrefabStage.prefabSaving += OnPrefabSaving;
         }
 
@@ -47,6 +49,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             EditorApplication.playModeStateChanged -= OnPlayModeChanged;
             AssemblyReloadEvents.beforeAssemblyReload -= Stop;
             EditorSceneManager.sceneSaving -= OnSceneSaving;
+            EditorSceneManager.sceneClosing -= OnSceneClosing;
             PrefabStage.prefabSaving -= OnPrefabSaving;
             UnityEngine.Object.DestroyImmediate(_driver);
         }
@@ -62,10 +65,14 @@ namespace SeoBYP.TimelineAnimation.Editor
             Target.CaptureRest();
 
             _snapshot.Clear();
+            _texts.Clear();
             foreach (var s in target.states)
             foreach (var track in s.tracks)
                 if (track.target != null)
+                {
                     _snapshot.Add((track, UIAnimation.Read(track.target, track.property)));
+                    if (track.target is TMP_Text text) _texts.Add((text, text.text));
+                }
 
             AnimationMode.StartAnimationMode(_driver);
             AnimationMode.BeginSampling();
@@ -84,11 +91,27 @@ namespace SeoBYP.TimelineAnimation.Editor
             Seek(t);
         }
 
+        // A state bound to the second half of an event pair (Exit, Up, Deselect, ToggleOff) is previewed from the end
+        // of the state bound to the first half, so its motion is visible instead of starting at the rest pose.
+        static readonly Dictionary<UIAnimEvent, UIAnimEvent> PairedWith = new()
+        {
+            [UIAnimEvent.PointerExit] = UIAnimEvent.PointerEnter,
+            [UIAnimEvent.PointerUp] = UIAnimEvent.PointerDown,
+            [UIAnimEvent.Deselect] = UIAnimEvent.Select,
+            [UIAnimEvent.ToggleOff] = UIAnimEvent.ToggleOn,
+        };
+
         static UIAnimState PreviewFrom(UIAnimation target, UIAnimState state)
         {
-            if (string.IsNullOrEmpty(state.previewFrom)) return null;
-            foreach (var s in target.states)
-                if (s != state && s.name == state.previewFrom) return s;
+            if (!target.TryGetComponent<UIAnimTrigger>(out var trigger)) return null;
+            foreach (var b in trigger.bindings)
+            {
+                if (b.state != state.name || !PairedWith.TryGetValue(b.evt, out var first)) continue;
+                foreach (var other in trigger.bindings)
+                    if (other.evt == first)
+                        foreach (var s in target.states)
+                            if (s != state && s.name == other.state) return s;
+            }
             return null;
         }
 
@@ -136,7 +159,13 @@ namespace SeoBYP.TimelineAnimation.Editor
             // Fallback: AnimationMode has already reverted registered properties; this covers anything it missed.
             foreach (var (track, value) in _snapshot)
                 if (track.target != null) UIAnimation.Write(track.target, track.property, value);
+            // Scrambled text is restored first; character effects live only in the generated mesh, so regenerate it.
+            foreach (var (text, value) in _texts)
+                if (text != null && text.text != value) text.text = value;
+            foreach (var (track, _) in _snapshot)
+                if (track.target is TMP_Text text) text.ForceMeshUpdate();
             _snapshot.Clear();
+            _texts.Clear();
 
             Target = null;
             State = null;
@@ -176,6 +205,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         }
 
         void OnSceneSaving(UnityEngine.SceneManagement.Scene scene, string path) => Stop();
+        // Revert/reopen replaces the previewed objects; stop first so the restore lands on the old ones, not the new scene.
+        void OnSceneClosing(UnityEngine.SceneManagement.Scene scene, bool removing) => Stop();
         void OnPrefabSaving(GameObject prefab) => Stop();
 
         static void Repaint()
@@ -209,6 +240,10 @@ namespace SeoBYP.TimelineAnimation.Editor
                     else if (target is Graphic)
                         Add(root, target, "m_Color", "r", "g", "b", "a");
                     break;
+                case UIAnimProperty.TextReveal:
+                    Add(root, target, "m_maxVisibleCharacters");
+                    Add(root, target, "m_text");   // scramble rewrites the text itself
+                    break;
                 case UIAnimProperty.FontSize:
                     Add(root, target, "m_fontSize");
                     break;
@@ -231,6 +266,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             {
                 SerializedPropertyType.Float => prop.floatValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 SerializedPropertyType.Integer => prop.longValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                SerializedPropertyType.String => prop.stringValue,
                 _ => null,
             };
             if (value == null) return;
