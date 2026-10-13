@@ -622,6 +622,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                     f.RegisterValueChangedCallback(e => Set(e.newValue));
                     return f;
                 }
+                case UIAnimProperty.FillAmount when !relative:
                 case UIAnimProperty.GraphicAlpha when !relative:
                 {
                     var f = new Slider(label, 0f, 1f) { value = v.x, showInputField = true };

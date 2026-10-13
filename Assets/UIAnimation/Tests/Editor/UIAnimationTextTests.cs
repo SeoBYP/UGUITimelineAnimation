@@ -185,5 +185,16 @@ namespace SeoBYP.TimelineAnimation.Tests
             UIAnimation.Evaluate(reveal, 1f);
             Assert.AreEqual("WXYZ", _text.text);
         }
+
+        [Test]
+        public void CharacterSpacing_트랙은_자간을_움직이고_원래_값으로_돌아온다()
+        {
+            var spread = Add(UIAnimProperty.CharacterSpacing, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(12, 0)));
+
+            UIAnimation.Evaluate(spread, 0.5f);
+            Assert.AreEqual(6f, _text.characterSpacing, 1e-4f);
+            UIAnimation.Evaluate(spread, 1f);
+            Assert.AreEqual(12f, _text.characterSpacing, 1e-4f);
+        }
     }
 }

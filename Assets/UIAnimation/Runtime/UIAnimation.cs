@@ -24,6 +24,9 @@ namespace SeoBYP.TimelineAnimation
         CharRotation,       // per character, euler angles around its center
         CharColor,          // per character vertex color
         CharAlpha,          // per character vertex alpha
+        // appended: values are serialized as ints, so new members go last
+        FillAmount,         // Image.fillAmount
+        CharacterSpacing,   // TMP_Text.characterSpacing
     }
 
     /// <summary>How a new state treats states that are still playing on the same properties.</summary>
@@ -483,6 +486,8 @@ namespace SeoBYP.TimelineAnimation
             UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => Vector4.zero,
             UIAnimProperty.CharColor => ((TMP_Text)target).color,
             UIAnimProperty.CharAlpha => new Vector4(1f, 0, 0, 0),
+            UIAnimProperty.FillAmount => new Vector4(((Image)target).fillAmount, 0, 0, 0),
+            UIAnimProperty.CharacterSpacing => new Vector4(((TMP_Text)target).characterSpacing, 0, 0, 0),
             _ => throw new ArgumentOutOfRangeException(nameof(property)),
         };
 
@@ -507,6 +512,8 @@ namespace SeoBYP.TimelineAnimation
                     g.color = c;
                     break;
                 case UIAnimProperty.FontSize: ((TMP_Text)target).fontSize = v.x; break;
+                case UIAnimProperty.FillAmount: ((Image)target).fillAmount = v.x; break;
+                case UIAnimProperty.CharacterSpacing: ((TMP_Text)target).characterSpacing = v.x; break;
                 case UIAnimProperty.TextReveal:
                     var text = (TMP_Text)target;
                     // 1 = everything (also covers text that grows later); below that, a share of the current characters.
