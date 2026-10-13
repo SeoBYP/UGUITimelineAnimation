@@ -1,0 +1,358 @@
+/* UI Animation Editor — layered surfaces: window < panels < cards < clips. Light skin overrides at the bottom. */
+
+.uia-root {
+    flex-grow: 1;
+    background-color: rgb(30, 31, 34);
+}
+
+/* ---------- top bar ---------- */
+.uia-topbar {
+    flex-direction: row;
+    align-items: center;
+    height: 34px;
+    padding: 0 8px;
+    background-color: rgb(43, 45, 49);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(20, 21, 23);
+}
+.uia-target {
+    -unity-font-style: bold;
+    font-size: 13px;
+    color: rgb(235, 236, 238);
+    margin-right: 12px;
+}
+.uia-iconbtn {
+    width: 28px;
+    height: 24px;
+    margin: 0 2px;
+    padding: 0;
+    border-radius: 5px;
+    border-width: 0;
+    background-color: rgb(58, 60, 66);
+    color: rgb(225, 226, 230);
+    font-size: 12px;
+    -unity-text-align: middle-center;
+}
+.uia-iconbtn:hover { background-color: rgb(74, 77, 84); }
+.uia-iconbtn--accent { background-color: rgb(52, 105, 178); color: white; }
+.uia-iconbtn--accent:hover { background-color: rgb(64, 122, 204); }
+.uia-time {
+    margin-left: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background-color: rgb(24, 25, 27);
+    color: rgb(150, 200, 255);
+    -unity-font-style: bold;
+    min-width: 96px;
+    -unity-text-align: middle-center;
+}
+.uia-status {
+    color: rgb(255, 196, 110);
+    font-size: 11px;
+}
+
+/* ---------- state tabs ---------- */
+.uia-tabs {
+    flex-direction: row;
+    align-items: flex-end;
+    height: 32px;
+    padding: 0 8px;
+    background-color: rgb(36, 37, 41);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(20, 21, 23);
+}
+.uia-tab {
+    height: 26px;
+    margin: 0 2px;
+    padding: 0 14px;
+    border-width: 0;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    background-color: rgb(47, 49, 54);
+    color: rgb(170, 173, 180);
+}
+.uia-tab:hover { background-color: rgb(56, 58, 64); color: rgb(225, 226, 230); }
+.uia-tab--selected {
+    background-color: rgb(30, 31, 34);
+    color: white;
+    -unity-font-style: bold;
+    border-top-width: 2px;
+    border-top-color: rgb(108, 178, 255);
+}
+.uia-tab--add { padding: 0 10px; background-color: rgba(0, 0, 0, 0); color: rgb(150, 155, 165); }
+
+/* ---------- timeline ---------- */
+.uia-timeline { flex-grow: 1; }
+.uia-ruler {
+    height: 24px;
+    background-color: rgb(40, 42, 46);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(20, 21, 23);
+}
+.uia-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    padding-left: 3px;
+    padding-top: 5px;
+    border-left-width: 1px;
+    border-left-color: rgb(70, 73, 80);
+    font-size: 10px;
+    color: rgb(140, 145, 155);
+}
+.uia-row {
+    flex-direction: row;
+    height: 40px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(24, 25, 28);
+}
+.uia-row--odd .uia-lane { background-color: rgb(35, 36, 40); }
+.uia-header {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 0;
+    padding-right: 4px;
+    background-color: rgb(44, 46, 51);
+    border-right-width: 1px;
+    border-right-color: rgb(20, 21, 23);
+}
+.uia-stripe { width: 4px; align-self: stretch; margin-right: 6px; }
+.uia-lane { flex-grow: 1; background-color: rgb(32, 33, 37); margin-right: 12px; }
+.uia-smallbtn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin: 0 1px;
+    border-radius: 4px;
+    border-width: 0;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: rgb(200, 203, 210);
+}
+.uia-smallbtn:hover { background-color: rgba(255, 255, 255, 0.14); }
+.uia-addtrack {
+    height: 26px;
+    margin: 8px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(70, 73, 80);
+    background-color: rgba(255, 255, 255, 0.03);
+    color: rgb(180, 185, 195);
+}
+.uia-addtrack:hover { background-color: rgba(255, 255, 255, 0.08); }
+
+/* Keyframe: a rotated square (diamond) centered on the lane. */
+.uia-key {
+    position: absolute;
+    top: 13px;
+    width: 12px;
+    height: 12px;
+    rotate: 45deg;
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: rgb(20, 21, 23);
+    background-color: rgb(225, 228, 235);
+}
+.uia-key:hover { background-color: white; scale: 1.2 1.2; }
+.uia-key--selected {
+    background-color: rgb(58, 150, 255);   /* Unity's selected-key blue */
+    border-color: rgb(200, 225, 255);
+}
+.uia-header--selected { background-color: rgb(52, 58, 70); }
+.uia-track-path { font-size: 10px; color: rgb(150, 155, 165); }
+.uia-track-prop { font-size: 12px; -unity-font-style: bold; color: rgb(228, 230, 234); }
+.uia-box {
+    position: absolute;
+    border-width: 1px;
+    border-color: rgb(110, 170, 255);
+    background-color: rgba(80, 140, 230, 0.18);
+}
+.uia-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: rgb(108, 178, 255);
+}
+
+/* ---------- inspector: Unity Inspector form (title bar + foldout sections), project colors ---------- */
+.uia-inspector {
+    background-color: rgb(37, 38, 42);
+    border-left-width: 1px;
+    border-left-color: rgb(20, 21, 23);
+}
+/* Like a component header in the Inspector. */
+.uia-heading {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(238, 239, 241);
+    height: 24px;
+    padding-left: 8px;
+    -unity-text-align: middle-left;
+    background-color: rgb(47, 49, 54);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(20, 21, 23);
+}
+/* Foldout header bar = Inspector section header; content indented like Inspector fields. */
+.uia-section { margin: 0; }
+.uia-section > .unity-foldout__toggle {
+    margin: 0;
+    padding: 2px 4px;
+    background-color: rgb(43, 45, 49);
+    border-top-width: 1px;
+    border-top-color: rgb(56, 58, 64);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(24, 25, 28);
+}
+.uia-section > .unity-foldout__toggle:hover { background-color: rgb(50, 52, 57); }
+.uia-section > .unity-foldout__toggle .unity-toggle__text { -unity-font-style: bold; color: rgb(220, 222, 226); }
+.uia-section > .unity-foldout__content { margin-left: 4px; padding: 3px 6px 6px 12px; }
+.uia-hint { font-size: 11px; color: rgb(150, 155, 165); white-space: normal; margin: 2px 3px; }
+.uia-linkrow { flex-direction: row; align-items: center; }
+.uia-link {
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    margin-left: 4px;
+    border-radius: 4px;
+    border-width: 0;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+.uia-link--on { background-color: rgb(52, 105, 178); }
+.uia-danger { color: rgb(255, 140, 140); }
+
+/* ---------- light skin ---------- */
+.uia-light.uia-root { background-color: rgb(214, 214, 214); }
+.uia-light .uia-topbar { background-color: rgb(228, 228, 228); border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-target { color: rgb(20, 20, 20); }
+.uia-light .uia-iconbtn { background-color: rgb(205, 205, 205); color: rgb(30, 30, 30); }
+.uia-light .uia-iconbtn:hover { background-color: rgb(190, 190, 190); }
+.uia-light .uia-time { background-color: rgb(250, 250, 250); color: rgb(20, 80, 160); }
+.uia-light .uia-status { color: rgb(150, 90, 0); }
+.uia-light .uia-tabs { background-color: rgb(200, 200, 200); border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-tab { background-color: rgb(185, 185, 185); color: rgb(60, 60, 60); }
+.uia-light .uia-tab--selected { background-color: rgb(214, 214, 214); color: black; }
+.uia-light .uia-ruler { background-color: rgb(222, 222, 222); border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-tick { border-left-color: rgb(170, 170, 170); color: rgb(90, 90, 90); }
+.uia-light .uia-header { background-color: rgb(225, 225, 225); border-right-color: rgb(170, 170, 170); }
+.uia-light .uia-header--selected { background-color: rgb(190, 205, 225); }
+.uia-light .uia-key { background-color: rgb(250, 250, 250); border-color: rgb(80, 80, 80); }
+.uia-light .uia-key--selected { background-color: rgb(40, 120, 230); border-color: rgb(20, 60, 130); }
+.uia-light .uia-track-path { color: rgb(90, 90, 90); }
+.uia-light .uia-track-prop { color: rgb(20, 20, 20); }
+.uia-light .uia-lane { background-color: rgb(200, 200, 200); }
+.uia-light .uia-row--odd .uia-lane { background-color: rgb(192, 192, 192); }
+.uia-light .uia-row { border-bottom-color: rgb(175, 175, 175); }
+.uia-light .uia-smallbtn { background-color: rgba(0, 0, 0, 0.06); color: rgb(40, 40, 40); }
+.uia-light .uia-inspector { background-color: rgb(206, 206, 206); border-left-color: rgb(170, 170, 170); }
+.uia-light .uia-heading { color: rgb(20, 20, 20); background-color: rgb(222, 222, 222); border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-section > .unity-foldout__toggle { background-color: rgb(214, 214, 214); border-top-color: rgb(235, 235, 235); border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-section > .unity-foldout__toggle .unity-toggle__text { color: rgb(25, 25, 25); }
+.uia-light .uia-hint { color: rgb(90, 90, 90); }
+.uia-light .uia-light .uia-addtrack { color: rgb(60, 60, 60); border-color: rgb(165, 165, 165); }
+
+/* ---------- arrival graph ---------- */
+.uia-easegraph {
+    height: 110px;
+    margin: 6px 3px 2px 3px;
+    background-color: rgb(28, 29, 32);
+    border-width: 1px;
+    border-color: rgb(20, 21, 23);
+}
+.uia-light .uia-easegraph { background-color: rgb(245, 245, 245); border-color: rgb(175, 175, 175); }
+
+/* ---------- property picker ---------- */
+.uia-picker { border-width: 1px; border-color: rgb(14, 15, 17); }
+.uia-picker-header {
+    flex-direction: row;
+    align-items: center;
+    height: 36px;
+    padding: 0 10px;
+    background-color: rgb(43, 45, 49);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(20, 21, 23);
+}
+.uia-picker-header #title { -unity-font-style: bold; color: rgb(235, 236, 238); margin-right: 10px; }
+.uia-picker-search { flex-grow: 1; margin: 0; }
+.uia-picker-body { flex-direction: row; flex-grow: 1; }
+.uia-picker-tree {
+    width: 210px;
+    background-color: rgb(34, 35, 39);
+    border-right-width: 1px;
+    border-right-color: rgb(20, 21, 23);
+    padding-top: 4px;
+}
+.uia-picker-row {
+    flex-direction: row;
+    align-items: center;
+    height: 24px;
+    padding-right: 8px;
+    color: rgb(210, 212, 218);
+}
+.uia-picker-row:hover { background-color: rgba(255, 255, 255, 0.06); }
+.uia-picker-row--selected { background-color: rgb(44, 93, 160); color: white; }
+.uia-picker-row--selected:hover { background-color: rgb(52, 105, 178); }
+.uia-picker-row--inactive { opacity: 0.5; }
+.uia-picker-icon { width: 16px; height: 16px; margin-right: 6px; }
+.uia-picker-badge {
+    font-size: 10px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgb(200, 203, 210);
+}
+.uia-picker-path {
+    height: 26px;
+    padding-left: 12px;
+    -unity-text-align: middle-left;
+    font-size: 11px;
+    color: rgb(150, 155, 165);
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(30, 31, 34);
+}
+.uia-picker-cards { flex-grow: 1; padding: 6px 8px; }
+.uia-picker-card {
+    flex-direction: row;
+    align-items: center;
+    height: 44px;
+    margin-bottom: 6px;
+    padding-right: 10px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgb(58, 60, 66);
+    border-top-color: rgb(72, 74, 81);
+    background-color: rgb(47, 49, 54);
+    overflow: hidden;
+}
+.uia-picker-card:hover { background-color: rgb(58, 61, 68); border-color: rgb(108, 178, 255); }
+.uia-picker-card--current { border-color: rgb(108, 178, 255); }
+.uia-picker-card--taken { opacity: 0.45; }
+.uia-picker-card--taken:hover { background-color: rgb(47, 49, 54); border-color: rgb(58, 60, 66); }
+.uia-picker-card-stripe { width: 5px; align-self: stretch; margin-right: 10px; }
+.uia-picker-card #prop { -unity-font-style: bold; font-size: 12px; color: rgb(235, 236, 238); }
+.uia-picker-card #type { font-size: 10px; color: rgb(140, 145, 155); }
+.uia-picker-value {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background-color: rgb(28, 29, 32);
+    color: rgb(150, 200, 255);
+}
+.uia-picker-swatch {
+    width: 36px;
+    height: 18px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.uia-picker-tag { font-size: 10px; margin-left: 8px; color: rgb(170, 175, 185); }
+
+.uia-light .uia-picker-header { background-color: rgb(228, 228, 228); border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-picker-header #title { color: rgb(20, 20, 20); }
+.uia-light .uia-picker-tree { background-color: rgb(215, 215, 215); border-right-color: rgb(170, 170, 170); }
+.uia-light .uia-picker-row { color: rgb(30, 30, 30); }
+.uia-light .uia-picker-row--selected { background-color: rgb(58, 114, 176); color: white; }
+.uia-light .uia-picker-card { background-color: rgb(236, 236, 236); border-color: rgb(185, 185, 185); }
+.uia-light .uia-picker-card #prop { color: rgb(20, 20, 20); }
+.uia-light .uia-picker-value { background-color: rgb(250, 250, 250); color: rgb(20, 80, 160); }
