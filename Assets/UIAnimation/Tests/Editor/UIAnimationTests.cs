@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using LitMotion;
 using NUnit.Framework;
 using UnityEngine;
@@ -174,6 +176,98 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.IsFalse(_anim.IsPlaying("Press"));
             Assert.AreEqual(Vector3.one, _go.transform.localScale);
             Assert.AreEqual(1f, _image.color.a, "Release starts from the completed alpha.");
+        }
+
+        // ---------- 완료 대기 (PlayAsync) ----------
+
+        UIAnimation.Playback PlayAwaitable(string name, out UniTask task, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+            CancellationToken ct = default)
+        {
+            var playback = _anim.Prepare(name, interrupt, null);
+            task = UIAnimation.Await(playback, ct);
+            return playback;
+        }
+
+        UIAnimState Fade(string name, float to) =>
+            State(name, Track(_image, UIAnimProperty.GraphicAlpha, true, false, Key(1f, new Vector4(to, 0))));
+
+        [Test]
+        public void 끝까지_재생되면_대기가_완료된다()
+        {
+            _anim.states.Add(Fade("Close", 0f));
+            var playback = PlayAwaitable("Close", out var task);
+            Assert.AreEqual(UniTaskStatus.Pending, task.Status);
+
+            playback.onComplete();   // LitMotion이 끝에 도달했을 때 부르는 콜백
+            Assert.AreEqual(UniTaskStatus.Succeeded, task.Status);
+            Assert.IsFalse(_anim.IsPlaying("Close"));
+        }
+
+        [Test]
+        public void 다른_상태가_속성을_모두_가져가면_대기가_취소된다()
+        {
+            // 팝업 Close 도중 Open: Close 뒤의 Destroy가 실행되면 안 된다.
+            _anim.states.Add(Fade("Close", 0f));
+            _anim.states.Add(Fade("Open", 1f));
+            PlayAwaitable("Close", out var task);
+
+            _anim.Prepare("Open", UIAnimInterrupt.Cancel, null);
+            Assert.AreEqual(UniTaskStatus.Canceled, task.Status);
+        }
+
+        [Test]
+        public void 같은_상태를_다시_재생하면_이전_대기는_취소된다()
+        {
+            _anim.states.Add(Fade("Close", 0f));
+            PlayAwaitable("Close", out var first);
+            PlayAwaitable("Close", out var second);
+
+            Assert.AreEqual(UniTaskStatus.Canceled, first.Status);
+            Assert.AreEqual(UniTaskStatus.Pending, second.Status);
+        }
+
+        [Test]
+        public void Complete로_건너뛰면_끝_값이_되고_대기가_완료된다()
+        {
+            _anim.states.Add(Fade("Show", 1f));
+            PlayAwaitable("Show", out var task);
+
+            _anim.Complete("Show");
+            Assert.AreEqual(1f, _image.color.a, 1e-4f);
+            Assert.AreEqual(UniTaskStatus.Succeeded, task.Status);
+            Assert.IsFalse(_anim.IsPlaying("Show"));
+        }
+
+        [Test]
+        public void Complete_인터럽트로_끝난_상태의_대기는_완료된다()
+        {
+            _anim.states.Add(Fade("Show", 1f));
+            _anim.states.Add(Fade("Hide", 0f));
+            PlayAwaitable("Show", out var task);
+
+            _anim.Prepare("Hide", UIAnimInterrupt.Complete, null);
+            Assert.AreEqual(UniTaskStatus.Succeeded, task.Status);
+        }
+
+        [Test]
+        public void 토큰이_취소되면_재생이_멈추고_대기가_취소된다()
+        {
+            _anim.states.Add(Fade("Close", 0f));
+            using var cts = new CancellationTokenSource();
+            PlayAwaitable("Close", out var task, ct: cts.Token);
+
+            cts.Cancel();
+            Assert.AreEqual(UniTaskStatus.Canceled, task.Status);
+            Assert.IsFalse(_anim.IsPlaying("Close"));
+        }
+
+        [Test]
+        public void 이미_취소된_토큰이면_재생하지_않는다()
+        {
+            _anim.states.Add(Fade("Close", 0f));
+            var task = _anim.PlayAsync("Close", cancellationToken: new CancellationToken(true));
+            Assert.AreEqual(UniTaskStatus.Canceled, task.Status);
+            Assert.IsFalse(_anim.IsPlaying("Close"));
         }
     }
 }

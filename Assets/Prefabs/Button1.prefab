@@ -92,8 +92,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 58
+  m_fontSizeBase: 58
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -211,7 +211,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 10
+  m_PixelsPerUnitMultiplier: 4.17
 --- !u!1 &5356918964230820014
 GameObject:
   m_ObjectHideFlags: 0
@@ -251,7 +251,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 70}
+  m_SizeDelta: {x: 480, y: 168}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7380946740394984183
 MonoBehaviour:
@@ -317,6 +317,9 @@ MonoBehaviour:
       property: 3
       startFromCurrent: 1
       relativeToRest: 0
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.2
         value: {x: 1, y: 0.3254902, z: 0.3254902, w: 1}
@@ -346,10 +349,15 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
     - target: {fileID: 8775424870721701802}
       property: 3
       startFromCurrent: 1
       relativeToRest: 0
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.2
         value: {x: 1, y: 1, z: 1, w: 1}
@@ -379,6 +387,8 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
   - name: Unhover
     actions: []
     tracks:
@@ -386,6 +396,9 @@ MonoBehaviour:
       property: 3
       startFromCurrent: 1
       relativeToRest: 1
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.2
         value: {x: 0, y: 0, z: 0, w: 0}
@@ -415,10 +428,15 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
     - target: {fileID: 8775424870721701802}
       property: 3
       startFromCurrent: 1
       relativeToRest: 1
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.2
         value: {x: 0, y: 0, z: 0, w: 0}
@@ -448,6 +466,8 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
   - name: Press
     actions: []
     tracks:
@@ -455,9 +475,12 @@ MonoBehaviour:
       property: 1
       startFromCurrent: 1
       relativeToRest: 1
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.07
-        value: {x: -14, y: -7, z: 0, w: 0}
+        value: {x: -34, y: -17, z: 0, w: 0}
         curveType: 0
         ease: 5
         curve:
@@ -484,13 +507,18 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
     - target: {fileID: 8775424870721701802}
       property: 5
       startFromCurrent: 1
       relativeToRest: 1
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.07
-        value: {x: -1, y: 0, z: 0, w: 0}
+        value: {x: -2.4, y: 0, z: 0, w: 0}
         curveType: 0
         ease: 5
         curve:
@@ -517,6 +545,8 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
   - name: Release
     actions: []
     tracks:
@@ -524,6 +554,9 @@ MonoBehaviour:
       property: 1
       startFromCurrent: 1
       relativeToRest: 1
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.07
         value: {x: 0, y: 0, z: 0, w: 0}
@@ -553,10 +586,15 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
     - target: {fileID: 8775424870721701802}
       property: 5
       startFromCurrent: 1
       relativeToRest: 1
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
       keys:
       - time: 0.07
         value: {x: 0, y: 0, z: 0, w: 0}
@@ -586,6 +624,8 @@ MonoBehaviour:
           m_PreInfinity: 2
           m_PostInfinity: 2
           m_RotationOrder: 4
+        frequency: 10
+        damping: 1
 --- !u!114 &8148353322140972355
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -685,4 +725,4 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 10
+  m_PixelsPerUnitMultiplier: 4.17

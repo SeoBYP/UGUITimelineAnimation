@@ -29,6 +29,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         readonly List<(UIAnimTrack track, Vector4 value)> _snapshot = new();
         readonly List<(TMP_Text text, string value)> _texts = new();   // scramble rewrites text; restored on stop
         double _lastTick;
+        bool _inPrefabStage;
 
         public UIAnimPreview()
         {
@@ -74,10 +75,17 @@ namespace SeoBYP.TimelineAnimation.Editor
                     if (track.target is TMP_Text text) _texts.Add((text, text.text));
                 }
 
+            // Prefab Mode only redraws values written inside a sampling block (as the Animation window samples), and
+            // there EndSampling would revert registered properties; so nothing is registered and the snapshot restore
+            // below (plus stop-before-save) is what keeps the asset untouched.
+            _inPrefabStage = PrefabStageUtility.GetPrefabStage(target.gameObject) != null;
             AnimationMode.StartAnimationMode(_driver);
-            AnimationMode.BeginSampling();
-            foreach (var (track, _) in _snapshot) Register(target, track);
-            AnimationMode.EndSampling();
+            if (!_inPrefabStage)
+            {
+                AnimationMode.BeginSampling();
+                foreach (var (track, _) in _snapshot) Register(target, track);
+                AnimationMode.EndSampling();
+            }
 
             // Put the object where this state is normally played from (e.g. Off starts from the end of On).
             var from = PreviewFrom(target, state);
@@ -101,17 +109,32 @@ namespace SeoBYP.TimelineAnimation.Editor
             [UIAnimEvent.ToggleOff] = UIAnimEvent.ToggleOn,
         };
 
+        // States played from code have no trigger; their names pair them instead: "Open" is previewed from the end
+        // of "Close" (the popup is spawned closed), "Show" from "Hide", ...
+        static readonly (string from, string state)[] NamePairs =
+        {
+            ("Close", "Open"), ("Open", "Close"), ("Hide", "Show"), ("Show", "Hide"), ("Out", "In"), ("In", "Out"),
+        };
+
         static UIAnimState PreviewFrom(UIAnimation target, UIAnimState state)
         {
-            if (!target.TryGetComponent<UIAnimTrigger>(out var trigger)) return null;
-            foreach (var b in trigger.bindings)
-            {
-                if (b.state != state.name || !PairedWith.TryGetValue(b.evt, out var first)) continue;
-                foreach (var other in trigger.bindings)
-                    if (other.evt == first)
-                        foreach (var s in target.states)
-                            if (s != state && s.name == other.state) return s;
-            }
+            if (target.TryGetComponent<UIAnimTrigger>(out var trigger))
+                foreach (var b in trigger.bindings)
+                {
+                    if (b.state != state.name || !PairedWith.TryGetValue(b.evt, out var first)) continue;
+                    foreach (var other in trigger.bindings)
+                        if (other.evt == first && Find(target, state, other.state) is { } fromTrigger) return fromTrigger;
+                }
+            foreach (var (from, name) in NamePairs)
+                if (string.Equals(state.name, name, StringComparison.OrdinalIgnoreCase) && Find(target, state, from) is { } fromName)
+                    return fromName;
+            return null;
+        }
+
+        static UIAnimState Find(UIAnimation target, UIAnimState except, string name)
+        {
+            foreach (var s in target.states)
+                if (s != except && string.Equals(s.name, name, StringComparison.OrdinalIgnoreCase)) return s;
             return null;
         }
 
@@ -119,9 +142,16 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             if (!IsActive) return;
             Time = Mathf.Clamp(t, 0f, State.Duration);
-            // Written outside Begin/EndSampling on purpose: EndSampling restores registered properties to their
-            // recorded originals, which would undo a plain C# write. Registration alone keeps them revert-on-stop and unsaved.
-            UIAnimation.Evaluate(State, Time);
+            // Scenes: written outside Begin/EndSampling on purpose, since EndSampling restores registered properties to
+            // their recorded originals; registration alone keeps them revert-on-stop and unsaved.
+            // Prefab Mode: nothing is registered, and only writes inside a sampling block get redrawn.
+            if (_inPrefabStage)
+            {
+                AnimationMode.BeginSampling();
+                UIAnimation.Evaluate(State, Time);
+                AnimationMode.EndSampling();
+            }
+            else UIAnimation.Evaluate(State, Time);
             Repaint();
             Changed?.Invoke();
         }

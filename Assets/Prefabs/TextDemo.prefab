@@ -36,7 +36,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 600, y: 200}
+  m_SizeDelta: {x: 1440, y: 480}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4421889826551896638
 CanvasRenderer:
@@ -93,8 +93,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 72
+  m_fontSizeBase: 72
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -444,7 +444,7 @@ MonoBehaviour:
       scramble: 0
       keys:
       - time: 0
-        value: {x: 0, y: -50, z: 0, w: 0}
+        value: {x: 0, y: -120, z: 0, w: 0}
         curveType: 0
         ease: 0
         curve:
@@ -752,7 +752,7 @@ MonoBehaviour:
         frequency: 10
         damping: 1
       - time: 1
-        value: {x: 30, y: 30, z: 30, w: 0}
+        value: {x: 72, y: 72, z: 72, w: 0}
         curveType: 3
         ease: 0
         curve:

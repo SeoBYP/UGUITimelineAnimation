@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using LitMotion;
 using TMPro;
 using UnityEngine;
@@ -200,11 +202,13 @@ namespace SeoBYP.TimelineAnimation
             public MotionHandle handle;
             public bool active;
             public readonly Action onComplete;
+            public AutoResetUniTaskCompletionSource completion;   // only while someone awaits PlayAsync
+            public CancellationTokenRegistration cancelRegistration;
 
             public Playback(UIAnimState state)
             {
                 this.state = state;
-                onComplete = () => active = false;
+                onComplete = () => Finish(this);
             }
         }
 
@@ -251,12 +255,42 @@ namespace SeoBYP.TimelineAnimation
             PointerEventData pointer = null)
         {
             var playback = Prepare(stateName, interrupt, pointer);
-            if (playback == null) return;
+            if (playback != null) StartMotion(playback);
+        }
 
+        /// <summary>
+        /// Plays a state and completes when it reaches its end (or <see cref="Complete"/> skips there).
+        /// Canceled (OperationCanceledException) when the state does not finish: another state took all of its
+        /// properties, it was played again, the object was disabled, or <paramref name="cancellationToken"/> fired.
+        /// e.g. <c>await anim.PlayAsync("Close"); Destroy(gameObject);</c> never destroys a popup that was reopened mid-close.
+        /// </summary>
+        public UniTask PlayAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+            CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested) return UniTask.FromCanceled(cancellationToken);
+            var playback = Prepare(stateName, interrupt, null);
+            if (playback == null) return UniTask.CompletedTask;
+            var task = Await(playback, cancellationToken);
+            StartMotion(playback);
+            return task;
+        }
+
+        /// <summary>Jumps a playing state to its end; a pending PlayAsync completes normally (e.g. skipping a typewriter).</summary>
+        public void Complete(string stateName)
+        {
+            var playback = FindPlayback(stateName);
+            if (playback == null || !playback.active) return;
+            playback.handle.TryCancel();
+            Evaluate(playback.state, playback.state.Duration);
+            Finish(playback);
+        }
+
+        static void StartMotion(Playback playback)
+        {
             var duration = playback.state.Duration;
             if (duration <= 0f)
             {
-                playback.active = false;
+                Finish(playback);
                 return;
             }
 
@@ -264,6 +298,41 @@ namespace SeoBYP.TimelineAnimation
                 .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
                 .WithOnComplete(playback.onComplete)
                 .Bind(playback, static (t, p) => Evaluate(p.state, t));
+        }
+
+        /// <summary>The task for this play; split out so tests can drive time.</summary>
+        internal static UniTask Await(Playback playback, CancellationToken cancellationToken)
+        {
+            playback.completion = AutoResetUniTaskCompletionSource.Create();
+            if (cancellationToken.CanBeCanceled)
+                playback.cancelRegistration = cancellationToken.RegisterWithoutCaptureExecutionContext(
+                    static p => Stop((Playback)p), playback);
+            return playback.completion.Task;
+        }
+
+        // Reached the end: the state stays on its last values.
+        static void Finish(Playback p)
+        {
+            p.active = false;
+            Release(p)?.TrySetResult();
+        }
+
+        // Did not reach the end.
+        static void Stop(Playback p)
+        {
+            p.handle.TryCancel();
+            p.active = false;
+            Release(p)?.TrySetCanceled();
+        }
+
+        // Hands the completion source out exactly once; the pooled source must not be touched after it is set.
+        static AutoResetUniTaskCompletionSource Release(Playback p)
+        {
+            var completion = p.completion;
+            p.completion = null;
+            p.cancelRegistration.Dispose();
+            p.cancelRegistration = default;
+            return completion;
         }
 
         /// <summary>Everything Play does except starting the motion. Split out so tests can drive time.</summary>
@@ -299,8 +368,9 @@ namespace SeoBYP.TimelineAnimation
 
                 if (interrupt == UIAnimInterrupt.Complete)
                 {
+                    other.handle.TryCancel();
                     Evaluate(other.state, other.state.Duration);
-                    Stop(other);
+                    Finish(other);
                     continue;
                 }
 
@@ -326,12 +396,6 @@ namespace SeoBYP.TimelineAnimation
             foreach (var track in state.tracks)
                 if (track.target == other.target && track.property == other.property) return true;
             return false;
-        }
-
-        static void Stop(Playback p)
-        {
-            p.handle.TryCancel();
-            p.active = false;
         }
 
         Playback FindPlayback(string stateName)
