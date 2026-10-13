@@ -172,12 +172,21 @@ namespace SeoBYP.TimelineAnimation
         public RectTransform target;
     }
 
+    /// <summary>A named point in a state's time; raised once when playback passes it (e.g. play a sound on impact).</summary>
+    [Serializable]
+    public sealed class UIAnimSignal
+    {
+        public float time;
+        public string name = "Signal";
+    }
+
     [Serializable]
     public sealed class UIAnimState
     {
         public string name = "State";
         public List<UIAnimAction> actions = new();
         public List<UIAnimTrack> tracks = new();
+        public List<UIAnimSignal> signals = new();   // sorted by time
 
         public float Duration
         {
@@ -185,6 +194,7 @@ namespace SeoBYP.TimelineAnimation
             {
                 var d = 0f;
                 foreach (var track in tracks) d = Mathf.Max(d, track.End);
+                foreach (var signal in signals) d = Mathf.Max(d, signal.time);
                 return d;
             }
         }
@@ -201,18 +211,37 @@ namespace SeoBYP.TimelineAnimation
 
         internal sealed class Playback
         {
+            public readonly UIAnimation owner;
             public readonly UIAnimState state;
             public MotionHandle handle;
             public bool active;
+            public float lastTime;                                // signals in (lastTime, t] are raised on the next step
             public readonly Action onComplete;
             public AutoResetUniTaskCompletionSource completion;   // only while someone awaits PlayAsync
             public CancellationTokenRegistration cancelRegistration;
 
-            public Playback(UIAnimState state)
+            public Playback(UIAnimation owner, UIAnimState state)
             {
+                this.owner = owner;
                 this.state = state;
                 onComplete = () => Finish(this);
             }
+        }
+
+        /// <summary>(state name, signal name) when playback passes a signal. Skipping to the end (Complete) raises the skipped ones; a canceled play does not.</summary>
+        public event Action<string, string> SignalRaised;
+
+        /// <summary>Completes the next time any playing state raises <paramref name="signalName"/>.</summary>
+        public async UniTask WaitSignalAsync(string signalName, CancellationToken cancellationToken = default)
+        {
+            var source = new UniTaskCompletionSource();
+            void OnSignal(string _, string raised)
+            {
+                if (raised == signalName) source.TrySetResult();
+            }
+            SignalRaised += OnSignal;
+            try { await source.Task.AttachExternalCancellation(cancellationToken); }
+            finally { SignalRaised -= OnSignal; }
         }
 
         readonly List<Playback> _playbacks = new();
@@ -236,7 +265,7 @@ namespace SeoBYP.TimelineAnimation
             if (_initialized) return;
             _initialized = true;
             _playbacks.Clear();
-            foreach (var state in states) _playbacks.Add(new Playback(state));
+            foreach (var state in states) _playbacks.Add(new Playback(this, state));
             CaptureRest();
         }
 
@@ -300,7 +329,24 @@ namespace SeoBYP.TimelineAnimation
             playback.handle = LMotion.Create(0f, duration, duration)
                 .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
                 .WithOnComplete(playback.onComplete)
-                .Bind(playback, static (t, p) => Evaluate(p.state, t));
+                .Bind(playback, static (t, p) => Step(p, t));
+        }
+
+        /// <summary>One frame of a playback: values, then the signals passed since the last frame. Internal so tests can drive time.</summary>
+        internal static void Step(Playback p, float t)
+        {
+            Evaluate(p.state, t);
+            RaiseSignals(p, t);
+        }
+
+        static void RaiseSignals(Playback p, float t)
+        {
+            var from = p.lastTime;
+            p.lastTime = t;
+            var handler = p.owner.SignalRaised;
+            if (handler == null) return;
+            foreach (var signal in p.state.signals)
+                if (signal.time > from && signal.time <= t) handler(p.state.name, signal.name);
         }
 
         /// <summary>The task for this play; split out so tests can drive time.</summary>
@@ -316,6 +362,7 @@ namespace SeoBYP.TimelineAnimation
         // Reached the end: the state stays on its last values.
         static void Finish(Playback p)
         {
+            RaiseSignals(p, float.MaxValue);   // skipped to the end: the remaining signals still happen, in order
             p.active = false;
             Release(p)?.TrySetResult();
         }
@@ -356,7 +403,8 @@ namespace SeoBYP.TimelineAnimation
             foreach (var action in playback.state.actions) Run(action, pointer);
             Resolve(playback.state);
             // Show t = 0 right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
-            Evaluate(playback.state, 0f);
+            playback.lastTime = -1f;           // a signal at 0 fires on this first step
+            Step(playback, 0f);
 
             playback.active = true;
             return playback;

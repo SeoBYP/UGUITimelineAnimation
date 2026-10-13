@@ -284,5 +284,85 @@ namespace SeoBYP.TimelineAnimation.Tests
             UIAnimation.Evaluate(fill, 1f);
             Assert.AreEqual(1f, _image.fillAmount, 1e-4f);
         }
+
+        // ---------- 시그널 ----------
+
+        UIAnimState WithSignals(string name, params (float time, string name)[] signals)
+        {
+            var state = Fade(name, 0f);
+            foreach (var (time, signal) in signals) state.signals.Add(new UIAnimSignal { time = time, name = signal });
+            _anim.states.Add(state);
+            return state;
+        }
+
+        List<string> Record()
+        {
+            var raised = new List<string>();
+            _anim.SignalRaised += (state, signal) => raised.Add($"{state}:{signal}");
+            return raised;
+        }
+
+        [Test]
+        public void 시그널은_그_시간을_지날_때_한_번씩_발생한다()
+        {
+            WithSignals("Close", (0.3f, "A"), (0.6f, "B"));
+            var raised = Record();
+            var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
+
+            UIAnimation.Step(playback, 0.2f);
+            CollectionAssert.IsEmpty(raised);
+            UIAnimation.Step(playback, 0.5f);
+            UIAnimation.Step(playback, 0.5f);
+            CollectionAssert.AreEqual(new[] { "Close:A" }, raised, "같은 시간에 두 번 지나도 한 번만");
+            UIAnimation.Step(playback, 1f);
+            CollectionAssert.AreEqual(new[] { "Close:A", "Close:B" }, raised);
+        }
+
+        [Test]
+        public void 영초_시그널은_재생을_시작하자마자_발생한다()
+        {
+            WithSignals("Open", (0f, "Start"));
+            var raised = Record();
+            _anim.Prepare("Open", UIAnimInterrupt.Cancel, null);
+            CollectionAssert.AreEqual(new[] { "Open:Start" }, raised);
+        }
+
+        [Test]
+        public void Complete로_건너뛰면_남은_시그널이_순서대로_발생한다()
+        {
+            WithSignals("Close", (0.3f, "A"), (0.6f, "B"), (0.9f, "C"));
+            var raised = Record();
+            var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
+            UIAnimation.Step(playback, 0.4f);
+
+            _anim.Complete("Close");
+            CollectionAssert.AreEqual(new[] { "Close:A", "Close:B", "Close:C" }, raised);
+        }
+
+        [Test]
+        public void 취소되면_남은_시그널은_발생하지_않는다()
+        {
+            WithSignals("Close", (0.3f, "A"), (0.6f, "B"));
+            _anim.states.Add(Fade("Open", 1f));
+            var raised = Record();
+            var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
+            UIAnimation.Step(playback, 0.4f);
+
+            _anim.Prepare("Open", UIAnimInterrupt.Cancel, null);   // Open takes the alpha: Close is canceled
+            CollectionAssert.AreEqual(new[] { "Close:A" }, raised);
+        }
+
+        [Test]
+        public void WaitSignalAsync는_그_시그널이_오면_완료된다()
+        {
+            WithSignals("Close", (0.3f, "A"), (0.6f, "Impact"));
+            var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
+            var wait = _anim.WaitSignalAsync("Impact");
+
+            UIAnimation.Step(playback, 0.4f);
+            Assert.AreEqual(UniTaskStatus.Pending, wait.Status, "다른 시그널(A)로는 끝나지 않는다");
+            UIAnimation.Step(playback, 0.7f);
+            Assert.AreEqual(UniTaskStatus.Succeeded, wait.Status);
+        }
     }
 }
