@@ -28,6 +28,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         readonly HashSet<UIAnimKey> _selection = new();
         readonly Dictionary<UIAnimKey, float> _dragStartTimes = new();
         int _dragUndoGroup = -1;
+        UIAnimSignal _signal;            // selected signal (exclusive with key/track selection)
+        int _signalUndoGroup = -1;
         UIAnimPreview _preview;
         readonly HashSet<UIAnimKey> _unlinkedScale = new();   // keys whose Scale is edited per axis
 
@@ -146,6 +148,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         void OnUndoRedo()
         {
             _selection.Clear();   // undo deserializes new key objects; old references are stale
+            _signal = null;
             Rebuild();
             RefreshPreview();
         }
@@ -173,6 +176,8 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         void SelectionChanged()
         {
+            _signal = null;
+            _timeline.SelectedSignal = null;
             // A single selected key also selects its track, so the key inspector knows where it lives.
             if (_selection.Count > 0)
             {
@@ -259,10 +264,54 @@ namespace SeoBYP.TimelineAnimation.Editor
                 _track = -1;
             });
             _timeline.AddTrackMenuRequested = rect => ShowPropertyMenu(rect, null);
+
+            _timeline.SignalClicked = signal =>
+            {
+                _selection.Clear();
+                _track = -1;
+                _signal = signal;
+                _timeline.SelectedSignal = signal;
+                _timeline.Refresh(_track);
+                RebuildInspector();
+            };
+            _timeline.SignalMoved = (signal, time) =>
+            {
+                if (_signalUndoGroup < 0) _signalUndoGroup = Undo.GetCurrentGroup();
+                Modify("Move Signal", () => signal.time = time, rebuild: false);
+            };
+            _timeline.SignalDragFinished = () =>
+            {
+                Modify("Move Signal", SortSignals);
+                if (_signalUndoGroup >= 0) Undo.CollapseUndoOperations(_signalUndoGroup);
+                _signalUndoGroup = -1;
+            };
+            _timeline.AddSignalRequested = time => Modify("Add Signal", () =>
+            {
+                var name = "Signal";
+                for (var n = 1; CurrentState.signals.Exists(x => x.name == name); n++) name = $"Signal {n}";
+                var signal = new UIAnimSignal { time = time, name = name };
+                CurrentState.signals.Add(signal);
+                SortSignals();
+                _selection.Clear();
+                _track = -1;
+                _signal = signal;
+            });
         }
+
+        void SortSignals() => CurrentState.signals.Sort((a, b) => a.time.CompareTo(b.time));
 
         void DeleteSelectedKeys()
         {
+            if (_signal != null)
+            {
+                var signal = _signal;
+                Modify("Delete Signal", () =>
+                {
+                    CurrentState.signals.Remove(signal);
+                    _signal = null;
+                });
+                return;
+            }
             if (_selection.Count == 0) return;
             Modify("Delete Keys", () =>
             {
@@ -373,6 +422,8 @@ namespace SeoBYP.TimelineAnimation.Editor
             add.AddToClassList("uia-tab--add");
             _tabs.Add(add);
 
+            if (_signal != null && !CurrentState.signals.Contains(_signal)) _signal = null;   // state switched or signal removed
+            _timeline.SelectedSignal = _signal;
             _timeline.SetState(_target, CurrentState, _track, _selection);
             RebuildInspector();
         }
@@ -387,6 +438,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 section.Add(Hint("위의 + 탭으로 상태를 추가하세요."));
                 _inspector.Add(section);
             }
+            else if (_signal != null) BuildSignalInspector(_signal);
             else if (_selection.Count == 1 && CurrentTrack != null && CurrentTrack.keys.Contains(_selection.First()))
                 BuildKeyInspector(CurrentTrack, _selection.First());
             else if (_selection.Count > 1) BuildMultiKeyInspector();
@@ -407,6 +459,29 @@ namespace SeoBYP.TimelineAnimation.Editor
             _track = -1;
             _selection.Clear();
         });
+
+        void BuildSignalInspector(UIAnimSignal signal)
+        {
+            _inspector.Add(Heading($"▼ {signal.name}", new Color32(255, 183, 77, 255)));
+            var section = Section("시그널");
+            var name = new TextField("이름") { value = signal.name, isDelayed = true };
+            name.RegisterValueChangedCallback(e => Modify("Rename Signal", () => signal.name = e.newValue));
+            section.Add(name);
+            var time = new FloatField("시간 (s)") { value = signal.time, isDelayed = true };
+            time.RegisterValueChangedCallback(e => Modify("Move Signal", () =>
+            {
+                signal.time = Mathf.Max(0f, e.newValue);
+                SortSignals();
+            }));
+            section.Add(time);
+            section.Add(Hint($"재생이 이 시간을 지나면 SignalRaised(\"{CurrentState.name}\", \"{signal.name}\")가 발생합니다.\n" +
+                             $"코드에서 기다리기: await anim.WaitSignalAsync(\"{signal.name}\");\n" +
+                             "Complete로 건너뛰면 남은 시그널도 순서대로 발생하고, 취소되면 발생하지 않습니다."));
+            var remove = new Button(DeleteSelectedKeys) { text = "시그널 삭제", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            remove.AddToClassList("uia-danger");
+            section.Add(remove);
+            _inspector.Add(section);
+        }
 
         void BuildStateInspector(UIAnimState state)
         {

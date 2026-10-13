@@ -26,6 +26,7 @@ public sealed class PopupSample : MonoBehaviour
         {
             _popup = Instantiate(popupPrefab, popupParent);
             _popup.GetComponentInChildren<Button>().onClick.AddListener(Close);
+            _popup.SignalRaised += (state, signal) => Log($"Signal {state}:{signal}");
             _popup.Play("Close");       // start from the closed pose
             _popup.Complete("Close");
             Log("Instantiate");

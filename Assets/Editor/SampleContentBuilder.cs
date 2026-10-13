@@ -511,6 +511,8 @@ static class SampleContentBuilder
             State("Close", To(dim, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.4f, Ease.OutQuad),
                            To(window, UIAnimProperty.Scale, Vector3.one * 0.6f, 0.4f, Ease.InBack),
                            Relative(window, UIAnimProperty.AnchoredPosition, new Vector4(0, -192), 0.4f, Ease.InCubic)));
+        // A signal the sample logs, so the timeline marker can be checked in Play mode.
+        anim.states[0].signals.Add(new UIAnimSignal { time = 0.2f, name = "Shown" });
         return root.gameObject;
     }
 
