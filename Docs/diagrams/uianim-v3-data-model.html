@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UIAnimation 데이터 모델</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Geist', 'Noto Sans KR', system-ui, sans-serif; background: #fafaf8; color: #121417;
+           min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1280px; width: 100%; min-width: 0; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: #2f3640; margin-bottom: 0.5rem; }
+    h1 { font-family: 'Instrument Serif', 'Noto Serif KR', serif; font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+         letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 1280px; display: block; }
+    @media print { .diagram-container { overflow-x: visible; } svg { min-width: 0; } }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Data model · UIAnimation v3</p>
+    <h1>UIAnimation 데이터 모델</h1>
+    <div class="diagram-container">
+      <svg viewBox="0 0 1280 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="uianim-v3-data-model-title uianim-v3-data-model-desc">
+        <title id="uianim-v3-data-model-title">UIAnimation 데이터 모델</title>
+        <desc id="uianim-v3-data-model-desc">UIAnimation은 상태 목록을 갖고, 상태는 액션과 트랙을, 트랙은 키를 가지며, 트리거는 상태를 이름으로 참조하고 트랙은 대상 컴포넌트를 직접 참조한다.</desc>
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2f3640"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#0956c0"/></marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a14f00"/></marker>
+        </defs>
+        <rect width="100%" height="100%" fill="#fafaf8"/>
+<g>
+<path d="M272,88 H350" fill="none" stroke="#2f3640" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M584,88 H662" fill="none" stroke="#2f3640" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M928,88 H1006" fill="none" stroke="#2f3640" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M468,172 V374" fill="none" stroke="#2f3640" stroke-width="1.4" marker-end="url(#arrow)"/>
+<path d="M272,408 H312 Q320,408 320,400 V148 Q320,140 328,140 H350" fill="none" stroke="#2f3640" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+<path d="M796,244 V414" fill="none" stroke="#2f3640" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+<rect x="293" y="70" width="36" height="12" rx="2" fill="#fafaf8"/><text x="311" y="79" fill="#2f3640" font-size="8" font-weight="500" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em" text-anchor="middle">1 : N</text>
+<rect x="605" y="70" width="36" height="12" rx="2" fill="#fafaf8"/><text x="623" y="79" fill="#2f3640" font-size="8" font-weight="500" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em" text-anchor="middle">1 : N</text>
+<rect x="949" y="70" width="36" height="12" rx="2" fill="#fafaf8"/><text x="967" y="79" fill="#2f3640" font-size="8" font-weight="500" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em" text-anchor="middle">1 : N</text>
+<rect x="474" y="266" width="36" height="12" rx="2" fill="#fafaf8"/><text x="492" y="275" fill="#2f3640" font-size="8" font-weight="500" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em" text-anchor="middle">1 : N</text>
+<rect x="244" y="264" width="68" height="16" rx="2" fill="#fafaf8"/><text x="278" y="276" fill="#2f3640" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" text-anchor="middle">이름 참조</text>
+<rect x="808" y="322" width="40" height="12" rx="2" fill="#fafaf8"/><text x="828" y="331" fill="#2f3640" font-size="8" font-weight="500" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.06em" text-anchor="middle">TARGET</text>
+</g>
+<rect x="40" y="56" width="232" height="84" rx="6" fill="#fafaf8"/>
+<rect x="40" y="56" width="232" height="84" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+<line x1="40" y1="88" x2="272" y2="88" stroke="#121417" stroke-width="0.8"/>
+<rect x="48" y="66" width="32" height="12" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+<text x="64" y="75" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">MONO</text>
+<text x="88" y="77" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">UIAnimation</text>
+<text x="56" y="108" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">states : List&lt;UIAnimState&gt;</text>
+<text x="56" y="126" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">Play · PlayAsync · Complete</text>
+<rect x="352" y="56" width="232" height="120" rx="6" fill="#fafaf8"/>
+<rect x="352" y="56" width="232" height="120" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+<line x1="352" y1="88" x2="584" y2="88" stroke="#121417" stroke-width="0.8"/>
+<rect x="360" y="66" width="36" height="12" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+<text x="378" y="75" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CLASS</text>
+<text x="404" y="77" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">UIAnimState</text>
+<text x="368" y="108" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">name : string</text>
+<text x="368" y="126" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">actions : List&lt;UIAnimAction&gt;</text>
+<text x="368" y="144" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">tracks : List&lt;UIAnimTrack&gt;</text>
+<text x="368" y="162" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">Duration : float  [get]</text>
+<rect x="664" y="56" width="264" height="192" rx="6" fill="#fafaf8"/>
+<rect x="664" y="56" width="264" height="192" rx="6" fill="rgba(9,86,192,0.10)" stroke="#0956c0" stroke-width="1.8"/>
+<line x1="664" y1="88" x2="928" y2="88" stroke="#0956c0" stroke-width="0.8"/>
+<rect x="672" y="66" width="36" height="12" rx="2" fill="none" stroke="#0956c0" stroke-width="0.8"/>
+<text x="690" y="75" fill="#0956c0" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CLASS</text>
+<text x="716" y="77" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">UIAnimTrack</text>
+<text x="680" y="108" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">target : Component</text>
+<text x="680" y="126" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">property : UIAnimProperty</text>
+<text x="680" y="144" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">startFromCurrent : bool</text>
+<text x="680" y="162" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">relativeToRest : bool</text>
+<text x="680" y="180" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">stagger : float  *</text>
+<text x="680" y="198" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">durationPerChar : float  *</text>
+<text x="680" y="216" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">scramble : ScrambleMode  *</text>
+<text x="680" y="234" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">keys : List&lt;UIAnimKey&gt;</text>
+<rect x="1008" y="56" width="232" height="172" rx="6" fill="#fafaf8"/>
+<rect x="1008" y="56" width="232" height="172" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+<line x1="1008" y1="88" x2="1240" y2="88" stroke="#121417" stroke-width="0.8"/>
+<rect x="1016" y="66" width="36" height="12" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+<text x="1034" y="75" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CLASS</text>
+<text x="1060" y="77" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">UIAnimKey</text>
+<text x="1024" y="108" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">time : float</text>
+<text x="1024" y="126" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">value : Vector4</text>
+<text x="1024" y="144" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">curveType : CurveType</text>
+<text x="1024" y="162" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">ease : Ease</text>
+<text x="1024" y="180" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">curve : AnimationCurve</text>
+<text x="1024" y="198" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">frequency : float  †</text>
+<text x="1024" y="216" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">damping : float  †</text>
+<rect x="352" y="376" width="232" height="84" rx="6" fill="#fafaf8"/>
+<rect x="352" y="376" width="232" height="84" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+<line x1="352" y1="408" x2="584" y2="408" stroke="#121417" stroke-width="0.8"/>
+<rect x="360" y="386" width="36" height="12" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+<text x="378" y="395" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">CLASS</text>
+<text x="404" y="397" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">UIAnimAction</text>
+<text x="368" y="428" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">type : MoveToPointer</text>
+<text x="368" y="446" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">target : RectTransform</text>
+<rect x="40" y="376" width="232" height="84" rx="6" fill="#fafaf8"/>
+<rect x="40" y="376" width="232" height="84" rx="6" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+<line x1="40" y1="408" x2="272" y2="408" stroke="#121417" stroke-width="0.8"/>
+<rect x="48" y="386" width="32" height="12" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+<text x="64" y="395" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">MONO</text>
+<text x="88" y="397" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">UIAnimTrigger</text>
+<text x="56" y="428" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">bindings : List&lt;Binding&gt;</text>
+<text x="56" y="446" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">evt · state · interrupt</text>
+<rect x="664" y="416" width="264" height="64" rx="6" fill="#fafaf8"/>
+<rect x="664" y="416" width="264" height="64" rx="6" fill="rgba(18,20,23,0.05)" stroke="#2f3640" stroke-width="1.2"/>
+<line x1="664" y1="448" x2="928" y2="448" stroke="#2f3640" stroke-width="0.8"/>
+<rect x="672" y="426" width="36" height="12" rx="2" fill="none" stroke="#2f3640" stroke-width="0.8"/>
+<text x="690" y="435" fill="#2f3640" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle" letter-spacing="0.08em">UNITY</text>
+<text x="716" y="437" fill="#121417" font-size="12" font-weight="600" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">대상 컴포넌트</text>
+<text x="680" y="468" fill="#2f3640" font-size="10" font-family="'Geist Mono', ui-monospace, monospace">RectTransform · Graphic · TMP_Text</text>
+<line x1="40" y1="544" x2="1240" y2="544" stroke="#9aa0a8" stroke-width="0.8"/>
+<text x="40" y="576" font-size="8" font-weight="600" letter-spacing="0.14em" fill="#4a525e" font-family="'Geist Mono', ui-monospace, monospace">LEGEND</text>
+<rect x="120" y="566" width="16" height="12" rx="2" fill="rgba(9,86,192,0.10)" stroke="#0956c0" stroke-width="1.8"/>
+<text x="144" y="576" font-size="12" fill="#2f3640" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">핵심 클래스</text>
+<rect x="240" y="566" width="16" height="12" rx="2" fill="#ffffff" stroke="#121417" stroke-width="1.2"/>
+<text x="264" y="576" font-size="12" fill="#2f3640" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">클래스·컴포넌트</text>
+<rect x="384" y="566" width="16" height="12" rx="2" fill="rgba(18,20,23,0.05)" stroke="#2f3640" stroke-width="1.2"/>
+<text x="408" y="576" font-size="12" fill="#2f3640" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">Unity 컴포넌트</text>
+<line x1="522" y1="572" x2="550" y2="572" stroke="#2f3640" stroke-width="1.4"/>
+<text x="558" y="576" font-size="12" fill="#2f3640" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">소유 (1 : N)</text>
+<line x1="664" y1="572" x2="692" y2="572" stroke="#2f3640" stroke-width="1.4" stroke-dasharray="5,4"/>
+<text x="700" y="576" font-size="12" fill="#2f3640" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">참조</text>
+<text x="752" y="576" font-size="12" fill="#2f3640" font-family="'Geist', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif">* 텍스트 트랙 전용    † Punch/Shake 전용</text>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>
