@@ -5,6 +5,13 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>Custom animation event data: picked on the event marker in the editor, received with AddListener.</summary>
+public struct PopupSoundEvent : IUIAnimEventData
+{
+    public string clip;
+    public float volume;
+}
+
 /// <summary>
 /// Dev sample: opens a popup, awaits its Close animation, then destroys it.
 /// A Close interrupted by Open (e.g. the "Close > Open" button) is canceled, so the popup is kept.
@@ -26,7 +33,8 @@ public sealed class PopupSample : MonoBehaviour
         {
             _popup = Instantiate(popupPrefab, popupParent);
             _popup.GetComponentInChildren<Button>().onClick.AddListener(Close);
-            _popup.SignalRaised += (state, signal) => Log($"Signal {state}:{signal}");
+            _popup.EventRaised += (in UIAnimEventInfo e) => Log($"Event {e.State}:{e.Name}");
+            _popup.AddListener((in UIAnimEventInfo e, in PopupSoundEvent sound) => Log($"Sound {sound.clip} ({sound.volume:0.0})"));
             _popup.Play("Close");       // start from the closed pose
             _popup.Complete("Close");
             Log("Instantiate");

@@ -6,6 +6,7 @@ using LitMotion;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace SeoBYP.TimelineAnimation
@@ -172,29 +173,122 @@ namespace SeoBYP.TimelineAnimation
         public RectTransform target;
     }
 
-    /// <summary>A named point in a state's time; raised once when playback passes it (e.g. play a sound on impact).</summary>
+    /// <summary>Marks a struct as custom data an animation event can carry (e.g. <c>struct HitEvent : IUIAnimEventData { public float damage; }</c>).</summary>
+    public interface IUIAnimEventData { }
+
+    /// <summary>
+    /// An animation event: a named point in a state's time, raised once when playback passes it (e.g. play a sound on impact).
+    /// It can carry one custom <see cref="IUIAnimEventData"/> struct, stored as JSON and converted once on first use.
+    /// </summary>
     [Serializable]
-    public sealed class UIAnimSignal
+    public sealed class UIAnimEventMarker
     {
         public float time;
-        public string name = "Signal";
+        public string name = "Event";
+        public string dataType = "";   // "Namespace.Type, Assembly" of an IUIAnimEventData struct, or empty
+        public string dataJson = "";
+
+        [NonSerialized] object _data;   // boxed once; reading it copies the struct out without allocating
+        [NonSerialized] bool _parsed;
+
+        public static string TypeKey(Type type) => type == null ? "" : $"{type.FullName}, {type.Assembly.GetName().Name}";
+
+        public Type DataType => string.IsNullOrEmpty(dataType) ? null : Type.GetType(dataType);
+
+        internal bool TryGetData<T>(out T data) where T : struct, IUIAnimEventData
+        {
+            if (!_parsed)
+            {
+                _parsed = true;
+                var type = DataType;
+                _data = type == null ? null : JsonUtility.FromJson(string.IsNullOrEmpty(dataJson) ? "{}" : dataJson, type);
+            }
+            if (_data is T value)
+            {
+                data = value;
+                return true;
+            }
+            data = default;
+            return false;
+        }
+
+        /// <summary>Call after changing dataType/dataJson (the editor does).</summary>
+        public void InvalidateData()
+        {
+            _parsed = false;
+            _data = null;
+        }
+    }
+
+    /// <summary>What an animation event handler receives (like Unity 6.5's AnimationEventInfo): passed by <c>in</c>, no allocation.</summary>
+    public readonly struct UIAnimEventInfo
+    {
+        public readonly UIAnimation Animation;
+        public readonly string State;
+        public readonly string Name;
+        public readonly float Time;
+        readonly UIAnimEventMarker _marker;
+
+        internal UIAnimEventInfo(UIAnimation animation, string state, UIAnimEventMarker marker)
+        {
+            Animation = animation;
+            State = state;
+            Name = marker.name;
+            Time = marker.time;
+            _marker = marker;
+        }
+
+        /// <summary>The event's custom data, if it carries a <typeparamref name="T"/>.</summary>
+        public bool TryGetData<T>(out T data) where T : struct, IUIAnimEventData
+        {
+            if (_marker != null) return _marker.TryGetData(out data);
+            data = default;
+            return false;
+        }
+    }
+
+    public delegate void UIAnimEventHandler(in UIAnimEventInfo e);
+    public delegate void UIAnimEventHandler<T>(in UIAnimEventInfo e, in T data) where T : struct, IUIAnimEventData;
+
+    /// <summary>Plays another UIAnimation's state at a point in this state's time (e.g. a popup showing its buttons).</summary>
+    [Serializable]
+    public sealed class UIAnimChildCall
+    {
+        public float time;
+        public UIAnimation child;
+        public string state = "";
+
+        public UIAnimState Target => child != null ? child.FindState(state) : null;
     }
 
     [Serializable]
     public sealed class UIAnimState
     {
+        internal const int MaxCallDepth = 8;   // a child calling back into its parent is cut here
+        [ThreadStatic] static int _durationDepth;
+
         public string name = "State";
         public List<UIAnimAction> actions = new();
         public List<UIAnimTrack> tracks = new();
-        public List<UIAnimSignal> signals = new();   // sorted by time
+        [FormerlySerializedAs("signals")]
+        public List<UIAnimEventMarker> events = new();      // animation events, sorted by time
+        public List<UIAnimChildCall> childCalls = new();    // sorted by time
 
+        /// <summary>Until the last track, animation event or called child state ends.</summary>
         public float Duration
         {
             get
             {
                 var d = 0f;
                 foreach (var track in tracks) d = Mathf.Max(d, track.End);
-                foreach (var signal in signals) d = Mathf.Max(d, signal.time);
+                foreach (var e in events) d = Mathf.Max(d, e.time);
+                if (_durationDepth >= MaxCallDepth) return d;
+                _durationDepth++;
+                try
+                {
+                    foreach (var call in childCalls) d = Mathf.Max(d, call.time + (call.Target?.Duration ?? 0f));
+                }
+                finally { _durationDepth--; }
                 return d;
             }
         }
@@ -215,7 +309,7 @@ namespace SeoBYP.TimelineAnimation
             public readonly UIAnimState state;
             public MotionHandle handle;
             public bool active;
-            public float lastTime;                                // signals in (lastTime, t] are raised on the next step
+            public float lastTime;                                // events in (lastTime, t] are raised on the next step
             public readonly Action onComplete;
             public AutoResetUniTaskCompletionSource completion;   // only while someone awaits PlayAsync
             public CancellationTokenRegistration cancelRegistration;
@@ -228,24 +322,58 @@ namespace SeoBYP.TimelineAnimation
             }
         }
 
-        /// <summary>(state name, signal name) when playback passes a signal. Skipping to the end (Complete) raises the skipped ones; a canceled play does not.</summary>
-        public event Action<string, string> SignalRaised;
+        /// <summary>
+        /// Raised when playback passes an animation event. Skipping to the end (Complete) raises the skipped ones in order;
+        /// a canceled play does not. Lambdas need the parameter type: <c>anim.EventRaised += (in UIAnimEventInfo e) =&gt; ...</c>
+        /// </summary>
+        public event UIAnimEventHandler EventRaised;
 
-        /// <summary>Completes the next time any playing state raises <paramref name="signalName"/>.</summary>
-        public async UniTask WaitSignalAsync(string signalName, CancellationToken cancellationToken = default)
+        /// <summary>Calls <paramref name="handler"/> for events carrying a <typeparamref name="T"/>; dispose the result to stop.</summary>
+        public IDisposable AddListener<T>(UIAnimEventHandler<T> handler) where T : struct, IUIAnimEventData
         {
-            var source = new UniTaskCompletionSource();
-            void OnSignal(string _, string raised)
+            void OnEvent(in UIAnimEventInfo e)
             {
-                if (raised == signalName) source.TrySetResult();
+                if (e.TryGetData(out T data)) handler(in e, in data);
             }
-            SignalRaised += OnSignal;
-            try { await source.Task.AttachExternalCancellation(cancellationToken); }
-            finally { SignalRaised -= OnSignal; }
+            EventRaised += OnEvent;
+            return new Unsubscriber(this, OnEvent);
+        }
+
+        sealed class Unsubscriber : IDisposable
+        {
+            UIAnimation _owner;
+            readonly UIAnimEventHandler _handler;
+            public Unsubscriber(UIAnimation owner, UIAnimEventHandler handler) => (_owner, _handler) = (owner, handler);
+
+            public void Dispose()
+            {
+                if (_owner != null) _owner.EventRaised -= _handler;
+                _owner = null;
+            }
+        }
+
+        /// <summary>Completes with the event the next time any playing state raises <paramref name="eventName"/>.</summary>
+        public async UniTask<UIAnimEventInfo> WaitEventAsync(string eventName, CancellationToken cancellationToken = default)
+        {
+            var source = new UniTaskCompletionSource<UIAnimEventInfo>();
+            void OnEvent(in UIAnimEventInfo e)
+            {
+                if (e.Name == eventName) source.TrySetResult(e);
+            }
+            EventRaised += OnEvent;
+            try { return await source.Task.AttachExternalCancellation(cancellationToken); }
+            finally { EventRaised -= OnEvent; }
         }
 
         readonly List<Playback> _playbacks = new();
         bool _initialized;
+
+        internal UIAnimState FindState(string stateName)
+        {
+            foreach (var s in states)
+                if (s.name == stateName) return s;
+            return null;
+        }
 
         public bool IsPlaying(string stateName)
         {
@@ -332,21 +460,33 @@ namespace SeoBYP.TimelineAnimation
                 .Bind(playback, static (t, p) => Step(p, t));
         }
 
-        /// <summary>One frame of a playback: values, then the signals passed since the last frame. Internal so tests can drive time.</summary>
+        /// <summary>One frame of a playback: values, then the child calls and animation events passed since the last frame. Internal so tests can drive time.</summary>
         internal static void Step(Playback p, float t)
         {
             Evaluate(p.state, t);
-            RaiseSignals(p, t);
+            RaiseEvents(p, t);
         }
 
-        static void RaiseSignals(Playback p, float t)
+        [ThreadStatic] static int _callDepth;   // parent and child calling each other at the same time stop here
+
+        static void RaiseEvents(Playback p, float t)
         {
             var from = p.lastTime;
             p.lastTime = t;
-            var handler = p.owner.SignalRaised;
+            if (_callDepth < UIAnimState.MaxCallDepth)
+            {
+                _callDepth++;
+                try
+                {
+                    foreach (var call in p.state.childCalls)
+                        if (call.time > from && call.time <= t && call.child != null) call.child.Play(call.state);
+                }
+                finally { _callDepth--; }
+            }
+            var handler = p.owner.EventRaised;
             if (handler == null) return;
-            foreach (var signal in p.state.signals)
-                if (signal.time > from && signal.time <= t) handler(p.state.name, signal.name);
+            foreach (var marker in p.state.events)
+                if (marker.time > from && marker.time <= t) handler(new UIAnimEventInfo(p.owner, p.state.name, marker));
         }
 
         /// <summary>The task for this play; split out so tests can drive time.</summary>
@@ -362,7 +502,9 @@ namespace SeoBYP.TimelineAnimation
         // Reached the end: the state stays on its last values.
         static void Finish(Playback p)
         {
-            RaiseSignals(p, float.MaxValue);   // skipped to the end: the remaining signals still happen, in order
+            RaiseEvents(p, float.MaxValue);   // skipped to the end: the remaining calls and events still happen, in order
+            foreach (var call in p.state.childCalls)
+                if (call.child != null && call.child.IsPlaying(call.state)) call.child.Complete(call.state);
             p.active = false;
             Release(p)?.TrySetResult();
         }
@@ -403,7 +545,7 @@ namespace SeoBYP.TimelineAnimation
             foreach (var action in playback.state.actions) Run(action, pointer);
             Resolve(playback.state);
             // Show t = 0 right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
-            playback.lastTime = -1f;           // a signal at 0 fires on this first step
+            playback.lastTime = -1f;           // an event at 0 fires on this first step
             Step(playback, 0f);
 
             playback.active = true;
@@ -487,6 +629,24 @@ namespace SeoBYP.TimelineAnimation
         {
             for (var i = 1; i < track.keys.Count; i++)
                 if (track.keys[i].IsVibration) track.keys[i].resolved = track.keys[i - 1].resolved;
+        }
+
+        /// <summary>Editor preview: resolves a state and every child state it calls.</summary>
+        internal static void ResolveTree(UIAnimState state, int depth = 0)
+        {
+            Resolve(state);
+            if (depth >= UIAnimState.MaxCallDepth) return;
+            foreach (var call in state.childCalls)
+                if (call.Target is { } child) ResolveTree(child, depth + 1);
+        }
+
+        /// <summary>Editor preview: the state at t, with each called child state at its own time since the call.</summary>
+        internal static void EvaluateTree(UIAnimState state, float t, int depth = 0)
+        {
+            Evaluate(state, t);
+            if (depth >= UIAnimState.MaxCallDepth) return;
+            foreach (var call in state.childCalls)
+                if (t >= call.time && call.Target is { } child) EvaluateTree(child, t - call.time, depth + 1);
         }
 
         /// <summary>Writes the state at time t. Shared by runtime playback, tests and the editor preview.</summary>

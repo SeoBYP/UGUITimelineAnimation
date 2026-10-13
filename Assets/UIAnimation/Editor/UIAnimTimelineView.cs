@@ -30,12 +30,14 @@ namespace SeoBYP.TimelineAnimation.Editor
         public Action<int, float> AddKeyRequested;                        // track, time
         public Action<int> RemoveTrackRequested;
         public Action<Rect> AddTrackMenuRequested;                        // where to drop the menu
-        public Action<UIAnimSignal> SignalClicked;                        // null = clicked the empty signal lane
-        public Action<UIAnimSignal, float> SignalMoved;                   // signal, new time (live while dragging)
-        public Action SignalDragFinished;
-        public Action<float> AddSignalRequested;                          // time
+        // Marker rows (animation events, child calls): items are UIAnimEventMarker or UIAnimChildCall.
+        public Action<object> MarkerClicked;                              // null = clicked an empty marker lane
+        public Action<object, float> MarkerMoved;                         // item, new time (live while dragging)
+        public Action MarkerDragFinished;
+        public Action<float> AddEventRequested;                           // time
+        public Action<Rect, float> AddCallRequested;                      // where to drop the menu, time
 
-        public UIAnimSignal SelectedSignal { get; set; }
+        public object SelectedMarker { get; set; }
 
         readonly VisualElement _ruler;
         readonly VisualElement _rows;
@@ -44,10 +46,10 @@ namespace SeoBYP.TimelineAnimation.Editor
         readonly List<(UIAnimKey key, VisualElement el)> _keyElements = new();
         readonly List<(VisualElement header, int track)> _headers = new();
         readonly List<VisualElement> _lanes = new();
-        readonly VisualElement _signalLane;
-        readonly List<(UIAnimSignal signal, Label el)> _signalElements = new();
-        UIAnimSignal _dragSignal;
-        bool _signalDragged;
+        readonly VisualElement _eventLane, _callLane;
+        readonly List<(object item, VisualElement el)> _markerElements = new();
+        object _dragMarker;
+        bool _markerDragged;
         UIAnimState _state;
         UIAnimation _root;
         ICollection<UIAnimKey> _selection = Array.Empty<UIAnimKey>();
@@ -120,24 +122,12 @@ namespace SeoBYP.TimelineAnimation.Editor
             rulerRow.Add(_ruler);
             Add(rulerRow);
 
-            // Signal row: named points in time (double-click the lane or + to add, drag to move, Delete to remove).
-            var signalRow = new VisualElement { style = { flexDirection = FlexDirection.Row } };
-            signalRow.AddToClassList("uia-signal-row");
-            var signalHeader = new VisualElement { style = { width = HeaderWidth } };
-            signalHeader.AddToClassList("uia-header");
-            var signalTitle = new Label("시그널") { pickingMode = PickingMode.Ignore, style = { flexGrow = 1 } };
-            signalTitle.AddToClassList("uia-track-prop");
-            signalHeader.Add(signalTitle);
-            signalHeader.Add(SmallButton("+", "재생 위치에 시그널 추가", () => AddSignalRequested?.Invoke(_time)));
-            signalRow.Add(signalHeader);
-            _signalLane = new VisualElement { style = { flexGrow = 1, marginRight = LaneRight } };
-            _signalLane.AddToClassList("uia-signal-lane");
-            _signalLane.tooltip = "더블클릭: 시그널 추가 · 드래그: 이동 · Delete: 삭제";
-            _signalLane.RegisterCallback<PointerDownEvent>(OnSignalDown);
-            _signalLane.RegisterCallback<PointerMoveEvent>(OnSignalMove);
-            _signalLane.RegisterCallback<PointerUpEvent>(OnSignalUp);
-            signalRow.Add(_signalLane);
-            Add(signalRow);
+            // Marker rows: animation events (named points in time) and child calls (another UIAnimation state played at a time).
+            // + or double-click to add, drag to move, Delete to remove.
+            _eventLane = MarkerRow("애니메이션 이벤트", "재생 위치에 애니메이션 이벤트 추가", _ => AddEventRequested?.Invoke(_time),
+                                   "더블클릭: 애니메이션 이벤트 추가 · 드래그: 이동 · Delete: 삭제");
+            _callLane = MarkerRow("자식 호출", "재생 위치에 자식 상태 호출 추가", b => AddCallRequested?.Invoke(b.worldBound, _time),
+                                  "더블클릭: 자식 상태 호출 추가 · 드래그: 이동 · Delete: 삭제");
 
             var scroll = new ScrollView(ScrollViewMode.Vertical) { style = { flexGrow = 1 } };
             _rows = new VisualElement();
@@ -191,7 +181,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             _selTrack = selTrack;
             foreach (var (key, el) in _keyElements) el.EnableInClassList("uia-key--selected", _selection.Contains(key));
             foreach (var (header, t) in _headers) header.EnableInClassList("uia-header--selected", t == _selTrack);
-            foreach (var (signal, el) in _signalElements) el.EnableInClassList("uia-signal--selected", signal == SelectedSignal);
+            foreach (var (item, el) in _markerElements) el.EnableInClassList("uia-marker--selected", item == SelectedMarker);
             Layout();
         }
 
@@ -201,19 +191,55 @@ namespace SeoBYP.TimelineAnimation.Editor
             _keyElements.Clear();
             _headers.Clear();
             _lanes.Clear();
-            _signalLane.Clear();
-            _signalElements.Clear();
+            _eventLane.Clear();
+            _callLane.Clear();
+            _markerElements.Clear();
             if (_state == null) return;
             for (var i = 0; i < _state.tracks.Count; i++) _rows.Add(MakeRow(i, _state.tracks[i]));
-            foreach (var signal in _state.signals)
-            {
-                var el = new Label("▼ " + signal.name) { userData = signal };
-                el.AddToClassList("uia-signal");
-                el.EnableInClassList("uia-signal--selected", signal == SelectedSignal);
-                _signalElements.Add((signal, el));
-                _signalLane.Add(el);
-            }
+            foreach (var e in _state.events)
+                AddMarker(_eventLane, e, new Label("▼ " + e.name + (string.IsNullOrEmpty(e.dataType) ? "" : " •")), "uia-signal");
+            foreach (var call in _state.childCalls)
+                AddMarker(_callLane, call, new Label($"{(call.child != null ? call.child.name : "(없음)")} ▸ {call.state}"), "uia-call");
         }
+
+        void AddMarker(VisualElement lane, object item, VisualElement el, string className)
+        {
+            el.userData = item;
+            el.AddToClassList(className);
+            el.EnableInClassList("uia-marker--selected", item == SelectedMarker);
+            _markerElements.Add((item, el));
+            lane.Add(el);
+        }
+
+        VisualElement MarkerRow(string title, string addTooltip, Action<Button> onAdd, string laneTooltip)
+        {
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+            row.AddToClassList("uia-marker-row");
+            var header = new VisualElement { style = { width = HeaderWidth } };
+            header.AddToClassList("uia-header");
+            var label = new Label(title) { pickingMode = PickingMode.Ignore, style = { flexGrow = 1 } };
+            label.AddToClassList("uia-track-prop");
+            header.Add(label);
+            Button add = null;
+            add = SmallButton("+", addTooltip, () => onAdd(add));
+            header.Add(add);
+            row.Add(header);
+            var lane = new VisualElement { tooltip = laneTooltip, style = { flexGrow = 1, marginRight = LaneRight } };
+            lane.AddToClassList("uia-marker-lane");
+            lane.RegisterCallback<PointerDownEvent>(e => OnMarkerDown(lane, e));
+            lane.RegisterCallback<PointerMoveEvent>(e => OnMarkerMove(lane, e));
+            lane.RegisterCallback<PointerUpEvent>(e => OnMarkerUp(lane, e));
+            row.Add(lane);
+            Add(row);
+            return lane;
+        }
+
+        public static float TimeOf(object marker) => marker switch
+        {
+            UIAnimEventMarker e => e.time,
+            UIAnimChildCall call => call.time,
+            _ => 0f,
+        };
 
         public static string TargetPath(UIAnimation root, Component target)
         {
@@ -360,56 +386,82 @@ namespace SeoBYP.TimelineAnimation.Editor
                 el.style.left = TimeToX(key.time) - 6f;
                 el.tooltip = $"{key.time:0.00}s";
             }
-            foreach (var (signal, el) in _signalElements)
+            foreach (var (item, el) in _markerElements)
             {
-                el.style.left = TimeToX(signal.time) - 5f;   // the ▼ tip sits on the signal time
-                el.tooltip = $"{signal.name} · {signal.time:0.00}s";
+                switch (item)
+                {
+                    case UIAnimEventMarker e:
+                        el.style.left = TimeToX(e.time) - 5f;   // the ▼ tip sits on the event time
+                        var data = e.DataType;
+                        el.tooltip = $"{e.name} · {e.time:0.00}s" + (data != null ? $" · {data.Name}" : "");
+                        break;
+                    case UIAnimChildCall call:
+                        var length = call.Target?.Duration ?? 0f;   // the bar spans the called state
+                        el.style.left = TimeToX(call.time);
+                        el.style.width = Mathf.Max(24f, TimeToX(length));
+                        el.tooltip = $"{call.time:0.00}s에 {(call.child != null ? call.child.name : "(없음)")}의 '{call.state}' 재생 ({length:0.00}s)";
+                        break;
+                }
             }
             foreach (var lane in _lanes) lane.MarkDirtyRepaint();
             SetTime(_time);
         }
 
-        // ---------- signal lane ----------
+        // ---------- marker lanes (animation events, child calls) ----------
 
-        void OnSignalDown(PointerDownEvent e)
+        void OnMarkerDown(VisualElement lane, PointerDownEvent e)
         {
             if (e.button != 0 || _state == null) return;
             Focus();
-            var x = _signalLane.WorldToLocal(e.position).x;
-            _dragSignal = (e.target as VisualElement)?.userData as UIAnimSignal;
-            _signalDragged = false;
-            if (_dragSignal == null)
+            var x = lane.WorldToLocal(e.position).x;
+            _dragMarker = FindMarker(e.target as VisualElement);
+            _markerDragged = false;
+            if (_dragMarker == null)
             {
-                if (e.clickCount == 2) AddSignalRequested?.Invoke(XToTime(x));
+                if (e.clickCount == 2)
+                {
+                    if (lane == _eventLane) AddEventRequested?.Invoke(XToTime(x));
+                    else AddCallRequested?.Invoke(new Rect(e.position, Vector2.zero), XToTime(x));
+                }
                 else
                 {
-                    SignalClicked?.Invoke(null);
+                    MarkerClicked?.Invoke(null);
                     Scrubbed?.Invoke(XToTime(x));
                 }
                 return;
             }
-            SignalClicked?.Invoke(_dragSignal);
+            MarkerClicked?.Invoke(_dragMarker);
             _frozenRange = Range;
-            _signalLane.CapturePointer(e.pointerId);
+            _dragOffset = x - TimeToX(TimeOf(_dragMarker));   // keep the grab point under the pointer
+            lane.CapturePointer(e.pointerId);
             e.StopPropagation();
         }
 
-        void OnSignalMove(PointerMoveEvent e)
+        float _dragOffset;
+
+        void OnMarkerMove(VisualElement lane, PointerMoveEvent e)
         {
-            if (_dragSignal == null || !_signalLane.HasPointerCapture(e.pointerId)) return;
-            _signalDragged = true;
-            SignalMoved?.Invoke(_dragSignal, XToTime(_signalLane.WorldToLocal(e.position).x));
+            if (_dragMarker == null || !lane.HasPointerCapture(e.pointerId)) return;
+            _markerDragged = true;
+            MarkerMoved?.Invoke(_dragMarker, XToTime(lane.WorldToLocal(e.position).x - _dragOffset));
             e.StopPropagation();
         }
 
-        void OnSignalUp(PointerUpEvent e)
+        void OnMarkerUp(VisualElement lane, PointerUpEvent e)
         {
-            if (_dragSignal == null) return;
-            _signalLane.ReleasePointer(e.pointerId);
+            if (_dragMarker == null) return;
+            lane.ReleasePointer(e.pointerId);
             _frozenRange = null;
-            if (_signalDragged) SignalDragFinished?.Invoke();
-            _dragSignal = null;
+            if (_markerDragged) MarkerDragFinished?.Invoke();
+            _dragMarker = null;
             e.StopPropagation();
+        }
+
+        static object FindMarker(VisualElement el)
+        {
+            for (; el != null; el = el.parent)
+                if (el.userData is UIAnimEventMarker or UIAnimChildCall) return el.userData;
+            return null;
         }
 
         // ---------- pointer gestures on the lanes: click / Shift+click / box select / drag selected keys ----------

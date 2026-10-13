@@ -28,8 +28,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         readonly HashSet<UIAnimKey> _selection = new();
         readonly Dictionary<UIAnimKey, float> _dragStartTimes = new();
         int _dragUndoGroup = -1;
-        UIAnimSignal _signal;            // selected signal (exclusive with key/track selection)
-        int _signalUndoGroup = -1;
+        object _marker;                  // selected animation event or child call (exclusive with key/track selection)
+        int _markerUndoGroup = -1;
         UIAnimPreview _preview;
         readonly HashSet<UIAnimKey> _unlinkedScale = new();   // keys whose Scale is edited per axis
 
@@ -148,7 +148,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         void OnUndoRedo()
         {
             _selection.Clear();   // undo deserializes new key objects; old references are stale
-            _signal = null;
+            _marker = null;
             Rebuild();
             RefreshPreview();
         }
@@ -176,8 +176,8 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         void SelectionChanged()
         {
-            _signal = null;
-            _timeline.SelectedSignal = null;
+            _marker = null;
+            _timeline.SelectedMarker = null;
             // A single selected key also selects its track, so the key inspector knows where it lives.
             if (_selection.Count > 0)
             {
@@ -265,50 +265,92 @@ namespace SeoBYP.TimelineAnimation.Editor
             });
             _timeline.AddTrackMenuRequested = rect => ShowPropertyMenu(rect, null);
 
-            _timeline.SignalClicked = signal =>
+            _timeline.MarkerClicked = marker =>
             {
                 _selection.Clear();
                 _track = -1;
-                _signal = signal;
-                _timeline.SelectedSignal = signal;
+                _marker = marker;
+                _timeline.SelectedMarker = marker;
                 _timeline.Refresh(_track);
                 RebuildInspector();
             };
-            _timeline.SignalMoved = (signal, time) =>
+            _timeline.MarkerMoved = (marker, time) =>
             {
-                if (_signalUndoGroup < 0) _signalUndoGroup = Undo.GetCurrentGroup();
-                Modify("Move Signal", () => signal.time = time, rebuild: false);
+                if (_markerUndoGroup < 0) _markerUndoGroup = Undo.GetCurrentGroup();
+                Modify("Move Marker", () => SetMarkerTime(marker, time), rebuild: false);
             };
-            _timeline.SignalDragFinished = () =>
+            _timeline.MarkerDragFinished = () =>
             {
-                Modify("Move Signal", SortSignals);
-                if (_signalUndoGroup >= 0) Undo.CollapseUndoOperations(_signalUndoGroup);
-                _signalUndoGroup = -1;
+                Modify("Move Marker", SortMarkers);
+                if (_markerUndoGroup >= 0) Undo.CollapseUndoOperations(_markerUndoGroup);
+                _markerUndoGroup = -1;
             };
-            _timeline.AddSignalRequested = time => Modify("Add Signal", () =>
+            _timeline.AddEventRequested = time => Modify("Add Animation Event", () =>
             {
-                var name = "Signal";
-                for (var n = 1; CurrentState.signals.Exists(x => x.name == name); n++) name = $"Signal {n}";
-                var signal = new UIAnimSignal { time = time, name = name };
-                CurrentState.signals.Add(signal);
-                SortSignals();
-                _selection.Clear();
-                _track = -1;
-                _signal = signal;
+                var name = "Event";
+                for (var n = 1; CurrentState.events.Exists(x => x.name == name); n++) name = $"Event {n}";
+                var marker = new UIAnimEventMarker { time = time, name = name };
+                CurrentState.events.Add(marker);
+                SelectNewMarker(marker);
             });
+            _timeline.AddCallRequested = ShowChildCallMenu;
         }
 
-        void SortSignals() => CurrentState.signals.Sort((a, b) => a.time.CompareTo(b.time));
+        static void SetMarkerTime(object marker, float time)
+        {
+            time = Mathf.Max(0f, time);
+            if (marker is UIAnimEventMarker e) e.time = time;
+            else if (marker is UIAnimChildCall call) call.time = time;
+        }
+
+        void SortMarkers()
+        {
+            CurrentState.events.Sort((a, b) => a.time.CompareTo(b.time));
+            CurrentState.childCalls.Sort((a, b) => a.time.CompareTo(b.time));
+        }
+
+        void SelectNewMarker(object marker)
+        {
+            SortMarkers();
+            _selection.Clear();
+            _track = -1;
+            _marker = marker;
+        }
+
+        // Child UIAnimations under this one, each with its states: pick one to play at `time`.
+        void ShowChildCallMenu(Rect at, float time)
+        {
+            var menu = new GenericMenu();
+            var children = _target.GetComponentsInChildren<UIAnimation>(true).Where(c => c != _target).ToArray();
+            foreach (var child in children)
+            {
+                var path = UIAnimTimelineView.TargetPath(_target, child).Replace('/', '\\');
+                if (child.states.Count == 0) menu.AddDisabledItem(new GUIContent($"{path}/(상태 없음)"));
+                foreach (var state in child.states)
+                {
+                    var (c, name) = (child, state.name);
+                    menu.AddItem(new GUIContent($"{path}/{name}"), false, () => Modify("Add Child Call", () =>
+                    {
+                        var call = new UIAnimChildCall { time = time, child = c, state = name };
+                        CurrentState.childCalls.Add(call);
+                        SelectNewMarker(call);
+                    }));
+                }
+            }
+            if (children.Length == 0) menu.AddDisabledItem(new GUIContent("이 오브젝트 아래에 UIAnimation이 있는 자식이 없습니다"));
+            menu.DropDown(at);
+        }
 
         void DeleteSelectedKeys()
         {
-            if (_signal != null)
+            if (_marker != null)
             {
-                var signal = _signal;
-                Modify("Delete Signal", () =>
+                var marker = _marker;
+                Modify("Delete Marker", () =>
                 {
-                    CurrentState.signals.Remove(signal);
-                    _signal = null;
+                    if (marker is UIAnimEventMarker e) CurrentState.events.Remove(e);
+                    else if (marker is UIAnimChildCall call) CurrentState.childCalls.Remove(call);
+                    _marker = null;
                 });
                 return;
             }
@@ -422,8 +464,9 @@ namespace SeoBYP.TimelineAnimation.Editor
             add.AddToClassList("uia-tab--add");
             _tabs.Add(add);
 
-            if (_signal != null && !CurrentState.signals.Contains(_signal)) _signal = null;   // state switched or signal removed
-            _timeline.SelectedSignal = _signal;
+            if (_marker != null && !CurrentState.events.Contains(_marker) && !CurrentState.childCalls.Contains(_marker))
+                _marker = null;   // state switched or marker removed
+            _timeline.SelectedMarker = _marker;
             _timeline.SetState(_target, CurrentState, _track, _selection);
             RebuildInspector();
         }
@@ -438,7 +481,8 @@ namespace SeoBYP.TimelineAnimation.Editor
                 section.Add(Hint("위의 + 탭으로 상태를 추가하세요."));
                 _inspector.Add(section);
             }
-            else if (_signal != null) BuildSignalInspector(_signal);
+            else if (_marker is UIAnimEventMarker marker) BuildEventInspector(marker);
+            else if (_marker is UIAnimChildCall call) BuildCallInspector(call);
             else if (_selection.Count == 1 && CurrentTrack != null && CurrentTrack.keys.Contains(_selection.First()))
                 BuildKeyInspector(CurrentTrack, _selection.First());
             else if (_selection.Count > 1) BuildMultiKeyInspector();
@@ -460,24 +504,146 @@ namespace SeoBYP.TimelineAnimation.Editor
             _selection.Clear();
         });
 
-        void BuildSignalInspector(UIAnimSignal signal)
+        void BuildEventInspector(UIAnimEventMarker marker)
         {
-            _inspector.Add(Heading($"▼ {signal.name}", new Color32(255, 183, 77, 255)));
-            var section = Section("시그널");
-            var name = new TextField("이름") { value = signal.name, isDelayed = true };
-            name.RegisterValueChangedCallback(e => Modify("Rename Signal", () => signal.name = e.newValue));
+            _inspector.Add(Heading($"▼ {marker.name}", new Color32(255, 183, 77, 255)));
+            var section = Section("애니메이션 이벤트");
+            var name = new TextField("이름") { value = marker.name, isDelayed = true };
+            name.RegisterValueChangedCallback(e => Modify("Rename Animation Event", () => marker.name = e.newValue));
             section.Add(name);
-            var time = new FloatField("시간 (s)") { value = signal.time, isDelayed = true };
-            time.RegisterValueChangedCallback(e => Modify("Move Signal", () =>
+            var time = new FloatField("시간 (s)") { value = marker.time, isDelayed = true };
+            time.RegisterValueChangedCallback(e => Modify("Move Marker", () =>
             {
-                signal.time = Mathf.Max(0f, e.newValue);
-                SortSignals();
+                marker.time = Mathf.Max(0f, e.newValue);
+                SortMarkers();
             }));
             section.Add(time);
-            section.Add(Hint($"재생이 이 시간을 지나면 SignalRaised(\"{CurrentState.name}\", \"{signal.name}\")가 발생합니다.\n" +
-                             $"코드에서 기다리기: await anim.WaitSignalAsync(\"{signal.name}\");\n" +
-                             "Complete로 건너뛰면 남은 시그널도 순서대로 발생하고, 취소되면 발생하지 않습니다."));
-            var remove = new Button(DeleteSelectedKeys) { text = "시그널 삭제", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            _inspector.Add(section);
+
+            _inspector.Add(EventDataSection(marker));
+
+            var usage = Section("받는 방법");
+            var dataType = marker.DataType;
+            usage.Add(Hint("코드:\n" +
+                           "anim.EventRaised += (in UIAnimEventInfo e) => { if (e.Name == \"" + marker.name + "\") ... };\n" +
+                           "await anim.WaitEventAsync(\"" + marker.name + "\");" +
+                           (dataType != null ? $"\nanim.AddListener<{dataType.Name}>((in UIAnimEventInfo e, in {dataType.Name} data) => ...);" : "") +
+                           "\n인스펙터: UI Anim Event Listener 컴포넌트에 이벤트 이름과 UnityEvent를 연결합니다.\n" +
+                           "Complete로 건너뛰면 남은 이벤트도 순서대로 발생하고, 취소되면 발생하지 않습니다."));
+            var remove = new Button(DeleteSelectedKeys) { text = "이벤트 삭제", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            remove.AddToClassList("uia-danger");
+            usage.Add(remove);
+            _inspector.Add(usage);
+        }
+
+        // Custom data: an IUIAnimEventData struct picked from the project, its fields edited through JsonUtility.
+        VisualElement EventDataSection(UIAnimEventMarker marker)
+        {
+            var section = Section("데이터 (struct)");
+            var types = TypeCache.GetTypesDerivedFrom<IUIAnimEventData>()
+                .Where(t => t.IsValueType && !t.IsGenericType).OrderBy(t => t.Name).ToList();
+            var current = marker.DataType;
+            var choices = new List<string> { "(없음)" };
+            choices.AddRange(types.Select(t => t.FullName));
+            var missing = current == null && !string.IsNullOrEmpty(marker.dataType);
+            if (missing) choices.Add(marker.dataType);
+            var selected = current != null ? current.FullName : missing ? marker.dataType : "(없음)";
+
+            var type = new PopupField<string>("형식", choices, selected);
+            type.RegisterValueChangedCallback(e => Modify("Change Event Data", () =>
+            {
+                var t = types.FirstOrDefault(x => x.FullName == e.newValue);
+                marker.dataType = UIAnimEventMarker.TypeKey(t);
+                marker.dataJson = t != null ? JsonUtility.ToJson(Activator.CreateInstance(t)) : "";
+                marker.InvalidateData();
+            }));
+            section.Add(type);
+
+            if (missing) section.Add(Hint($"형식 '{marker.dataType}'을 찾을 수 없습니다. 이름이 바뀌었거나 삭제됐습니다."));
+            if (current == null)
+            {
+                if (types.Count == 0)
+                    section.Add(Hint("IUIAnimEventData를 구현한 struct가 없습니다.\n예: public struct HitEvent : IUIAnimEventData { public float damage; }"));
+                return section;
+            }
+
+            var boxed = JsonUtility.FromJson(string.IsNullOrEmpty(marker.dataJson) ? "{}" : marker.dataJson, current);
+            foreach (var field in current.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            {
+                var editor = DataField(field, boxed, value => Modify("Edit Event Data", () =>
+                {
+                    field.SetValue(boxed, value);   // boxed struct: the box itself changes
+                    marker.dataJson = JsonUtility.ToJson(boxed);
+                    marker.InvalidateData();
+                }, rebuild: false));
+                section.Add(editor ?? Hint($"{field.Name}: {field.FieldType.Name} 형식은 편집할 수 없습니다 (숫자·문자열·벡터·색·enum만 지원)."));
+            }
+            return section;
+        }
+
+        static VisualElement DataField(System.Reflection.FieldInfo field, object boxed, Action<object> set)
+        {
+            var label = ObjectNames.NicifyVariableName(field.Name);
+            var value = field.GetValue(boxed);
+            VisualElement Bind<T>(BaseField<T> f, T v)
+            {
+                f.value = v;
+                f.RegisterValueChangedCallback(e => set(e.newValue));
+                return f;
+            }
+            var type = field.FieldType;
+            if (type == typeof(float)) return Bind(new FloatField(label) { isDelayed = true }, (float)value);
+            if (type == typeof(int)) return Bind(new IntegerField(label) { isDelayed = true }, (int)value);
+            if (type == typeof(bool)) return Bind(new Toggle(label), (bool)value);
+            if (type == typeof(string)) return Bind(new TextField(label) { isDelayed = true }, (string)value ?? "");
+            if (type == typeof(Vector2)) return Bind(new Vector2Field(label), (Vector2)value);
+            if (type == typeof(Vector3)) return Bind(new Vector3Field(label), (Vector3)value);
+            if (type == typeof(Color)) return Bind(new ColorField(label), (Color)value);
+            if (type.IsEnum)
+            {
+                var f = new EnumField(label, (Enum)value);
+                f.RegisterValueChangedCallback(e => set(e.newValue));
+                return f;
+            }
+            return null;
+        }
+
+        void BuildCallInspector(UIAnimChildCall call)
+        {
+            var childName = call.child != null ? call.child.name : "(없음)";
+            _inspector.Add(Heading($"▸ {childName} · {call.state}", new Color32(120, 170, 255, 255)));
+            var section = Section("자식 상태 호출");
+
+            var child = new ObjectField("자식") { objectType = typeof(UIAnimation), allowSceneObjects = true, value = call.child };
+            child.RegisterValueChangedCallback(e => Modify("Change Child Call", () =>
+            {
+                call.child = e.newValue as UIAnimation;
+                if (call.Target == null) call.state = call.child != null && call.child.states.Count > 0 ? call.child.states[0].name : "";
+            }));
+            section.Add(child);
+
+            var names = call.child != null ? call.child.states.Select(st => st.name).ToList() : new List<string>();
+            if (!names.Contains(call.state)) names.Insert(0, call.state);
+            var state = new PopupField<string>("상태", names, call.state);
+            state.SetEnabled(call.child != null);
+            state.RegisterValueChangedCallback(e => Modify("Change Child Call", () => call.state = e.newValue));
+            section.Add(state);
+
+            var time = new FloatField("시간 (s)") { value = call.time, isDelayed = true };
+            time.RegisterValueChangedCallback(e => Modify("Move Marker", () =>
+            {
+                call.time = Mathf.Max(0f, e.newValue);
+                SortMarkers();
+            }));
+            section.Add(time);
+
+            var length = call.Target?.Duration ?? 0f;
+            section.Add(Hint(call.Target == null
+                ? "자식 또는 상태가 없어서 재생되지 않습니다."
+                : $"{call.time:0.00}초에 {childName}의 '{call.state}'({length:0.00}s)를 재생합니다. 부모 길이는 {call.time + length:0.00}초까지 늘어납니다.\n" +
+                  "부모를 Complete로 건너뛰면 자식도 끝 값이 되고, 부모가 취소돼도 이미 시작한 자식은 계속 재생됩니다."));
+
+            var remove = new Button(DeleteSelectedKeys) { text = "호출 삭제", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
             remove.AddToClassList("uia-danger");
             section.Add(remove);
             _inspector.Add(section);
