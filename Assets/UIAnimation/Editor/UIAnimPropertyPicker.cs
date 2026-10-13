@@ -55,10 +55,12 @@ namespace SeoBYP.TimelineAnimation.Editor
                 yield return (graphic, UIAnimProperty.GraphicColor);
                 yield return (graphic, UIAnimProperty.GraphicAlpha);
             }
+            if (graphic is UnityEngine.UI.Image { type: UnityEngine.UI.Image.Type.Filled } image) yield return (image, UIAnimProperty.FillAmount);
             var text = tr.GetComponent<TMP_Text>();
             if (text != null)
             {
                 yield return (text, UIAnimProperty.FontSize);
+                yield return (text, UIAnimProperty.CharacterSpacing);
                 yield return (text, UIAnimProperty.TextReveal);
                 yield return (text, UIAnimProperty.CharScale);
                 yield return (text, UIAnimProperty.CharOffset);

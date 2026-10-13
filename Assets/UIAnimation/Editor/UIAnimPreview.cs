@@ -277,6 +277,12 @@ namespace SeoBYP.TimelineAnimation.Editor
                 case UIAnimProperty.FontSize:
                     Add(root, target, "m_fontSize");
                     break;
+                case UIAnimProperty.FillAmount:
+                    Add(root, target, "m_FillAmount");
+                    break;
+                case UIAnimProperty.CharacterSpacing:
+                    Add(root, target, "m_characterSpacing");
+                    break;
             }
         }
 

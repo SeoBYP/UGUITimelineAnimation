@@ -23,6 +23,8 @@ static class SampleContentBuilder
     const string TextDemoPath = "Assets/Prefabs/TextDemo.prefab";
     const string TextScene = "Assets/Scenes/Text.unity";
     const string Popup1Path = "Assets/Prefabs/Popup1.prefab";
+    const string HoverScene = "Assets/Scenes/Hover.unity";
+    static string HoverPath(int n) => $"Assets/Prefabs/Hover{n}.prefab";
     const string PopupScene = "Assets/Scenes/Popup.unity";
 
     static readonly Color Red = new(1f, 0.3254902f, 0.3254902f, 1f);
@@ -37,6 +39,7 @@ static class SampleContentBuilder
         if (!System.IO.File.Exists(TextDemoPath) || !System.IO.File.ReadAllText(TextDemoPath).Contains("name: Scramble"))
             EditorApplication.delayCall += BuildText;
         if (!System.IO.File.Exists(Popup1Path)) EditorApplication.delayCall += BuildPopup;
+        if (!System.IO.File.Exists(HoverPath(1))) EditorApplication.delayCall += BuildHovers;
     }
 
     // Prefabs saved before the keyframe model serialized clips instead of keys. Checked on the file,
@@ -290,6 +293,178 @@ static class SampleContentBuilder
             instance.GetComponentInChildren<TMP_Text>().text = states[i];
             UnityEditor.Events.UnityEventTools.AddStringPersistentListener(instance.GetComponent<Button>().onClick, anim.PlayState, states[i]);
         }
+    }
+
+    // ---------- 1_Hover ----------
+    // Sample 1_Hover, laid out x2.4 for the 1920x1080 canvas (button 200x70 -> 480x168, font 24 -> 58).
+    // characterSpacing is in em/100, so the sample value 12 stays 12.
+
+    [MenuItem("Tools/UIAnimation Dev/Rebuild Sample Hovers")]
+    static void BuildHovers()
+    {
+        if (!EnsureTmp(BuildHovers)) return;
+        var font = LoadOrCreateFont();
+        EnsureSprite("Assets/Textures/Square.png");
+        var builders = new System.Func<TMP_FontAsset, GameObject>[] { BuildHover1, BuildHover2, BuildHover3, BuildHover4, BuildHover5, BuildHover6 };
+        var prefabs = new GameObject[builders.Length];
+        for (var i = 0; i < builders.Length; i++) prefabs[i] = SavePrefab(builders[i](font), HoverPath(i + 1));
+        var scene = BuildSceneIfMissing(HoverScene, font, "- Hover -", 408f, panel =>
+        {
+            for (var i = 0; i < prefabs.Length; i++)
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[i], panel);
+                ((RectTransform)instance.transform).anchoredPosition = new Vector2((i % 3 - 1) * 600, i < 3 ? 132 : -132);
+            }
+        });
+        Debug.Log($"[SampleContentBuilder] Built Hover1~6{scene}");
+    }
+
+    static void EnsureSprite(string path)
+    {
+        var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (importer == null || importer.textureType == TextureImporterType.Sprite) return;
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        importer.SaveAndReimport();
+    }
+
+    static RectTransform HoverRoot(string name)
+    {
+        var root = Rect(name, null);
+        root.sizeDelta = new Vector2(480, 168);
+        return root;
+    }
+
+    static TextMeshProUGUI CenterLabel(string name, Transform parent, TMP_FontAsset font, string text, Color color)
+    {
+        var label = Label(name, parent, font, text, color, 58);
+        label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        label.rectTransform.sizeDelta = new Vector2(480, 168);
+        return label;
+    }
+
+    static Image HoverFrame(Transform root, float ppu) => Img("Frame", root, Sprite("Circle Frame"), Red, Image.Type.Sliced, ppu);
+
+    static Image HoverMask(Transform root)
+    {
+        var mask = Img("Mask", root, Sprite("Circle"), Color.white, Image.Type.Sliced, 3.33f);
+        mask.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+        return mask;
+    }
+
+    // Enter -> "Hover", Exit -> "Unhover".
+    static void BindHover(GameObject go, UIAnimInterrupt interrupt, params UIAnimState[] states)
+    {
+        go.AddComponent<UIAnimation>().States(states);
+        go.AddComponent<UIAnimTrigger>().bindings = new List<UIAnimBinding>
+        {
+            new() { evt = UIAnimEvent.PointerEnter, state = "Hover", interrupt = interrupt },
+            new() { evt = UIAnimEvent.PointerExit, state = "Unhover", interrupt = interrupt },
+        };
+    }
+
+    // Hover1: fill and label colors
+    static GameObject BuildHover1(TMP_FontAsset font)
+    {
+        var root = HoverRoot("Hover1");
+        var fill = Img("Fill", root, Sprite("Circle"), Clear(Red), Image.Type.Sliced, 4.17f);
+        var label = Label("Label", root, font, "Hover 1", Red, 58);
+        HoverFrame(root, 4.17f);
+        BindHover(root.gameObject, UIAnimInterrupt.Cancel,
+            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.2f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, Ease.OutSine)),
+            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine)));
+        return root.gameObject;
+    }
+
+    // Hover2: a horizontal fill sweeps in (Image fillAmount 0 -> 1)
+    static GameObject BuildHover2(TMP_FontAsset font)
+    {
+        var root = HoverRoot("Hover2");
+        var mask = HoverMask(root);
+        var fill = Img("Fill", mask.rectTransform, Sprite("Square"), Red, Image.Type.Filled, 0.42f);
+        fill.fillMethod = Image.FillMethod.Horizontal;
+        fill.fillOrigin = 0;
+        fill.fillAmount = 0f;
+        var label = Label("Label", root, font, "Hover 2", Red, 58);
+        HoverFrame(root, 3.33f);
+        BindHover(root.gameObject, UIAnimInterrupt.Cancel,
+            State("Hover", To(fill, UIAnimProperty.FillAmount, new Vector4(1, 0), 0.2f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, Ease.OutSine)),
+            State("Unhover", To(fill, UIAnimProperty.FillAmount, Vector4.zero, 0.2f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine)));
+        return root.gameObject;
+    }
+
+    // Hover3: a square grows from the center inside the rounded mask
+    static GameObject BuildHover3(TMP_FontAsset font)
+    {
+        var root = HoverRoot("Hover3");
+        var mask = HoverMask(root);
+        var fill = Img("Fill", mask.rectTransform, Sprite("Circle"), Red, Image.Type.Sliced, 0.42f);
+        fill.rectTransform.anchorMin = fill.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        fill.rectTransform.sizeDelta = new Vector2(480, 480);
+        fill.rectTransform.localScale = Vector3.zero;
+        var label = Label("Label", root, font, "Hover 3", Red, 58);
+        HoverFrame(root, 3.33f);
+        BindHover(root.gameObject, UIAnimInterrupt.Cancel,
+            State("Hover", To(fill.rectTransform, UIAnimProperty.Scale, Vector3.one, 0.2f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, Ease.OutSine)),
+            State("Unhover", To(fill.rectTransform, UIAnimProperty.Scale, Vector3.zero, 0.2f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine)));
+        return root.gameObject;
+    }
+
+    // Hover4: the label slides out to the right while "Hello!" slides in from the left
+    static GameObject BuildHover4(TMP_FontAsset font)
+    {
+        var root = HoverRoot("Hover4");
+        var mask = HoverMask(root);
+        var fill = Img("Fill", mask.rectTransform, Sprite("Circle"), Red, Image.Type.Sliced, 0.42f);
+        fill.rectTransform.anchorMin = fill.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        fill.rectTransform.sizeDelta = new Vector2(480, 480);
+        fill.rectTransform.localScale = Vector3.zero;
+        var normal = CenterLabel("Label_Normal", mask.rectTransform, font, "Hover 4", Red);
+        var hover = CenterLabel("Label_Hover", mask.rectTransform, font, "Hello!", Color.white);
+        hover.rectTransform.anchoredPosition = new Vector2(-480, 0);
+        HoverFrame(root, 3.33f);
+        BindHover(root.gameObject, UIAnimInterrupt.Cancel,
+            State("Hover", To(normal.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(480, 0), 0.2f, Ease.OutSine),
+                           To(hover.rectTransform, UIAnimProperty.AnchoredPosition, Vector4.zero, 0.2f, Ease.OutSine)),
+            State("Unhover", To(normal.rectTransform, UIAnimProperty.AnchoredPosition, Vector4.zero, 0.2f, Ease.OutSine),
+                             To(hover.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(-480, 0), 0.2f, Ease.OutSine)));
+        return root.gameObject;
+    }
+
+    // Hover5: colors plus the label character spacing opening up (0 -> 12), 0.25s
+    static GameObject BuildHover5(TMP_FontAsset font)
+    {
+        var root = HoverRoot("Hover5");
+        var fill = Img("Fill", root, Sprite("Circle"), Clear(Red), Image.Type.Sliced, 3.33f);
+        var label = CenterLabel("Label", root, font, "Hover 5", Red);
+        HoverFrame(root, 3.33f);
+        BindHover(root.gameObject, UIAnimInterrupt.Cancel,
+            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.25f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.25f, Ease.OutSine),
+                           To(label, UIAnimProperty.CharacterSpacing, new Vector4(12, 0), 0.25f, Ease.OutSine)),
+            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.25f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.25f, Ease.OutSine),
+                             To(label, UIAnimProperty.CharacterSpacing, Vector4.zero, 0.25f, Ease.OutSine)));
+        return root.gameObject;
+    }
+
+    // Hover6: a pulse behind the button grows 144px and fades out; enter/exit complete the running pulse first, 0.35s
+    static GameObject BuildHover6(TMP_FontAsset font)
+    {
+        var root = HoverRoot("Hover6");
+        var pulse = Img("Pulse", root, Sprite("Circle"), Red, Image.Type.Sliced, 3.33f);
+        pulse.raycastTarget = false;
+        Img("Background", root, Sprite("Circle"), new Color(0.058823533f, 0.1137255f, 0.19215688f, 1f), Image.Type.Sliced, 3.33f);
+        var label = CenterLabel("Label", root, font, "Hover 6", Red);
+        HoverFrame(root, 3.33f);
+        var grow = new UIAnimTrack
+        {
+            target = pulse.rectTransform, property = UIAnimProperty.SizeDelta, startFromCurrent = false, relativeToRest = true,
+            keys = { new UIAnimKey { time = 0f }, new UIAnimKey { time = 0.35f, value = new Vector4(144, 144), ease = Ease.OutSine } },
+        };
+        BindHover(root.gameObject, UIAnimInterrupt.Complete,
+            State("Hover", grow, FromTo(pulse, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), Vector4.zero, 0.35f),
+                           To(label, UIAnimProperty.GraphicColor, Color.white, 0.35f, Ease.OutSine)),
+            State("Unhover", BackToRest(label, UIAnimProperty.GraphicColor, 0.35f, Ease.OutSine)));
+        return root.gameObject;
     }
 
     // ---------- popup ----------

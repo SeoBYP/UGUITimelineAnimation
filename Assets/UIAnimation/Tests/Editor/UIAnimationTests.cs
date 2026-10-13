@@ -269,5 +269,20 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.AreEqual(UniTaskStatus.Canceled, task.Status);
             Assert.IsFalse(_anim.IsPlaying("Close"));
         }
+
+        [Test]
+        public void FillAmount_트랙은_Image_채우기_비율을_움직인다()
+        {
+            _image.type = Image.Type.Filled;
+            _image.fillAmount = 0f;
+            var fill = State("Fill", Track(_image, UIAnimProperty.FillAmount, true, false, Key(1f, new Vector4(1, 0))));
+            _anim.states.Add(fill);
+
+            _anim.Prepare("Fill", UIAnimInterrupt.Cancel, null);
+            UIAnimation.Evaluate(fill, 0.5f);
+            Assert.AreEqual(0.5f, _image.fillAmount, 1e-4f);
+            UIAnimation.Evaluate(fill, 1f);
+            Assert.AreEqual(1f, _image.fillAmount, 1e-4f);
+        }
     }
 }
