@@ -65,7 +65,7 @@ jobs:
           checkName: EditMode Test Results
 
       - name: Upload test results
-        if: always()
+        if: always() && steps.tests.outputs.artifactsPath != ''
         uses: actions/upload-artifact@v4
         with:
           name: editmode-test-results
