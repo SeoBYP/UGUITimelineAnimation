@@ -1,6 +1,6 @@
 # CI: Linux self-hosted runner로 Unity 테스트 실행
 
-`main` 대상 PR마다 `.github/workflows/unity-tests.yml`이 **원격 Linux 컴퓨터**에서 Unity CLI로 EditMode 테스트를 실행합니다. `main`의 브랜치 보호 규칙이 `Unity EditMode Tests` 체크 통과를 요구하기 때문에, 테스트가 실패하면 머지할 수 없습니다.
+`main` 대상 PR마다 `.github/workflows/unity-tests.yml`이 **원격 Linux 컴퓨터**에서 Unity CLI로 EditMode, PlayMode 테스트를 차례로 실행합니다. `main`의 브랜치 보호 규칙이 `Unity EditMode Tests` 체크 통과를 요구하기 때문에, 테스트가 실패하면 머지할 수 없습니다.
 
 ## 왜 self-hosted인가
 - Unity Personal 라이선스는 **Unity Hub 로그인으로만** 활성화됩니다. 커맨드라인이나 수동(`.ulf`) 활성화는 Personal에서 지원되지 않습니다 ([Unity 매뉴얼](https://docs.unity3d.com/Manual/LicenseActivationMethods.html)).
@@ -31,14 +31,16 @@
 
 ## 동작 방식
 - **코드 받기**: 실행기 작업 폴더로 받습니다. `Library/`(Unity 임포트 캐시)는 지우지 않고 다음 실행에 재사용합니다. 첫 실행만 느립니다.
-- **테스트 실행**:
+- **테스트 실행**: EditMode, PlayMode 순서로 같은 명령을 두 번 실행합니다. 둘 중 하나라도 실패하면 체크가 실패합니다.
   ```
-  Unity -batchmode -nographics -projectPath <workspace> -runTests -testPlatform EditMode -testResults results.xml -logFile unity-editor.log
+  Unity -batchmode -nographics -projectPath <workspace> -runTests -testPlatform EditMode -testResults EditMode-results.xml -logFile unity-EditMode.log
+  Unity -batchmode -nographics -projectPath <workspace> -runTests -testPlatform PlayMode -testResults PlayMode-results.xml -logFile unity-PlayMode.log
   ```
-  - 에디터 창을 띄우는 테스트(`EditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 그래픽 장치가 필요합니다. 러너에 `xvfb-run`이 있으면 `-nographics` 대신 `xvfb-run -a Unity -batchmode ...`로 실행해서 이 테스트까지 돌립니다. 없으면 이 테스트들은 실패하지 않고 건너뜁니다.
-  - 현재 러너에는 `xvfb-run`이 없습니다. 설치하려면 `sudo apt install xvfb` (Debian/Ubuntu 계열).
+  - 에디터 창을 띄우는 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`, PlayMode의 Edit Animation 테스트)는 그래픽 장치가 필요합니다. 러너에 `xvfb-run`이 있으면 `-nographics` 대신 `xvfb-run -a Unity -batchmode ...`로 실행해서 이 테스트까지 돌립니다. 없으면 이 테스트들은 실패하지 않고 건너뜁니다.
+  - 현재 러너에는 `xvfb`가 설치되어 있습니다(2026-10-15, `xvfb 2:21.1.12-1ubuntu1.8`, Ubuntu noble).
+  - `xvfb-run`이 없으면 워크플로가 `sudo -n apt-get install -y xvfb`로 설치를 시도합니다. 실행기 계정에 비밀번호 없는 sudo가 없으면 경고만 남기고 넘어가므로, 그때는 러너에서 한 번 `sudo apt install xvfb` (Debian/Ubuntu 계열)를 실행하세요.
 - **종료 코드**: `0` = 통과, `2` = 실패한 테스트 있음, 그 외 = 실행 오류(로그 마지막 60줄 출력)
-- **결과 확인**: 실행 요약에 통과/실패 표와 실패한 테스트 이름이 나옵니다. `editmode-test-results` 아티팩트로 결과 XML과 에디터 로그를 받을 수 있습니다.
+- **결과 확인**: 실행 요약에 통과/실패 표와 실패한 테스트 이름이 나옵니다. `unity-test-results` 아티팩트로 두 결과 XML과 에디터 로그를 받을 수 있습니다.
 
 ## 보안
 - 레포가 **공개**이므로, 포크에서 온 PR은 이 컴퓨터에서 **실행하지 않습니다**(워크플로 `if` 조건). 같은 레포의 브랜치에서 만든 PR만 실행됩니다.

@@ -1,8 +1,9 @@
-# Runs the Unity EditMode tests with the Unity CLI (batch mode) on a self-hosted Linux runner.
+# Runs the Unity EditMode and PlayMode tests with the Unity CLI (batch mode) on a self-hosted Linux runner.
 # Unity Personal can only be activated by signing in to Unity Hub, so CI runs on a machine where that is done
 # once by hand. Setup: Docs/CI-SelfHostedRunner.md
 #
-# Branch protection on main requires the "Unity EditMode Tests" check, so a PR can only merge when it passes.
+# Branch protection on main requires the "Unity EditMode Tests" check (the job name, kept as is; it now runs
+# PlayMode too), so a PR can only merge when both pass.
 name: Unity Tests
 
 on:
@@ -51,11 +52,21 @@ jobs:
           echo "Unity $version → $editor"
           echo "path=$editor" >> "$GITHUB_OUTPUT"
 
-      - name: Run EditMode tests (Unity CLI, batch mode)
+      # Editor-window tests need a graphics device. Install a virtual display once if the runner allows
+      # passwordless sudo; otherwise those tests are skipped (not failed). See Docs/CI-SelfHostedRunner.md.
+      - name: Ensure virtual display (xvfb)
+        run: |
+          if command -v xvfb-run >/dev/null 2>&1; then echo "xvfb-run 있음"; exit 0; fi
+          if command -v apt-get >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            sudo -n apt-get update -qq && sudo -n apt-get install -y -qq xvfb && echo "xvfb 설치함"
+          else
+            echo "::warning::xvfb-run이 없고 자동 설치 권한(sudo -n)도 없습니다. 에디터 창 테스트는 건너뜁니다. 러너에서 'sudo apt install xvfb' 한 번 실행하세요."
+          fi
+
+      # EditMode, then PlayMode (one Unity at a time on the runner). Both must pass.
+      - name: Run tests (Unity CLI, batch mode)
         run: |
           set +e
-          # Editor-window tests need a graphics device: use a virtual display when the runner has one,
-          # otherwise -nographics (those tests are then skipped, not failed).
           if command -v xvfb-run >/dev/null 2>&1; then
             echo "xvfb-run 사용: 에디터 창 테스트까지 실행"
             unity=(xvfb-run -a "${{ steps.unity.outputs.path }}" -batchmode)
@@ -63,47 +74,48 @@ jobs:
             echo "xvfb-run 없음: -nographics로 실행 (에디터 창 테스트는 건너뜀)"
             unity=("${{ steps.unity.outputs.path }}" -batchmode -nographics)
           fi
-          "${unity[@]}" \
-            -projectPath "$GITHUB_WORKSPACE" \
-            -runTests -testPlatform EditMode \
-            -testResults "$RUNNER_TEMP/editmode-results.xml" \
-            -logFile "$RUNNER_TEMP/unity-editor.log"
-          code=$?
-          echo "Unity exit code: $code (0 = 통과, 2 = 실패한 테스트 있음, 그 외 = 실행 오류)"
-          if [ $code -ne 0 ] && [ $code -ne 2 ]; then
-            echo "::error::Unity가 테스트를 실행하지 못했습니다 (exit $code). 아래 로그 마지막 부분을 확인하세요."
-            tail -n 60 "$RUNNER_TEMP/unity-editor.log" || true
-          fi
-          exit $code
+          result=0
+          for platform in EditMode PlayMode; do
+            "${unity[@]}"               -projectPath "$GITHUB_WORKSPACE"               -runTests -testPlatform $platform               -testResults "$RUNNER_TEMP/$platform-results.xml"               -logFile "$RUNNER_TEMP/unity-$platform.log"
+            code=$?
+            echo "$platform: Unity exit code $code (0 = 통과, 2 = 실패한 테스트 있음, 그 외 = 실행 오류)"
+            if [ $code -ne 0 ] && [ $code -ne 2 ]; then
+              echo "::error::Unity가 $platform 테스트를 실행하지 못했습니다 (exit $code). 아래 로그 마지막 부분을 확인하세요."
+              tail -n 60 "$RUNNER_TEMP/unity-$platform.log" || true
+            fi
+            [ $code -ne 0 ] && result=$code
+          done
+          exit $result
 
       - name: Summarize results
         if: always()
         run: |
-          python3 - "$RUNNER_TEMP/editmode-results.xml" <<'PY'
+          python3 - "$RUNNER_TEMP" <<'PY'
           import os, sys, xml.etree.ElementTree as ET
-          path = sys.argv[1]
           out = open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8")
-          if not os.path.exists(path):
-              out.write("### EditMode 테스트\n결과 파일이 없습니다 (Unity가 테스트를 실행하지 못함).\n")
-              sys.exit(0)
-          run = ET.parse(path).getroot()
-          total, passed, failed, skipped = (run.get(k, "0") for k in ("total", "passed", "failed", "skipped"))
-          out.write(f"### EditMode 테스트\n| 전체 | 통과 | 실패 | 건너뜀 |\n|---|---|---|---|\n| {total} | {passed} | {failed} | {skipped} |\n")
-          for case in run.iter("test-case"):
-              if case.get("result") == "Failed":
-                  msg = (case.findtext("failure/message") or "").strip().splitlines()
-                  out.write(f"- ❌ `{case.get('fullname')}`: {msg[0] if msg else ''}\n")
-                  print(f"::error::{case.get('fullname')}: {msg[0] if msg else 'failed'}")
-          if total == "0":
-              print("::warning::실행된 테스트가 0개입니다.")
+          for platform in ("EditMode", "PlayMode"):
+              path = os.path.join(sys.argv[1], f"{platform}-results.xml")
+              if not os.path.exists(path):
+                  out.write(f"### {platform} 테스트\n결과 파일이 없습니다 (Unity가 테스트를 실행하지 못함).\n")
+                  continue
+              run = ET.parse(path).getroot()
+              total, passed, failed, skipped = (run.get(k, "0") for k in ("total", "passed", "failed", "skipped"))
+              out.write(f"### {platform} 테스트\n| 전체 | 통과 | 실패 | 건너뜀 |\n|---|---|---|---|\n| {total} | {passed} | {failed} | {skipped} |\n")
+              for case in run.iter("test-case"):
+                  if case.get("result") == "Failed":
+                      msg = (case.findtext("failure/message") or "").strip().splitlines()
+                      out.write(f"- ❌ `{case.get('fullname')}`: {msg[0] if msg else ''}\n")
+                      print(f"::error::{case.get('fullname')}: {msg[0] if msg else 'failed'}")
+              if total == "0":
+                  print(f"::warning::{platform}: 실행된 테스트가 0개입니다.")
           PY
 
       - name: Upload test results and editor log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: editmode-test-results
+          name: unity-test-results
           path: |
-            ${{ runner.temp }}/editmode-results.xml
-            ${{ runner.temp }}/unity-editor.log
+            ${{ runner.temp }}/*-results.xml
+            ${{ runner.temp }}/unity-*.log
           if-no-files-found: ignore

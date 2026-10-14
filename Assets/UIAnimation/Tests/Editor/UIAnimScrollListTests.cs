@@ -285,26 +285,24 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.AreEqual(0.2f, anim.Duration("Show"), 1e-4f);
         }
 
-        // ---------- 성능 (첫 측정) ----------
+        // ---------- 성능 ----------
 
-        // Jumps around a 100-item list 1000 times (several items recycle per step); logs time and GC bytes.
-        (double ms, long bytes) MeasureScrolling()
+        // Jumps around a 100-item list 1000 times (several items recycle per step); time and allocations per jump.
+        (double ms, double allocs, long bytes) MeasureScrolling()
         {
-            for (var i = 0; i < 50; i++) _list.ScrollTo(i % 95);   // warm up: pool, dictionary, JIT
-            var before = System.GC.GetAllocatedBytesForCurrentThread();
-            var watch = Stopwatch.StartNew();
-            for (var i = 0; i < 1000; i++) _list.ScrollTo(i * 7 % 95);
-            watch.Stop();
-            return (watch.Elapsed.TotalMilliseconds, System.GC.GetAllocatedBytesForCurrentThread() - before);
+            var i = 0;
+            for (var w = 0; w < 50; w++) _list.ScrollTo(w % 95);   // warm up: pool, dictionary, JIT
+            return PerfMeasure.Run(() => _list.ScrollTo(i++ * 7 % 95), 1000);
         }
 
         [Test]
         public void 성능_바인딩만_스크롤_1000번()
         {
             _list.SetCount<RectTransform>(100, (view, i) => { });
-            var (ms, bytes) = MeasureScrolling();
-            TestContext.WriteLine($"바인딩만: 1000 steps {ms:0.0} ms total = {ms:0.0} µs/step, GC {bytes} bytes");
+            var r = MeasureScrolling();
+            TestContext.WriteLine($"바인딩만: {r.ms * 1000:0.0} µs/점프, GC 할당 {r.allocs:0.##}회 · 약 {r.bytes} bytes/점프");
             Assert.AreEqual(5, Instances, "재사용으로 오브젝트 5개 유지");
+            Assert.AreEqual(0, r.allocs, "스크롤 중 할당 없음");
         }
 
         [Test]
@@ -313,9 +311,10 @@ namespace SeoBYP.TimelineAnimation.Tests
             AnimatedItem();
             _list.scrubState = "Focus";
             _list.SetCount<RectTransform>(100, (view, i) => { });
-            var (ms, bytes) = MeasureScrolling();
-            TestContext.WriteLine($"바인딩 + 스크럽(UIAnimation.Sample): 1000 steps {ms:0.0} ms total = {ms:0.0} µs/step, GC {bytes} bytes");
+            var r = MeasureScrolling();
+            TestContext.WriteLine($"바인딩 + 스크럽(UIAnimation.Sample): {r.ms * 1000:0.0} µs/점프, GC 할당 {r.allocs:0.##}회 · 약 {r.bytes} bytes/점프");
             Assert.AreEqual(5, Instances);
+            Assert.AreEqual(0, r.allocs, "스크롤 중 할당 없음");
         }
     }
 }
