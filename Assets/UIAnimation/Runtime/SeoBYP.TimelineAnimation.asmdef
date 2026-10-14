@@ -4,7 +4,6 @@
     "references": [
         "UnityEngine.UI",
         "Unity.TextMeshPro",
-        "LitMotion",
         "UniTask",
         "Unity.Mathematics"
     ],

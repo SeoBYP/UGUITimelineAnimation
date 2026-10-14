@@ -3,7 +3,6 @@
     "rootNamespace": "SeoBYP.TimelineAnimation.Tests",
     "references": [
         "SeoBYP.TimelineAnimation",
-        "LitMotion",
         "UniTask",
         "UnityEngine.UI",
         "Unity.TextMeshPro",

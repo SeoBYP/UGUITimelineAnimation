@@ -1,5 +1,4 @@
 using System.Text;
-using LitMotion;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
@@ -70,7 +69,7 @@ namespace SeoBYP.TimelineAnimation
         /// The first round(length × t) characters of the text (tags kept, open tags closed), then random characters
         /// for the rest of the length, re-rolled from (seed, time) every frame.
         /// </summary>
-        public static string Scramble(string richText, float t, ScrambleMode mode, uint seed, double time, StringBuilder sb)
+        public static string Scramble(string richText, float t, UIAnimScramble mode, uint seed, double time, StringBuilder sb)
         {
             var length = VisibleLength(richText);
             var shown = Mathf.RoundToInt(length * Mathf.Clamp01(t));
@@ -103,10 +102,10 @@ namespace SeoBYP.TimelineAnimation
 
             var chars = mode switch
             {
-                ScrambleMode.Uppercase => Uppercase,
-                ScrambleMode.Lowercase => Lowercase,
-                ScrambleMode.Numerals => Numerals,
-                ScrambleMode.All => All,
+                UIAnimScramble.Uppercase => Uppercase,
+                UIAnimScramble.Lowercase => Lowercase,
+                UIAnimScramble.Numerals => Numerals,
+                UIAnimScramble.All => All,
                 _ => null,
             };
             if (chars != null)

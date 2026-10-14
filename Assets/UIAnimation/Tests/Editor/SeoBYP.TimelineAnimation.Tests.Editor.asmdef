@@ -5,7 +5,6 @@
         "SeoBYP.TimelineAnimation",
         "SeoBYP.TimelineAnimation.Editor",
         "UnityEngine.UI",
-        "LitMotion",
         "UniTask",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",

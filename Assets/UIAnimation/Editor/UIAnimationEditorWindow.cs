@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using LitMotion;
 using TMPro;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -1119,7 +1118,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 else
                 {
                     var scramble = new EnumField("Scramble", track.scramble) { tooltip = "Fills characters not revealed yet with random characters." };
-                    scramble.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.scramble = (ScrambleMode)e.newValue));
+                    scramble.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.scramble = (UIAnimScramble)e.newValue));
                     section.Add(scramble);
                     section.Add(Hint("0 = nothing shown, 1 = fully shown. Rich text tags don't count as characters."));
                 }
@@ -1225,7 +1224,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             if (keys.All(k => k.curveType != UIAnimCurveType.Curve))
             {
                 var ease = new EnumField("Ease", first.ease) { showMixedValue = keys.Any(k => k.ease != first.ease) };
-                ease.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.ease = (Ease)e.newValue; }));
+                ease.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.ease = (UIAnimEase)e.newValue; }));
                 arrival.Add(ease);
             }
             if (keys.All(k => k.IsVibration))

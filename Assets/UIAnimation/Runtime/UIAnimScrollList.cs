@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using LitMotion;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -108,9 +107,9 @@ namespace SeoBYP.TimelineAnimation
         bool _filled;
         float _contentMain, _cycle;
         int _entryFirst;
-        MotionHandle _entryMotion, _scrollMotion;
-        float _scrollTarget;
-        bool _creatingMotion, _dragging, _routingToParent, _preview, _motionOwnsMovement;
+        UIAnimTimerHandle _entryMotion, _scrollMotion;
+        float _scrollFrom, _scrollTarget, _scrollDuration;
+        bool _dragging, _routingToParent, _preview, _motionOwnsMovement;
         ScrollRect.MovementType _movementBeforeMotion;
         int _dragStartSlot, _current = -1;
         float _autoTimer;
@@ -310,14 +309,17 @@ namespace SeoBYP.TimelineAnimation
                 _motionOwnsMovement = true;
             }
             Scroll.movementType = ScrollRect.MovementType.Unrestricted;
-            _creatingMotion = true;   // see PlayEntry: nothing may start item motions during the creation call
-            _scrollMotion = LMotion.Create(Offset, target, duration)
-                .WithEase(Ease.OutCubic)
-                .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
-                .WithOnComplete(RestoreMovement)
-                .WithOnCancel(RestoreMovement)
-                .Bind(this, static (v, list) => { if (!list._creatingMotion) list.SetOffset(v, clamp: false); });
-            _creatingMotion = false;
+            _scrollFrom = Offset;
+            _scrollDuration = duration;
+            _scrollMotion = UIAnimTimer.Start(duration, this,
+                static (o, t) =>
+                {
+                    var list = (UIAnimScrollList)o;
+                    var eased = UIAnimEasing.OutCubic(t / list._scrollDuration);
+                    list.SetOffset(Mathf.LerpUnclamped(list._scrollFrom, list._scrollTarget, eased), clamp: false);
+                },
+                static o => ((UIAnimScrollList)o).RestoreMovement(),
+                static o => ((UIAnimScrollList)o).RestoreMovement());
         }
 
         void RestoreMovement()
@@ -367,17 +369,24 @@ namespace SeoBYP.TimelineAnimation
                 Relayout();
                 return;
             }
-            _creatingMotion = true;
-            LMotion.Create(from, size, duration)
-                .WithEase(Ease.OutCubic)
-                .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
-                .Bind(this, (v, list) =>
-                {
-                    if (list._creatingMotion) return;
-                    list._sizeOverride[index] = v;
-                    list.Relayout();
-                });
-            _creatingMotion = false;
+            UIAnimTimer.Start(duration, new Resize(this, index, from, size, duration), static (o, t) => ((Resize)o).At(t));
+        }
+
+        sealed class Resize
+        {
+            readonly UIAnimScrollList _list;
+            readonly int _index;
+            readonly float _from, _to, _duration;
+
+            public Resize(UIAnimScrollList list, int index, float from, float to, float duration) =>
+                (_list, _index, _from, _to, _duration) = (list, index, from, to, duration);
+
+            public void At(float t)
+            {
+                if (_list == null) return;   // destroyed
+                _list._sizeOverride[_index] = Mathf.LerpUnclamped(_from, _to, UIAnimEasing.OutCubic(t / _duration));
+                _list.Relayout();
+            }
         }
 
         /// <summary>The size of an index along the scroll axis.</summary>
@@ -412,20 +421,14 @@ namespace SeoBYP.TimelineAnimation
                 FinishEntry();   // one item, or no stagger: all at once
                 return;
             }
-            // LitMotion calls the binding once while creating the motion; starting item motions inside that call
-            // would create motions mid-creation and leave this handle dead. So that first call does nothing.
-            _creatingMotion = true;
-            _entryMotion = LMotion.Create(0f, span, span)
-                .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
-                .WithOnComplete(FinishEntry)
-                .Bind(this, static (t, list) => list.EntryAt(t));
-            _creatingMotion = false;
+            _entryMotion = UIAnimTimer.Start(span, this,
+                static (o, t) => ((UIAnimScrollList)o).EntryAt(t),
+                static o => ((UIAnimScrollList)o).FinishEntry());
             EntryAt(0f);
         }
 
         internal void EntryAt(float elapsed)
         {
-            if (_creatingMotion) return;
             foreach (var item in _active.Values)
             {
                 if (item.entered || Mathf.Max(0, item.slot - _entryFirst) * entryStagger > elapsed + 1e-4f) continue;

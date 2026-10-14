@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using LitMotion;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -35,7 +34,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         static UIAnimTrack Track(Component target, UIAnimProperty property, bool fromCurrent, bool relative, params UIAnimKey[] keys) =>
             new() { target = target, property = property, startFromCurrent = fromCurrent, relativeToRest = relative, keys = new List<UIAnimKey>(keys) };
 
-        static UIAnimKey Key(float time, Vector4 value) => new() { time = time, value = value, ease = Ease.Linear };
+        static UIAnimKey Key(float time, Vector4 value) => new() { time = time, value = value, ease = UIAnimEase.Linear };
 
         [Test]
         public void 키_3개면_가운데_키_값을_지난다()
@@ -225,7 +224,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             var playback = PlayAwaitable("Close", out var task);
             Assert.AreEqual(UniTaskStatus.Pending, task.Status);
 
-            playback.onComplete();   // LitMotion이 끝에 도달했을 때 부르는 콜백
+            UIAnimation.Finish(playback);   // 타이머가 끝에 도달했을 때 부르는 것
             Assert.AreEqual(UniTaskStatus.Succeeded, task.Status);
             Assert.IsFalse(_anim.IsPlaying("Close"));
         }

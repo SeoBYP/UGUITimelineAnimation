@@ -212,7 +212,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             UIAnimTrack Track(Component target, UIAnimProperty property, params (float t, Vector4 v)[] keys)
             {
                 var track = new UIAnimTrack { target = target, property = property, start = UIAnimStart.KeyValue };
-                foreach (var (t, v) in keys) track.keys.Add(new UIAnimKey { time = t, value = v, ease = LitMotion.Ease.Linear });
+                foreach (var (t, v) in keys) track.keys.Add(new UIAnimKey { time = t, value = v, ease = UIAnimEase.Linear });
                 return track;
             }
             anim.states.Add(new UIAnimState { name = "Show", tracks = { Track(_template.transform, UIAnimProperty.Scale, (0f, Vector3.zero), (0.2f, Vector3.one)) } });
