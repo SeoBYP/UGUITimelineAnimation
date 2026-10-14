@@ -18,6 +18,7 @@ namespace SeoBYP.TimelineAnimation
         Deselect,
         ToggleOn,       // Toggle.isOn became true
         ToggleOff,      // Toggle.isOn became false
+        Start,          // once, after the first OnEnable (Instantiate runs both: bind only one of them)
     }
 
     [Serializable]
@@ -53,6 +54,8 @@ namespace SeoBYP.TimelineAnimation
             Fire(UIAnimEvent.OnEnable, null);
         }
 
+        void Start() => Fire(UIAnimEvent.Start, null);
+
         void OnDisable()
         {
             if (_toggle != null) _toggle.onValueChanged.RemoveListener(OnToggle);
@@ -70,7 +73,7 @@ namespace SeoBYP.TimelineAnimation
         internal void Fire(UIAnimEvent evt, PointerEventData pointer)
         {
             // A non-interactable Selectable ignores input; OnEnable still plays.
-            if (evt != UIAnimEvent.OnEnable && _selectable != null && !_selectable.IsInteractable()) return;
+            if (evt != UIAnimEvent.OnEnable && evt != UIAnimEvent.Start && _selectable != null && !_selectable.IsInteractable()) return;
 
             foreach (var b in bindings)
                 if (b.evt == evt) _animation.Play(b.state, b.interrupt, pointer);

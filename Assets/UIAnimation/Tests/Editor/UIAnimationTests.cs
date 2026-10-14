@@ -72,6 +72,33 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
+        public void 포인터에서_시작하면_누른_위치로_옮겨진다()
+        {
+            // Button2 ripple: the fill starts where the pointer pressed. No canvas: screen point (100, 50) = world (100, 50).
+            var parent = new GameObject("Mask", typeof(RectTransform));
+            try
+            {
+                var fill = new GameObject("Fill", typeof(RectTransform)).GetComponent<RectTransform>();
+                fill.SetParent(parent.transform, false);
+                var press = State("Press", new UIAnimTrack
+                {
+                    target = fill, property = UIAnimProperty.AnchoredPosition, start = UIAnimStart.Pointer, keys = { new UIAnimKey() },
+                });
+                var anim = parent.AddComponent<UIAnimation>();
+                anim.states.Add(press);
+
+                var pointer = new UnityEngine.EventSystems.PointerEventData(null) { position = new Vector2(100, 50) };
+                anim.Prepare("Press", UIAnimInterrupt.Cancel, pointer);
+                Assert.AreEqual(new Vector2(100, 50), fill.anchoredPosition, "누른 위치");
+
+                fill.anchoredPosition = new Vector2(7, 7);
+                anim.Prepare("Press", UIAnimInterrupt.Cancel, null);
+                Assert.AreEqual(new Vector2(7, 7), fill.anchoredPosition, "포인터가 없으면(코드 호출) 현재 위치 그대로");
+            }
+            finally { Object.DestroyImmediate(parent); }
+        }
+
+        [Test]
         public void 현재값에서_시작할_때_첫_키가_0초_뒤면_지연이_된다()
         {
             // Toggle1 sample: hold the current value for 0.5s, then go to 2.
@@ -290,7 +317,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         UIAnimState WithSignals(string name, params (float time, string name)[] events)
         {
             var state = Fade(name, 0f);
-            foreach (var (time, e) in events) state.events.Add(new UIAnimEventMarker { time = time, name = e });
+            foreach (var (time, e) in events) state.AddEvent(new UIAnimEventMarker { time = time, name = e });
             _anim.states.Add(state);
             return state;
         }
@@ -443,7 +470,7 @@ namespace SeoBYP.TimelineAnimation.Tests
 
         // ---------- 커스텀 struct 이벤트와 인스펙터 리스너 ----------
 
-        UIAnimEventMarker WithData<T>(string state, float time, string name, T data) where T : struct, IUIAnimEventData
+        UIAnimEventMarker WithData<T>(string state, float time, string name, T data) where T : struct
         {
             var marker = new UIAnimEventMarker
             {
@@ -451,7 +478,7 @@ namespace SeoBYP.TimelineAnimation.Tests
                 dataType = UIAnimEventMarker.TypeKey(typeof(T)), dataJson = JsonUtility.ToJson(data),
             };
             var s = Fade(state, 0f);
-            s.events.Add(marker);
+            s.AddEvent(marker);
             _anim.states.Add(s);
             return marker;
         }
@@ -536,15 +563,178 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.AreEqual(1, count);
             listener.OnDisable();
         }
+
+        // ---------- 사운드 ----------
+
+        UIAnimState WithSound(float time, float clipSeconds)
+        {
+            var state = Fade("Close", 0f);
+            var clip = AudioClip.Create("Test", Mathf.RoundToInt(44100 * clipSeconds), 1, 44100, false);
+            state.AddSound(new UIAnimSound { time = time, clip = clip });
+            _anim.states.Add(state);
+            return state;
+        }
+
+        [Test]
+        public void 상태_길이는_사운드가_끝나는_시간까지_포함한다()
+        {
+            var state = WithSound(0.5f, 2f);
+            Assert.AreEqual(2.5f, state.Duration, 1e-3f, "사운드 0.5초 + 클립 2초");
+        }
+
+        [Test]
+        public void 사운드는_AudioSource_없이_공용_2D_소스로_재생한다()
+        {
+            WithSound(0.3f, 1f);
+            var played = new List<AudioSource>();
+            UIAnimation.SoundPlayed = (source, _) => played.Add(source);
+            try
+            {
+                var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
+                UIAnimation.Step(playback, 0.2f);
+                Assert.AreEqual(0, played.Count, "아직 재생 전");
+
+                UIAnimation.Step(playback, 0.4f);
+                Assert.AreEqual(1, played.Count, "시간을 지나면 한 번 재생");
+                Assert.AreNotEqual(_go, played[0].gameObject, "공용 소스로 재생");
+                Assert.AreEqual(0f, played[0].spatialBlend, "2D");
+                Assert.IsNull(_go.GetComponent<AudioSource>(), "UI 오브젝트에 AudioSource를 붙이지 않음");
+            }
+            finally { UIAnimation.SoundPlayed = null; }
+        }
+
+        [Test]
+        public void Complete로_건너뛴_사운드는_재생하지_않는다()
+        {
+            WithSound(0.3f, 1f);
+            var playback = _anim.Prepare("Close", UIAnimInterrupt.Cancel, null);
+            UIAnimation.Step(playback, 0.1f);
+
+            var played = 0;
+            UIAnimation.SoundPlayed = (_, _) => played++;
+            try { _anim.Complete("Close"); }
+            finally { UIAnimation.SoundPlayed = null; }
+            Assert.AreEqual(0, played);
+        }
+
+        // ---------- 현재 Prefab 오버라이드 ----------
+
+        UIAnimState FadeTo(Image image, float to, float seconds = 1f) =>
+            State("Show", Track(image, UIAnimProperty.GraphicAlpha, false, false, Key(0f, Vector4.zero), Key(seconds, new Vector4(to, 0))));
+
+        static float AlphaAtEnd(UIAnimation anim)
+        {
+            var playback = anim.Prepare("Show", UIAnimInterrupt.Cancel, null);
+            UIAnimation.Step(playback, 10f);
+            return ((Image)playback.state.tracks[0].target).color.a;
+        }
+
+        [Test]
+        public void 바깥_Prefab의_오버라이드가_자식_상태를_대신한다()
+        {
+            var child = Child(out var image);
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
+
+            Assert.AreEqual(0.5f, AlphaAtEnd(child), 1e-4f);
+            Assert.AreEqual(1f, child.states[0].tracks[0].keys[1].value.x, "자식 원본 상태는 그대로");
+        }
+
+        [Test]
+        public void 오버라이드한_Prefab_밖의_같은_자식은_원래_상태를_재생한다()
+        {
+            var child = Child(out var image);
+            child.transform.SetParent(null, false);   // no longer inside the popup
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
+
+            Assert.AreEqual(1f, AlphaAtEnd(child), 1e-4f);
+            Object.DestroyImmediate(child.gameObject);
+        }
+
+        [Test]
+        public void 가장_바깥_Prefab의_오버라이드가_우선한다()
+        {
+            var middle = new GameObject("Middle", typeof(RectTransform)).AddComponent<UIAnimation>();
+            middle.transform.SetParent(_go.transform, false);
+            var child = Child(out var image);
+            child.transform.SetParent(middle.transform, false);
+            middle.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.3f).tracks });
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
+
+            Assert.AreEqual(0.5f, AlphaAtEnd(child), 1e-4f);
+        }
+
+        [Test]
+        public void 자식_호출_길이는_오버라이드한_상태의_길이를_쓴다()
+        {
+            var child = Child(out var image);
+            var parent = Caller(child, 0.5f);
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 1f, 2f).tracks });
+
+            Assert.AreEqual(2.5f, parent.Duration, 1e-4f, "호출 0.5초 + 오버라이드 길이 2초");
+        }
+
+        [Test]
+        public void 오버라이드하지_않은_트랙은_자식_원본을_따라간다()
+        {
+            var child = Child(out var image);
+            var scale = Track(child.transform, UIAnimProperty.Scale, false, false, Key(0f, Vector3.one), Key(1f, Vector3.one * 2f));
+            child.states[0].tracks.Add(scale);
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
+
+            var effective = child.EffectiveState("Show");
+            Assert.AreEqual(2, effective.tracks.Count);
+            Assert.AreNotSame(child.states[0].tracks[0], effective.tracks[0], "Alpha는 오버라이드");
+            Assert.AreSame(scale, effective.tracks[1], "Scale은 원본 그대로(같은 트랙)");
+
+            scale.keys[1].value = Vector3.one * 3f;   // the child prefab changes later
+            UIAnimation.Step(child.Prepare("Show", UIAnimInterrupt.Cancel, null), 10f);
+            Assert.AreEqual(3f, child.transform.localScale.x, 1e-4f, "원본 변경이 따라옴");
+            Assert.AreEqual(0.5f, image.color.a, 1e-4f, "오버라이드한 트랙은 유지");
+        }
+
+        [Test]
+        public void 예전_형식의_전체_상태_오버라이드는_트랙_오버라이드로_옮겨진다()
+        {
+            var o = JsonUtility.FromJson<UIAnimOverride>(
+                "{\"state\":\"Show\",\"replacement\":{\"name\":\"Show\",\"tracks\":[{\"property\":4,\"keys\":[{\"time\":0.5}]}]}}");
+            Assert.AreEqual(1, o.tracks.Count);
+            Assert.AreEqual(0.5f, o.tracks[0].keys[0].time, 1e-4f);
+        }
+
+        [Test]
+        public void 상태_복사본은_참조는_같고_값은_독립적이다()
+        {
+            var child = Child(out var image);
+            var source = child.states[0];
+            var copy = source.Clone();
+
+            Assert.AreSame(image, copy.tracks[0].target, "대상 오브젝트 참조 유지");
+            copy.tracks[0].keys[1].value = new Vector4(0.2f, 0);
+            Assert.AreEqual(1f, source.tracks[0].keys[1].value.x, "복사본을 고쳐도 원본은 그대로");
+        }
+
+        [Test]
+        public void 예전_형식의_이벤트와_사운드는_불러올_때_트랙으로_옮겨진다()
+        {
+            var state = JsonUtility.FromJson<UIAnimState>(
+                "{\"name\":\"Open\",\"events\":[{\"time\":0.5,\"name\":\"Shown\"}],\"sounds\":[{\"time\":0.1,\"volume\":0.5}]}");
+
+            Assert.AreEqual(1, state.eventTracks.Count);
+            Assert.AreEqual("Shown", state.eventTracks[0].events[0].name);
+            Assert.AreEqual(1, state.soundTracks.Count);
+            Assert.AreEqual(0.5f, state.soundTracks[0].sounds[0].volume, 1e-4f);
+        }
     }
 
-    public struct TestHitEvent : IUIAnimEventData
+    [UIAnimEvent("테스트 타격")]
+    public struct TestHitEvent
     {
         public float damage;
         public string sfx;
     }
 
-    public struct TestSoundEvent : IUIAnimEventData
+    [UIAnimEvent]
+    public struct TestSoundEvent
     {
         public string clip;
     }

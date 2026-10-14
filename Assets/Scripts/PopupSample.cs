@@ -5,8 +5,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>Custom animation event data: picked on the event marker in the editor, received with AddListener.</summary>
-public struct PopupSoundEvent : IUIAnimEventData
+/// <summary>Custom animation event: picked from the event menu in the editor, received with AddListener.</summary>
+[UIAnimEvent("Popup Sound")]
+public struct PopupSoundEvent
 {
     public string clip;
     public float volume;

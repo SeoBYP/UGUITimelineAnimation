@@ -30,6 +30,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         readonly List<(TMP_Text text, string value)> _texts = new();
         readonly List<(UIAnimTrack track, Vector4 value)> _childRest = new();   // called child states: their rest before the call   // scramble rewrites text; restored on stop
         double _lastTick;
+        float _soundCursor;   // sounds after this time play on the next tick
         bool _inPrefabStage;
 
         public UIAnimPreview()
@@ -201,6 +202,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             if (Time >= State.Duration) Seek(0f);
             IsPlaying = true;
             _lastTick = EditorApplication.timeSinceStartup;
+            _soundCursor = Time > 0f ? Time : -1f;   // a sound at 0 plays when playback starts from 0
             Changed?.Invoke();
         }
 
@@ -223,6 +225,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             if (!IsActive) return;
             IsPlaying = false;
+            UIAnimAudioPreview.StopAll();
             if (AnimationMode.InAnimationMode(_driver)) AnimationMode.StopAnimationMode(_driver);
 
             // Fallback: AnimationMode has already reverted registered properties; this covers anything it missed.
@@ -253,6 +256,12 @@ namespace SeoBYP.TimelineAnimation.Editor
             var t = Time + (float)(now - _lastTick) * Speed;
             _lastTick = now;
 
+            // Sounds the playhead passed this tick (only while playing; scrubbing stays silent).
+            foreach (var track in State.soundTracks)
+            foreach (var sound in track.sounds)
+                if (sound.time > _soundCursor && sound.time <= t) UIAnimAudioPreview.Play(sound.clip);
+            _soundCursor = t;
+
             var duration = State.Duration;
             if (t >= duration)
             {
@@ -261,6 +270,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                     Begin(Target, State, t % duration);   // restart from the rest pose so Current clips loop cleanly
                     IsPlaying = true;
                     _lastTick = now;
+                    _soundCursor = -1f;   // next loop plays its sounds again
                     return;
                 }
                 t = duration;

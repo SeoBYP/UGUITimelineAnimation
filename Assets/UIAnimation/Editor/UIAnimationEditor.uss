@@ -104,7 +104,7 @@
 }
 .uia-row {
     flex-direction: row;
-    height: 40px;
+    height: 30px;
     border-bottom-width: 1px;
     border-bottom-color: rgb(24, 25, 28);
 }
@@ -172,11 +172,28 @@
 }
 .uia-call:hover { background-color: rgba(100, 140, 220, 0.5); }
 .uia-call.uia-marker--selected { background-color: rgba(58, 150, 255, 0.6); }
+.uia-sound {
+    position: absolute;
+    top: 3px;
+    height: 17px;
+    padding: 0 6px;
+    font-size: 11px;
+    overflow: hidden;
+    white-space: nowrap;
+    color: rgb(225, 245, 225);
+    background-color: rgba(102, 187, 106, 0.3);
+    border-left-width: 2px;
+    border-left-color: rgb(129, 199, 132);
+    border-radius: 3px;
+}
+.uia-sound:hover { background-color: rgba(102, 187, 106, 0.45); }
+.uia-sound.uia-marker--selected { background-color: rgba(58, 150, 255, 0.6); }
+.uia-row .uia-signal, .uia-row .uia-sound { top: 6px; }
 
 /* Keyframe: a rotated square (diamond) centered on the lane. */
 .uia-key {
     position: absolute;
-    top: 13px;
+    top: 8px;
     width: 12px;
     height: 12px;
     rotate: 45deg;
@@ -191,6 +208,20 @@
     border-color: rgb(200, 225, 255);
 }
 .uia-header--selected { background-color: rgb(52, 58, 70); }
+
+/* Object tree: one foldable row per animated object, tracks indented under it. */
+.uia-node-row { flex-direction: row; height: 24px; border-bottom-width: 1px; border-bottom-color: rgb(24, 25, 28); }
+.uia-node-header { background-color: rgb(38, 40, 45); }
+.uia-node-header:hover { background-color: rgb(46, 49, 55); }
+.uia-fold { width: 14px; font-size: 10px; color: rgb(160, 165, 175); -unity-text-align: middle-center; }
+.uia-node-name { font-size: 12px; -unity-font-style: bold; color: rgb(205, 210, 220); }
+.uia-node-lane { background-color: rgb(28, 29, 33); }
+
+/* Called child state: read-only preview rows under the child object, shifted by the call time. */
+.uia-callee-row { flex-direction: row; height: 24px;   /* same as an object row: both are group headers */ border-bottom-width: 1px; border-bottom-color: rgb(24, 25, 28); }
+.uia-callee-source { font-size: 11px; color: rgb(150, 155, 165); -unity-font-style: italic; }
+.uia-callee-own { font-size: 11px; color: rgb(140, 185, 255); -unity-font-style: bold; }
+.uia-override-title { -unity-text-align: middle-left; margin-left: 8px; flex-grow: 1; color: rgb(140, 185, 255); -unity-font-style: bold; }
 .uia-track-path { font-size: 10px; color: rgb(150, 155, 165); }
 .uia-track-prop { font-size: 12px; -unity-font-style: bold; color: rgb(228, 230, 234); }
 .uia-box {
@@ -270,11 +301,21 @@
 .uia-light .uia-header--selected { background-color: rgb(190, 205, 225); }
 .uia-light .uia-key { background-color: rgb(250, 250, 250); border-color: rgb(80, 80, 80); }
 .uia-light .uia-key--selected { background-color: rgb(40, 120, 230); border-color: rgb(20, 60, 130); }
+.uia-light .uia-node-row { border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-node-header { background-color: rgb(200, 200, 200); }
+.uia-light .uia-node-header:hover { background-color: rgb(210, 210, 210); }
+.uia-light .uia-fold { color: rgb(80, 80, 80); }
+.uia-light .uia-node-name { color: rgb(30, 30, 30); }
+.uia-light .uia-node-lane { background-color: rgb(206, 206, 206); }
+.uia-light .uia-callee-row { border-bottom-color: rgb(170, 170, 170); }
+.uia-light .uia-callee-source { color: rgb(90, 90, 90); }
+.uia-light .uia-callee-own, .uia-light .uia-override-title { color: rgb(30, 90, 200); }
 .uia-light .uia-marker-row { border-bottom-color: rgb(170, 170, 170); }
 .uia-light .uia-marker-lane { background-color: rgb(214, 214, 214); }
 .uia-light .uia-signal { color: rgb(170, 95, 0); }
 .uia-light .uia-marker--selected { background-color: rgba(40, 120, 230, 0.25); color: rgb(20, 40, 80); }
 .uia-light .uia-call { color: rgb(20, 40, 80); background-color: rgba(70, 120, 210, 0.22); border-left-color: rgb(40, 100, 210); }
+.uia-light .uia-sound { color: rgb(20, 60, 25); background-color: rgba(70, 160, 80, 0.25); border-left-color: rgb(46, 125, 50); }
 .uia-light .uia-track-path { color: rgb(90, 90, 90); }
 .uia-light .uia-track-prop { color: rgb(20, 20, 20); }
 .uia-light .uia-lane { background-color: rgb(200, 200, 200); }
@@ -302,6 +343,7 @@
 .uia-picker { border-width: 1px; border-color: rgb(14, 15, 17); }
 .uia-picker-header {
     flex-direction: row;
+    flex-shrink: 0;
     align-items: center;
     height: 36px;
     padding: 0 10px;
@@ -311,7 +353,7 @@
 }
 .uia-picker-header #title { -unity-font-style: bold; color: rgb(235, 236, 238); margin-right: 10px; }
 .uia-picker-search { flex-grow: 1; margin: 0; }
-.uia-picker-body { flex-direction: row; flex-grow: 1; }
+.uia-picker-body { flex-direction: row; flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-height: 0; }   /* the footer keeps its height */
 .uia-picker-tree {
     width: 210px;
     background-color: rgb(34, 35, 39);
@@ -383,6 +425,21 @@
     border-color: rgba(255, 255, 255, 0.3);
 }
 .uia-picker-tag { font-size: 10px; margin-left: 8px; color: rgb(170, 175, 185); }
+.uia-picker-card--picked { background-color: rgb(40, 66, 104); border-color: rgb(108, 178, 255); }
+.uia-picker-card--picked:hover { background-color: rgb(48, 78, 122); }
+.uia-picker-footer {
+    flex-direction: row;
+    flex-shrink: 0;
+    height: 36px;
+    align-items: center;
+    padding: 6px 8px;
+    border-top-width: 1px;
+    border-top-color: rgb(20, 21, 23);
+    background-color: rgb(36, 37, 41);
+    font-size: 11px;
+    color: rgb(150, 155, 165);
+}
+.uia-picker-add { min-width: 90px; -unity-font-style: bold; }
 
 .uia-light .uia-picker-header { background-color: rgb(228, 228, 228); border-bottom-color: rgb(170, 170, 170); }
 .uia-light .uia-picker-header #title { color: rgb(20, 20, 20); }
@@ -392,3 +449,72 @@
 .uia-light .uia-picker-card { background-color: rgb(236, 236, 236); border-color: rgb(185, 185, 185); }
 .uia-light .uia-picker-card #prop { color: rgb(20, 20, 20); }
 .uia-light .uia-picker-value { background-color: rgb(250, 250, 250); color: rgb(20, 80, 160); }
+.uia-light .uia-picker-card--picked { background-color: rgb(200, 220, 245); }
+.uia-light .uia-picker-footer { background-color: rgb(228, 228, 228); border-top-color: rgb(170, 170, 170); }
+
+/* Zoomed in, keys and bars outside the visible window are clipped instead of spilling over the headers. */
+.uia-ruler, .uia-lane, .uia-marker-lane { overflow: hidden; }
+.uia-zoom-hint { font-size: 10px; color: rgb(120, 125, 135); }
+
+/* ---------- context menu (UIAnimMenu): same palette as the property picker ---------- */
+.uia-menu {
+    position: absolute;
+    min-width: 180px;
+    padding: 4px;
+    background-color: rgb(37, 38, 42);
+    border-width: 1px;
+    border-color: rgb(14, 15, 17);
+    border-radius: 6px;
+}
+.uia-menu-item {
+    flex-direction: row;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px 0 4px;
+    border-radius: 4px;
+    color: rgb(215, 218, 224);
+}
+.uia-menu-item:hover, .uia-menu-item--open { background-color: rgb(44, 93, 160); color: white; }
+.uia-menu-item #check { width: 16px; -unity-text-align: middle-center; color: rgb(108, 178, 255); }
+.uia-menu-item #label { flex-grow: 1; padding-right: 16px; -unity-text-align: middle-left; }
+.uia-menu-item #arrow { width: 10px; color: rgb(150, 155, 165); }
+.uia-menu-item--danger #label { color: rgb(240, 120, 120); }
+.uia-menu-item--danger:hover #label { color: white; }
+.uia-menu-item--disabled { opacity: 0.45; }
+.uia-menu-item--disabled:hover { background-color: rgba(0, 0, 0, 0); color: rgb(215, 218, 224); }
+.uia-menu-separator { height: 1px; margin: 4px 6px; background-color: rgb(58, 60, 66); }
+.uia-light .uia-menu { background-color: rgb(236, 236, 236); border-color: rgb(160, 160, 160); }
+.uia-light .uia-menu-item { color: rgb(25, 25, 25); }
+.uia-light .uia-menu-item:hover, .uia-light .uia-menu-item--open { background-color: rgb(58, 114, 176); color: white; }
+.uia-light .uia-menu-separator { background-color: rgb(190, 190, 190); }
+
+/* State end: tag on the ruler, shade over the time after it (like the area past a clip's end in the Animation window). */
+.uia-end-shade { position: absolute; top: 25px; bottom: 0; background-color: rgba(0, 0, 0, 0.28); border-left-width: 1px; border-left-color: rgba(255, 255, 255, 0.35); }
+.uia-end-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    padding: 5px 4px 0 4px;
+    font-size: 10px;
+    color: rgb(235, 236, 238);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.6);
+}
+/* End of a character track: drag to change the stagger. */
+.uia-tail-handle { position: absolute; top: 7px; width: 6px; height: 16px; border-radius: 2px; opacity: 0.85; cursor: resize-horizontal; }
+.uia-tail-handle:hover { opacity: 1; scale: 1.2 1.2; }
+.uia-light .uia-end-shade { background-color: rgba(0, 0, 0, 0.12); border-left-color: rgba(0, 0, 0, 0.4); }
+.uia-light .uia-end-marker { color: rgb(30, 30, 30); background-color: rgba(0, 0, 0, 0.06); border-left-color: rgba(0, 0, 0, 0.5); }
+
+/* "How It Plays" rows: what plays the state; click pings the object. */
+.uia-howitplays { white-space: normal; margin: 2px 4px; padding: 4px 6px; font-size: 11px; background-color: rgba(108, 178, 255, 0.10); border-width: 0; border-left-width: 2px; border-left-color: rgb(108, 178, 255); border-radius: 3px; }
+.uia-howitplays:hover { background-color: rgba(108, 178, 255, 0.22); }
+
+/* A child's original (not overridden) track: the same row as any track, dimmed; clicking it makes a prefab override. */
+.uia-row--readonly { opacity: 0.5; }
+.uia-row--readonly:hover { opacity: 0.7; }
+
+/* A child's track overridden in this prefab: the name in Unity's override blue. */
+.uia-track-override { color: rgb(108, 178, 255); }
+.uia-light .uia-track-override { color: rgb(30, 90, 200); }

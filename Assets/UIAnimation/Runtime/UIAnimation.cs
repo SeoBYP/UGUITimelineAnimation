@@ -45,9 +45,12 @@ namespace SeoBYP.TimelineAnimation
         Shake,      // LMotion.Shake: like Punch but each component jitters randomly every frame
     }
 
-    public enum UIAnimActionType
+    /// <summary>Where a track's first key gets its value when the state starts.</summary>
+    public enum UIAnimStart
     {
-        MoveToPointer,  // places the target under the pointer that triggered the state
+        KeyValue,   // the value written in the key
+        Current,    // the property's value at that moment, so an interrupted animation never jumps
+        Pointer,    // Position only: where the pointer pressed (a ripple from the touch point); later keys are offsets from there
     }
 
     /// <summary>A value at a time. Ease/curve describe how the track arrives at this key from the previous one.</summary>
@@ -67,6 +70,13 @@ namespace SeoBYP.TimelineAnimation
         [NonSerialized] internal Vector4 resolved;
 
         public bool IsVibration => curveType is UIAnimCurveType.Punch or UIAnimCurveType.Shake;
+
+        internal UIAnimKey Clone()
+        {
+            var copy = (UIAnimKey)MemberwiseClone();
+            copy.curve = curve != null ? new AnimationCurve(curve.keys) : null;
+            return copy;
+        }
 
         /// <summary>Oscillation count over a segment of this many seconds.</summary>
         internal int Oscillations(float seconds) => (int)(seconds * frequency + 1e-4f);
@@ -88,8 +98,16 @@ namespace SeoBYP.TimelineAnimation
     {
         public Component target;
         public UIAnimProperty property;
-        [Tooltip("The first key takes the value the property has when the state starts, so an interrupted animation never jumps. With one key: current → that key.")]
-        public bool startFromCurrent = true;
+        [Tooltip("Where the first key's value comes from when the state starts: the key itself, the current value (no jump when interrupted), or the pointer position (Position only).")]
+        [FormerlySerializedAs("startFromCurrent")]   // was a bool: false → KeyValue, true → Current
+        public UIAnimStart start = UIAnimStart.Current;
+
+        /// <summary>The first key is a live value (current or pointer) rather than the value written in it.</summary>
+        public bool startFromCurrent
+        {
+            get => start != UIAnimStart.KeyValue;
+            set => start = value ? UIAnimStart.Current : UIAnimStart.KeyValue;
+        }
         [Tooltip("Key values are added to the value the property had on Awake (e.g. -14 = 14 smaller than the original size).")]
         public bool relativeToRest;
         [Tooltip("Per-character tracks only: each character starts this many seconds after the previous one.")]
@@ -99,6 +117,13 @@ namespace SeoBYP.TimelineAnimation
         [Tooltip("Text Reveal only: characters not yet revealed are shown as random characters (LitMotion WithScrambleChars).")]
         public ScrambleMode scramble = ScrambleMode.None;
         public List<UIAnimKey> keys = new();      // sorted by time
+
+        internal UIAnimTrack Clone()
+        {
+            var copy = (UIAnimTrack)MemberwiseClone();
+            copy.keys = keys.ConvertAll(k => k.Clone());
+            return copy;
+        }
 
         [NonSerialized] internal Vector4 rest;          // value captured on Awake, base for relativeToRest
         [NonSerialized] internal Vector4 startValue;    // value at state start, when startFromCurrent
@@ -166,26 +191,30 @@ namespace SeoBYP.TimelineAnimation
         };
     }
 
-    [Serializable]
-    public sealed class UIAnimAction
+    /// <summary>
+    /// Registers a struct as a custom animation event type. Its public fields become the event's parameters, edited per event
+    /// in the UI Animation Editor; code receives them with <c>anim.AddListener((in UIAnimEventInfo e, in HitEvent hit) =&gt; ...)</c>.
+    /// <code>[UIAnimEvent("Hit")] public struct HitEvent { public float damage; public string sfx; }</code>
+    /// Fields: numbers, bool, string, Vector2/3, Color, enums (stored as JSON, so no object references).
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Struct, Inherited = false)]
+    public sealed class UIAnimEventAttribute : Attribute
     {
-        public UIAnimActionType type;
-        public RectTransform target;
+        /// <summary>Shown in the editor's event menu; also the default name of a new event. Empty = the struct name.</summary>
+        public string DisplayName { get; }
+        public UIAnimEventAttribute(string displayName = "") => DisplayName = displayName;
     }
-
-    /// <summary>Marks a struct as custom data an animation event can carry (e.g. <c>struct HitEvent : IUIAnimEventData { public float damage; }</c>).</summary>
-    public interface IUIAnimEventData { }
 
     /// <summary>
     /// An animation event: a named point in a state's time, raised once when playback passes it (e.g. play a sound on impact).
-    /// It can carry one custom <see cref="IUIAnimEventData"/> struct, stored as JSON and converted once on first use.
+    /// It can carry one custom <see cref="UIAnimEventAttribute"/> struct, stored as JSON and converted once on first use.
     /// </summary>
     [Serializable]
     public sealed class UIAnimEventMarker
     {
         public float time;
         public string name = "Event";
-        public string dataType = "";   // "Namespace.Type, Assembly" of an IUIAnimEventData struct, or empty
+        public string dataType = "";   // "Namespace.Type, Assembly" of a [UIAnimEvent] struct, or empty
         public string dataJson = "";
 
         [NonSerialized] object _data;   // boxed once; reading it copies the struct out without allocating
@@ -195,7 +224,7 @@ namespace SeoBYP.TimelineAnimation
 
         public Type DataType => string.IsNullOrEmpty(dataType) ? null : Type.GetType(dataType);
 
-        internal bool TryGetData<T>(out T data) where T : struct, IUIAnimEventData
+        internal bool TryGetData<T>(out T data) where T : struct
         {
             if (!_parsed)
             {
@@ -239,7 +268,7 @@ namespace SeoBYP.TimelineAnimation
         }
 
         /// <summary>The event's custom data, if it carries a <typeparamref name="T"/>.</summary>
-        public bool TryGetData<T>(out T data) where T : struct, IUIAnimEventData
+        public bool TryGetData<T>(out T data) where T : struct
         {
             if (_marker != null) return _marker.TryGetData(out data);
             data = default;
@@ -248,7 +277,46 @@ namespace SeoBYP.TimelineAnimation
     }
 
     public delegate void UIAnimEventHandler(in UIAnimEventInfo e);
-    public delegate void UIAnimEventHandler<T>(in UIAnimEventInfo e, in T data) where T : struct, IUIAnimEventData;
+    public delegate void UIAnimEventHandler<T>(in UIAnimEventInfo e, in T data) where T : struct;
+
+    /// <summary>A sound played once when playback passes its time, through the UIAnimation's AudioSource.</summary>
+    [Serializable]
+    public sealed class UIAnimSound
+    {
+        public float time;
+        public AudioClip clip;
+        [Range(0f, 1f)] public float volume = 1f;
+
+        public float End => time + (clip != null ? clip.length : 0f);
+    }
+
+    /// <summary>
+    /// A nested UIAnimation's state changed inside this prefab only (e.g. the common button flashes differently in this popup).
+    /// Only the changed tracks are stored, matched to the child's by target + property; every other track keeps following the
+    /// child's own state, so later changes to the child prefab still show up here. Stored on the outer prefab, so the child's
+    /// prefab is never touched; for the same track the outermost override wins.
+    /// </summary>
+    [Serializable]
+    public sealed class UIAnimOverride : ISerializationCallbackReceiver
+    {
+        public UIAnimation child;
+        public string state = "";
+        public List<UIAnimTrack> tracks = new();
+
+        // Before per-track overrides: a whole copy of the state. Its tracks become the overridden tracks when loaded.
+        [SerializeField, HideInInspector] UIAnimState replacement;   // same name as before, so both YAML and JSON load it
+
+        void ISerializationCallbackReceiver.OnBeforeSerialize() { }
+
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
+        {
+            if (replacement is not { tracks: { Count: > 0 } }) return;
+            tracks.AddRange(replacement.tracks);
+            replacement = null;
+        }
+
+        public UIAnimTrack Find(UIAnimTrack childTrack) => tracks.Find(t => t.target == childTrack.target && t.property == childTrack.property);
+    }
 
     /// <summary>Plays another UIAnimation's state at a point in this state's time (e.g. a popup showing its buttons).</summary>
     [Serializable]
@@ -258,30 +326,105 @@ namespace SeoBYP.TimelineAnimation
         public UIAnimation child;
         public string state = "";
 
-        public UIAnimState Target => child != null ? child.FindState(state) : null;
+        /// <summary>The state that actually plays: the child's own, or this prefab's override of it.</summary>
+        public UIAnimState Target => child != null ? child.EffectiveState(state) : null;
+    }
+
+    /// <summary>A track of animation events (added like any other track).</summary>
+    [Serializable]
+    public sealed class UIAnimEventTrack
+    {
+        public List<UIAnimEventMarker> events = new();   // sorted by time
+    }
+
+    /// <summary>A track of sounds played through <see cref="source"/> (empty = the UIAnimation's AudioSource).</summary>
+    [Serializable]
+    public sealed class UIAnimSoundTrack
+    {
+        public AudioSource source;
+        public List<UIAnimSound> sounds = new();         // sorted by time
     }
 
     [Serializable]
-    public sealed class UIAnimState
+    public sealed class UIAnimState : ISerializationCallbackReceiver
     {
         internal const int MaxCallDepth = 8;   // a child calling back into its parent is cut here
         [ThreadStatic] static int _durationDepth;
 
         public string name = "State";
-        public List<UIAnimAction> actions = new();
         public List<UIAnimTrack> tracks = new();
-        [FormerlySerializedAs("signals")]
-        public List<UIAnimEventMarker> events = new();      // animation events, sorted by time
+        public List<UIAnimEventTrack> eventTracks = new();
+        public List<UIAnimSoundTrack> soundTracks = new();
         public List<UIAnimChildCall> childCalls = new();    // sorted by time
 
-        /// <summary>Until the last track, animation event or called child state ends.</summary>
+        // Before event/sound tracks: one flat list each. Moved into a track when loaded (see OnAfterDeserialize).
+        [SerializeField, HideInInspector, FormerlySerializedAs("signals")] List<UIAnimEventMarker> events = new();
+        [SerializeField, HideInInspector] List<UIAnimSound> sounds = new();
+
+        void ISerializationCallbackReceiver.OnBeforeSerialize() { }
+
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
+        {
+            if (events is { Count: > 0 })
+            {
+                eventTracks.Add(new UIAnimEventTrack { events = new List<UIAnimEventMarker>(events) });
+                events.Clear();
+            }
+            if (sounds is { Count: > 0 })
+            {
+                soundTracks.Add(new UIAnimSoundTrack { sounds = new List<UIAnimSound>(sounds) });
+                sounds.Clear();
+            }
+        }
+
+        /// <summary>Adds an animation event to the first event track (creating it if needed).</summary>
+        public UIAnimEventMarker AddEvent(UIAnimEventMarker marker)
+        {
+            if (eventTracks.Count == 0) eventTracks.Add(new UIAnimEventTrack());
+            eventTracks[0].events.Add(marker);
+            eventTracks[0].events.Sort((a, b) => a.time.CompareTo(b.time));
+            return marker;
+        }
+
+        /// <summary>Adds a sound to the first sound track (creating one that plays through the UIAnimation's AudioSource).</summary>
+        public UIAnimSound AddSound(UIAnimSound sound)
+        {
+            if (soundTracks.Count == 0) soundTracks.Add(new UIAnimSoundTrack());
+            soundTracks[0].sounds.Add(sound);
+            soundTracks[0].sounds.Sort((a, b) => a.time.CompareTo(b.time));
+            return sound;
+        }
+
+        /// <summary>A deep copy whose object references (targets, children, clips) still point at the same objects.</summary>
+        public UIAnimState Clone()
+        {
+            var copy = (UIAnimState)MemberwiseClone();
+            copy.tracks = tracks.ConvertAll(t => t.Clone());
+            copy.eventTracks = eventTracks.ConvertAll(t => new UIAnimEventTrack
+            {
+                events = t.events.ConvertAll(e => new UIAnimEventMarker { time = e.time, name = e.name, dataType = e.dataType, dataJson = e.dataJson }),
+            });
+            copy.soundTracks = soundTracks.ConvertAll(t => new UIAnimSoundTrack
+            {
+                source = t.source, sounds = t.sounds.ConvertAll(x => new UIAnimSound { time = x.time, clip = x.clip, volume = x.volume }),
+            });
+            copy.childCalls = childCalls.ConvertAll(c => new UIAnimChildCall { time = c.time, child = c.child, state = c.state });
+            copy.events = new List<UIAnimEventMarker>();
+            copy.sounds = new List<UIAnimSound>();
+            return copy;
+        }
+
+        /// <summary>Until the last track, animation event, sound or called child state ends.</summary>
         public float Duration
         {
             get
             {
                 var d = 0f;
                 foreach (var track in tracks) d = Mathf.Max(d, track.End);
-                foreach (var e in events) d = Mathf.Max(d, e.time);
+                foreach (var track in eventTracks)
+                foreach (var e in track.events) d = Mathf.Max(d, e.time);
+                foreach (var track in soundTracks)
+                foreach (var sound in track.sounds) d = Mathf.Max(d, sound.End);   // e.g. Destroy after Close must not cut the sound
                 if (_durationDepth >= MaxCallDepth) return d;
                 _durationDepth++;
                 try
@@ -302,6 +445,10 @@ namespace SeoBYP.TimelineAnimation
     public sealed class UIAnimation : MonoBehaviour
     {
         public List<UIAnimState> states = new();
+        [Tooltip("Optional. Plays sound tracks without their own AudioSource. Empty = a shared 2D AudioSource (PlayOneShot), so no component is needed.")]
+        public AudioSource audioSource;
+        [Tooltip("Nested UIAnimations' states replaced inside this prefab only (edited from the UI Animation Editor).")]
+        public List<UIAnimOverride> overrides = new();
 
         internal sealed class Playback
         {
@@ -329,7 +476,7 @@ namespace SeoBYP.TimelineAnimation
         public event UIAnimEventHandler EventRaised;
 
         /// <summary>Calls <paramref name="handler"/> for events carrying a <typeparamref name="T"/>; dispose the result to stop.</summary>
-        public IDisposable AddListener<T>(UIAnimEventHandler<T> handler) where T : struct, IUIAnimEventData
+        public IDisposable AddListener<T>(UIAnimEventHandler<T> handler) where T : struct
         {
             void OnEvent(in UIAnimEventInfo e)
             {
@@ -368,6 +515,33 @@ namespace SeoBYP.TimelineAnimation
         readonly List<Playback> _playbacks = new();
         bool _initialized;
 
+        void PlaySound(UIAnimSoundTrack track, UIAnimSound sound)
+        {
+            var source = track.source != null ? track.source : audioSource != null ? audioSource : SharedAudio;
+            source.PlayOneShot(sound.clip, sound.volume);
+            SoundPlayed?.Invoke(source, sound);
+        }
+
+        internal static Action<AudioSource, UIAnimSound> SoundPlayed;   // tests: which source played what
+
+        // One hidden 2D AudioSource for every sound without its own source: no AudioSource component per UI object.
+        // ponytail: plays on the default mixer route; assign an AudioSource (track or UIAnimation) for a mixer group or 3D sound.
+        static AudioSource _sharedAudio;
+
+        static AudioSource SharedAudio
+        {
+            get
+            {
+                if (_sharedAudio != null) return _sharedAudio;
+                var go = new GameObject("UIAnimation Shared Audio") { hideFlags = HideFlags.HideAndDontSave };
+                if (Application.isPlaying) DontDestroyOnLoad(go);
+                _sharedAudio = go.AddComponent<AudioSource>();
+                _sharedAudio.playOnAwake = false;
+                _sharedAudio.spatialBlend = 0f;
+                return _sharedAudio;
+            }
+        }
+
         internal UIAnimState FindState(string stateName)
         {
             foreach (var s in states)
@@ -393,14 +567,57 @@ namespace SeoBYP.TimelineAnimation
             if (_initialized) return;
             _initialized = true;
             _playbacks.Clear();
-            foreach (var state in states) _playbacks.Add(new Playback(this, state));
+            foreach (var state in states) _playbacks.Add(new Playback(this, EffectiveState(state.name) ?? state));
             CaptureRest();
+        }
+
+        /// <summary>
+        /// This state as it plays here: its own tracks, each replaced by an ancestor's override of that track (outermost wins),
+        /// plus overridden tracks the state no longer has. Without overrides it is the state itself.
+        /// </summary>
+        // ponytail: builds a new merged state per call (Playback keeps one; a child call's Duration builds one per play).
+        internal UIAnimState EffectiveState(string stateName)
+        {
+            var own = FindState(stateName);
+            List<UIAnimTrack> overridden = null;
+            for (var t = transform.parent; t != null; t = t.parent)
+                foreach (var ancestor in t.GetComponents<UIAnimation>())
+                foreach (var o in ancestor.overrides)
+                {
+                    if (o.child != this || o.state != stateName) continue;
+                    overridden ??= new List<UIAnimTrack>();
+                    foreach (var track in o.tracks)   // keep climbing: an outer override replaces an inner one of the same track
+                    {
+                        var i = overridden.FindIndex(x => x.target == track.target && x.property == track.property);
+                        if (i >= 0) overridden[i] = track;
+                        else overridden.Add(track);
+                    }
+                }
+            if (overridden == null || overridden.Count == 0 || own == null) return own;
+
+            var merged = new UIAnimState
+            {
+                name = own.name, eventTracks = own.eventTracks, soundTracks = own.soundTracks, childCalls = own.childCalls,
+                tracks = own.tracks.ConvertAll(t => overridden.Find(o => o.target == t.target && o.property == t.property) ?? t),
+            };
+            foreach (var track in overridden)
+                if (!merged.tracks.Contains(track)) merged.tracks.Add(track);   // the child dropped this track; the override keeps it
+            return merged;
         }
 
         /// <summary>Records the current values as the base for relative tracks. The editor preview calls this on every start.</summary>
         internal void CaptureRest()
         {
             foreach (var state in states)
+            {
+                CaptureRest(state);
+                var effective = EffectiveState(state.name);
+                if (effective != state) CaptureRest(effective);
+            }
+        }
+
+        internal static void CaptureRest(UIAnimState state)
+        {
             foreach (var track in state.tracks)
             {
                 track.released = false;
@@ -469,10 +686,14 @@ namespace SeoBYP.TimelineAnimation
 
         [ThreadStatic] static int _callDepth;   // parent and child calling each other at the same time stop here
 
-        static void RaiseEvents(Playback p, float t)
+        static void RaiseEvents(Playback p, float t, bool playSounds = true)
         {
             var from = p.lastTime;
             p.lastTime = t;
+            if (playSounds)
+                foreach (var track in p.state.soundTracks)
+                foreach (var sound in track.sounds)
+                    if (sound.time > from && sound.time <= t && sound.clip != null) p.owner.PlaySound(track, sound);
             if (_callDepth < UIAnimState.MaxCallDepth)
             {
                 _callDepth++;
@@ -485,7 +706,8 @@ namespace SeoBYP.TimelineAnimation
             }
             var handler = p.owner.EventRaised;
             if (handler == null) return;
-            foreach (var marker in p.state.events)
+            foreach (var track in p.state.eventTracks)
+            foreach (var marker in track.events)
                 if (marker.time > from && marker.time <= t) handler(new UIAnimEventInfo(p.owner, p.state.name, marker));
         }
 
@@ -502,7 +724,8 @@ namespace SeoBYP.TimelineAnimation
         // Reached the end: the state stays on its last values.
         static void Finish(Playback p)
         {
-            RaiseEvents(p, float.MaxValue);   // skipped to the end: the remaining calls and events still happen, in order
+            // Skipped to the end: the remaining calls and events still happen, in order; skipped sounds stay silent.
+            RaiseEvents(p, float.MaxValue, playSounds: false);
             foreach (var call in p.state.childCalls)
                 if (call.child != null && call.child.IsPlaying(call.state)) call.child.Complete(call.state);
             p.active = false;
@@ -542,8 +765,7 @@ namespace SeoBYP.TimelineAnimation
             TakeOver(playback.state, interrupt);
 
             foreach (var track in playback.state.tracks) track.released = false;
-            foreach (var action in playback.state.actions) Run(action, pointer);
-            Resolve(playback.state);
+            Resolve(playback.state, pointer);
             // Show t = 0 right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
             playback.lastTime = -1f;           // an event at 0 fires on this first step
             Step(playback, 0f);
@@ -599,7 +821,7 @@ namespace SeoBYP.TimelineAnimation
         }
 
         /// <summary>Resolves key values (relative/absolute) and the live start value. Call once right before evaluating from t = 0.</summary>
-        internal static void Resolve(UIAnimState state)
+        internal static void Resolve(UIAnimState state, PointerEventData pointer = null)
         {
             foreach (var track in state.tracks)
             {
@@ -614,9 +836,12 @@ namespace SeoBYP.TimelineAnimation
                 }
                 if (track.property == UIAnimProperty.TextReveal && track.scramble != ScrambleMode.None)
                     UIAnimTextChars.For((TMP_Text)track.target).CaptureSource();
-                track.startValue = Read(track.target, track.property);
+                track.startValue = track.start == UIAnimStart.Pointer && PointerPosition(track, pointer, out var pressed)
+                    ? pressed : Read(track.target, track.property);
+                // Pointer: keys are offsets from the press point (0 = stay there), the only base known for them.
                 foreach (var key in track.keys)
-                    key.resolved = track.relativeToRest ? track.rest + key.value : key.value;
+                    key.resolved = track.start == UIAnimStart.Pointer ? track.startValue + key.value
+                        : track.relativeToRest ? track.rest + key.value : key.value;
                 // The first key becomes the live value, so the track starts where the property is. With 2+ keys it holds
                 // until its time (= a delay); a lone key keeps its value and is reached through the implicit segment.
                 if (track.startFromCurrent && (track.keys.Count > 1 || track.keys[0].time <= 0f)) track.keys[0].resolved = track.startValue;
@@ -666,19 +891,19 @@ namespace SeoBYP.TimelineAnimation
 
         static bool IsText(UIAnimProperty p) => p == UIAnimProperty.TextReveal || UIAnimTextChars.IsCharProperty(p);
 
-        static void Run(UIAnimAction action, PointerEventData pointer)
+        // The anchored position that puts the track's target under the pointer. Without a pointer (code, OnEnable) it is the current one.
+        static bool PointerPosition(UIAnimTrack track, PointerEventData pointer, out Vector4 position)
         {
-            if (action.target == null) return;
-            switch (action.type)
-            {
-                case UIAnimActionType.MoveToPointer:
-                    if (pointer == null) return;
-                    var space = action.target.parent as RectTransform;
-                    if (space != null && RectTransformUtility.ScreenPointToWorldPointInRectangle(
-                            space, pointer.position, pointer.pressEventCamera, out var world))
-                        action.target.position = world;
-                    break;
-            }
+            position = default;
+            if (pointer == null || track.property != UIAnimProperty.AnchoredPosition) return false;
+            var rect = (RectTransform)track.target.transform;
+            if (rect.parent is not RectTransform space || !RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                    space, pointer.position, pointer.pressEventCamera, out var world)) return false;
+            var before = rect.anchoredPosition;
+            rect.position = world;   // let Unity convert world → anchored (anchors, pivot), then put it back
+            position = rect.anchoredPosition;
+            rect.anchoredPosition = before;
+            return true;
         }
 
         public static Vector4 Read(Component target, UIAnimProperty property) => property switch
