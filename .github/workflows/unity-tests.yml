@@ -54,7 +54,16 @@ jobs:
       - name: Run EditMode tests (Unity CLI, batch mode)
         run: |
           set +e
-          "${{ steps.unity.outputs.path }}" -batchmode -nographics \
+          # Editor-window tests need a graphics device: use a virtual display when the runner has one,
+          # otherwise -nographics (those tests are then skipped, not failed).
+          if command -v xvfb-run >/dev/null 2>&1; then
+            echo "xvfb-run 사용: 에디터 창 테스트까지 실행"
+            unity=(xvfb-run -a "${{ steps.unity.outputs.path }}" -batchmode)
+          else
+            echo "xvfb-run 없음: -nographics로 실행 (에디터 창 테스트는 건너뜀)"
+            unity=("${{ steps.unity.outputs.path }}" -batchmode -nographics)
+          fi
+          "${unity[@]}" \
             -projectPath "$GITHUB_WORKSPACE" \
             -runTests -testPlatform EditMode \
             -testResults "$RUNNER_TEMP/editmode-results.xml" \

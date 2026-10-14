@@ -633,7 +633,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         public void 바깥_Prefab의_오버라이드가_자식_상태를_대신한다()
         {
             var child = Child(out var image);
-            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", replacement = FadeTo(image, 0.5f) });
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
 
             Assert.AreEqual(0.5f, AlphaAtEnd(child), 1e-4f);
             Assert.AreEqual(1f, child.states[0].tracks[0].keys[1].value.x, "자식 원본 상태는 그대로");
@@ -644,7 +644,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         {
             var child = Child(out var image);
             child.transform.SetParent(null, false);   // no longer inside the popup
-            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", replacement = FadeTo(image, 0.5f) });
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
 
             Assert.AreEqual(1f, AlphaAtEnd(child), 1e-4f);
             Object.DestroyImmediate(child.gameObject);
@@ -657,8 +657,8 @@ namespace SeoBYP.TimelineAnimation.Tests
             middle.transform.SetParent(_go.transform, false);
             var child = Child(out var image);
             child.transform.SetParent(middle.transform, false);
-            middle.overrides.Add(new UIAnimOverride { child = child, state = "Show", replacement = FadeTo(image, 0.3f) });
-            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", replacement = FadeTo(image, 0.5f) });
+            middle.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.3f).tracks });
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
 
             Assert.AreEqual(0.5f, AlphaAtEnd(child), 1e-4f);
         }
@@ -668,9 +668,37 @@ namespace SeoBYP.TimelineAnimation.Tests
         {
             var child = Child(out var image);
             var parent = Caller(child, 0.5f);
-            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", replacement = FadeTo(image, 1f, 2f) });
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 1f, 2f).tracks });
 
             Assert.AreEqual(2.5f, parent.Duration, 1e-4f, "호출 0.5초 + 오버라이드 길이 2초");
+        }
+
+        [Test]
+        public void 오버라이드하지_않은_트랙은_자식_원본을_따라간다()
+        {
+            var child = Child(out var image);
+            var scale = Track(child.transform, UIAnimProperty.Scale, false, false, Key(0f, Vector3.one), Key(1f, Vector3.one * 2f));
+            child.states[0].tracks.Add(scale);
+            _anim.overrides.Add(new UIAnimOverride { child = child, state = "Show", tracks = FadeTo(image, 0.5f).tracks });
+
+            var effective = child.EffectiveState("Show");
+            Assert.AreEqual(2, effective.tracks.Count);
+            Assert.AreNotSame(child.states[0].tracks[0], effective.tracks[0], "Alpha는 오버라이드");
+            Assert.AreSame(scale, effective.tracks[1], "Scale은 원본 그대로(같은 트랙)");
+
+            scale.keys[1].value = Vector3.one * 3f;   // the child prefab changes later
+            UIAnimation.Step(child.Prepare("Show", UIAnimInterrupt.Cancel, null), 10f);
+            Assert.AreEqual(3f, child.transform.localScale.x, 1e-4f, "원본 변경이 따라옴");
+            Assert.AreEqual(0.5f, image.color.a, 1e-4f, "오버라이드한 트랙은 유지");
+        }
+
+        [Test]
+        public void 예전_형식의_전체_상태_오버라이드는_트랙_오버라이드로_옮겨진다()
+        {
+            var o = JsonUtility.FromJson<UIAnimOverride>(
+                "{\"state\":\"Show\",\"replacement\":{\"name\":\"Show\",\"tracks\":[{\"property\":4,\"keys\":[{\"time\":0.5}]}]}}");
+            Assert.AreEqual(1, o.tracks.Count);
+            Assert.AreEqual(0.5f, o.tracks[0].keys[0].time, 1e-4f);
         }
 
         [Test]

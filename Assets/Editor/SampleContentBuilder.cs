@@ -531,7 +531,7 @@ static class SampleContentBuilder
         var fastHover = closeAnim.states.Find(s => s.name == "Hover").Clone();
         foreach (var track in fastHover.tracks)
         foreach (var key in track.keys) key.time *= 0.5f;   // 0 stays the start key
-        anim.overrides.Add(new UIAnimOverride { child = closeAnim, state = "Hover", replacement = fastHover });
+        anim.overrides.Add(new UIAnimOverride { child = closeAnim, state = "Hover", tracks = fastHover.tracks });
         return root.gameObject;
     }
 

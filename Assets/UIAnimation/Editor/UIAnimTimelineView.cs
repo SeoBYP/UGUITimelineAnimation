@@ -43,8 +43,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         public Action<UIAnimEventTrack, Rect, float> AddEventRequested;   // track, where to drop the menu, time
         public Action<UIAnimSoundTrack, float, AudioClip> AddSoundRequested;   // track, time, clip (null = pick later)
         public Action<Rect, float> AddCallRequested;                      // where to drop the menu, time
-        public Action<UIAnimChildCall> OverrideRequested;                 // copy the child's state into this prefab to edit it here
-        public Action<UIAnimChildCall> RevertOverrideRequested;
+        public Action<UIAnimChildCall, UIAnimTrack> OverrideRequested;    // copy that one track of the child's state into this prefab
+        public Action<UIAnimChildCall> RevertOverrideRequested;           // every overridden track of the call back to the original
 
         public object SelectedMarker { get; set; }
 
@@ -234,7 +234,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             });
         }
 
-        const float Inset = 6f;   // 0s sits this far into the lane, so a key there shows whole (half a key is 6px)
+        const float Inset = 9f;   // 0s sits this far into the lane, so a key there shows whole (a 12px key turned 45° is 17px wide)
         float LaneWidth => Mathf.Max(50f, layout.width - HeaderWidth - LaneRight - Inset);   // the span that shows Range
         // Visible range: the state's length with room to drag keys further out. Frozen while dragging so keys don't jitter.
         float Range => _frozenRange ?? _viewLength ?? FitRange;
@@ -340,9 +340,25 @@ namespace SeoBYP.TimelineAnimation.Editor
             return string.IsNullOrEmpty(path) ? target.gameObject.name : path;
         }
 
-        /// <summary>Is this child call's state replaced inside this prefab (so its tracks belong here and are editable)?</summary>
-        public static bool IsOverridden(UIAnimChildCall call) =>
-            call.child != null && call.Target != null && call.Target != call.child.FindState(call.state);
+        /// <summary>This prefab's override of the called state (its changed tracks), if any.</summary>
+        public static UIAnimOverride OverrideOf(UIAnimation root, UIAnimChildCall call) =>
+            root != null ? root.overrides.Find(o => o.child == call.child && o.state == call.state) : null;
+
+        /// <summary>
+        /// Like Unity's nested prefabs: the override that supplies this (effective) track of the called state, on the child's
+        /// ancestors in the current context (the outermost one wins). Null = the child's own track.
+        /// </summary>
+        public static (UIAnimOverride o, UIAnimation owner) LayerOf(UIAnimChildCall call, UIAnimTrack track)
+        {
+            if (call.child == null) return default;
+            for (var t = call.child.transform.parent; t != null; t = t.parent)
+                foreach (var ancestor in t.GetComponents<UIAnimation>())
+                foreach (var o in ancestor.overrides)
+                    if (o.child == call.child && o.state == call.state && o.tracks.Contains(track)) return (o, ancestor);
+            return default;
+        }
+
+        static int OverriddenCount(UIAnimChildCall call) => call.Target?.tracks.Count(t => LayerOf(call, t).o != null) ?? 0;
 
         // ---------- rows ----------
 
@@ -434,8 +450,7 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         void CallMenu(UIAnimMenu menu, UIAnimChildCall call)
         {
-            if (IsOverridden(call)) menu.Add("Revert to Original", () => RevertOverrideRequested?.Invoke(call));
-            else menu.Add("Edit as Prefab Override", () => OverrideRequested?.Invoke(call));
+            menu.Add("Revert All (outermost overrides)", () => RevertOverrideRequested?.Invoke(call), enabled: OverriddenCount(call) > 0);
             menu.Add($"Remove Child Call  ({(call.child != null ? call.child.name : "None")} · {call.state})", () => RemoveRequested?.Invoke(call), danger: true);
         }
 
@@ -588,24 +603,22 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             var target = call.Target;
             if (target == null) return;
-            var overridden = IsOverridden(call);
+            var count = OverriddenCount(call);
 
             var row = new VisualElement();
             row.AddToClassList("uia-callee-row");
             var header = new VisualElement { style = { width = HeaderWidth } };
             header.AddToClassList("uia-header");
             header.Add(Indent(depth));
-            var title = new Label($"▶ {call.state}  {(overridden ? "Prefab Override" : "Original · ✎ to edit")}")
+            var title = new Label($"▶ {call.state}  {(count > 0 ? $"{count} track(s) overridden" : "Original")}")
                 { pickingMode = PickingMode.Ignore, style = { flexGrow = 1, flexShrink = 1, overflow = Overflow.Hidden } };
-            title.AddToClassList(overridden ? "uia-callee-own" : "uia-callee-source");
+            title.AddToClassList(count > 0 ? "uia-callee-own" : "uia-callee-source");
             header.Add(title);
-            if (overridden)
-                header.Add(SmallButton("↺", "Remove this prefab's override and revert to the original", () => RevertOverrideRequested?.Invoke(call)));
-            else
-                header.Add(SmallButton("✎", "Copy into this prefab as an override and edit it (the original stays unchanged)", () => OverrideRequested?.Invoke(call)));
-            header.tooltip = overridden
-                ? $"This prefab overrides '{call.state}' of {call.child.name}. The original {call.child.name} is unchanged."
-                : $"Original '{call.state}' of {call.child.name}. Press ✎ or click a track to copy it into this prefab and edit it here.";
+            var revertAll = SmallButton("↺", "Revert the outermost overrides (like Unity's Revert All)", () => RevertOverrideRequested?.Invoke(call));
+            revertAll.SetEnabled(count > 0);
+            header.Add(revertAll);
+            header.tooltip = $"'{call.state}' of {call.child.name} as it plays here. Click a dimmed track to override just that track; " +
+                             "the other tracks keep following the original. × on an overridden track reverts it.";
             ContextMenu(header, menu => CallMenu(menu, call));
             row.Add(header);
             row.Add(new VisualElement { style = { flexGrow = 1, marginRight = LaneRight } });
@@ -614,26 +627,32 @@ namespace SeoBYP.TimelineAnimation.Editor
             foreach (var track in target.tracks)
             {
                 var label = $"{(track.target != null ? track.target.name : "(None)")} · {PropertyName(track.property)}";
-                _rows.Add(MakeRow(track, depth + 1, call.time, label, overridden ? null : call));
+                var own = LayerOf(call, track).o != null;
+                _rows.Add(MakeRow(track, depth + 1, call.time, label, own ? null : call, own ? call : null));
             }
         }
 
         // Every keyframe track row, own or called. offset = where its time 0 sits on this timeline (a called child state starts later).
         // readOnlyOf: a child's original state, not overridden yet. Same row, dimmed; clicking it copies the state into this
         // prefab, after which the same row comes back editable.
-        VisualElement MakeRow(UIAnimTrack track, int depth, float offset, string label, UIAnimChildCall readOnlyOf = null)
+        // overrideOf: a child's track overridden in this prefab — editable, name in the override color, × reverts it.
+        VisualElement MakeRow(UIAnimTrack track, int depth, float offset, string label, UIAnimChildCall readOnlyOf = null,
+            UIAnimChildCall overrideOf = null)
         {
             var readOnly = readOnlyOf != null;
+            var overridden = overrideOf != null;
             var row = new VisualElement();
             row.AddToClassList("uia-row");
             row.EnableInClassList("uia-row--readonly", readOnly);
             if (_rowCount++ % 2 == 1) row.AddToClassList("uia-row--odd");
 
             var header = Header(depth, PropertyColor(track.property), label, "uia-track-prop", readOnly ? null : track);
-            header.tooltip = readOnly ? $"Original '{readOnlyOf.state}' of {readOnlyOf.child.name}: click to copy it into this prefab and edit it here."
+            header.Q<Label>()?.EnableInClassList("uia-track-override", overridden);
+            header.tooltip = readOnly ? $"Original track of '{readOnlyOf.state}' on {readOnlyOf.child.name}: click to override just this track in this prefab."
+                : overridden ? $"Overridden in {LayerOf(overrideOf, track).owner.name}. × reverts this override."
                 : track.target != null ? $"{TargetPath(_root, track.target)} · {track.target.GetType().Name}" : "No target";
             var addKey = SmallButton("◆", "Add key at playhead", () => AddKeyRequested?.Invoke(track, Mathf.Max(0f, _time - offset)));
-            var remove = SmallButton("×", "Remove track", () => RemoveRequested?.Invoke(track));
+            var remove = SmallButton("×", overridden ? "Revert this track to the original" : "Remove track", () => RemoveRequested?.Invoke(track));
             addKey.SetEnabled(!readOnly);
             remove.SetEnabled(!readOnly);
             header.Add(addKey);
@@ -646,7 +665,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             lane.RegisterCallback<PointerMoveEvent>(e => lane.tooltip = readOnly ? header.tooltip : TailTooltip(track, e.localPosition.x, offset));
             if (readOnly)
             {
-                void Override(IPointerEvent e) => OverrideRequested?.Invoke(readOnlyOf);
+                void Override(IPointerEvent e) => OverrideRequested?.Invoke(readOnlyOf, track);
                 header.RegisterCallback<PointerDownEvent>(e => { if (e.button == 0) { Override(e); e.StopPropagation(); } });
                 lane.RegisterCallback<PointerDownEvent>(e => { if (e.button == 0) { Override(e); e.StopPropagation(); } });   // before the key gestures on _rows
                 ContextMenu(header, menu => CallMenu(menu, readOnlyOf));
@@ -657,14 +676,14 @@ namespace SeoBYP.TimelineAnimation.Editor
                 ContextMenu(header, menu =>
                 {
                     menu.Add("Add Key at Playhead", () => AddKeyRequested?.Invoke(track, Mathf.Max(0f, _time - offset)));
-                    menu.Add("Remove Track", () => RemoveRequested?.Invoke(track), danger: true);
+                    menu.Add(overridden ? "Revert Track to Original" : "Remove Track", () => RemoveRequested?.Invoke(track), danger: true);
                 });
                 ContextMenu(lane, (menu, position) =>
                 {
                     var t = Mathf.Max(0f, XToTime(lane.WorldToLocal(position).x) - offset);
                     menu.Add("Add Key Here", () => AddKeyRequested?.Invoke(track, t));
                     menu.Add("Delete Selected Keys", () => DeleteRequested?.Invoke(), enabled: _selection.Count > 0, danger: true);
-                    menu.Add("Remove Track", () => RemoveRequested?.Invoke(track), danger: true);
+                    menu.Add(overridden ? "Revert Track to Original" : "Remove Track", () => RemoveRequested?.Invoke(track), danger: true);
                 });
             }
             foreach (var key in track.keys) lane.Add(MakeKey(key, offset, readOnly));

@@ -26,6 +26,9 @@ namespace SeoBYP.TimelineAnimation.Tests
         [SetUp]
         public void SetUp()
         {
+            // The real editor window needs a graphics device: skipped under -nographics (CI without a virtual display).
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("에디터 창 테스트: 그래픽 장치가 필요해서 건너뜀 (-nographics)");
             // What the user makes in the Hierarchy: Button > Mask > Fill (a centered circle).
             _root = new GameObject("Button", typeof(RectTransform), typeof(Image));
             ((RectTransform)_root.transform).sizeDelta = new Vector2(480, 168);

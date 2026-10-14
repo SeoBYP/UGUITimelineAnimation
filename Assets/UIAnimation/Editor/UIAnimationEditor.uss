@@ -514,3 +514,7 @@
 /* A child's original (not overridden) track: the same row as any track, dimmed; clicking it makes a prefab override. */
 .uia-row--readonly { opacity: 0.5; }
 .uia-row--readonly:hover { opacity: 0.7; }
+
+/* A child's track overridden in this prefab: the name in Unity's override blue. */
+.uia-track-override { color: rgb(108, 178, 255); }
+.uia-light .uia-track-override { color: rgb(30, 90, 200); }

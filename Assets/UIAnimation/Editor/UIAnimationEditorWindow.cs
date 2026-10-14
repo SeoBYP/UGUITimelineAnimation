@@ -54,8 +54,8 @@ namespace SeoBYP.TimelineAnimation.Editor
             if (state == null) yield break;
             foreach (var track in state.tracks) yield return track;
             foreach (var call in state.childCalls)
-                if (UIAnimTimelineView.IsOverridden(call))
-                    foreach (var track in call.Target.tracks) yield return track;
+            foreach (var track in call.Target?.tracks ?? new List<UIAnimTrack>())
+                if (UIAnimTimelineView.LayerOf(call, track).o != null) yield return track;
         }
 
         void OnEnable()
@@ -175,10 +175,15 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         void Modify(string undoName, Action edit, bool rebuild = true)
         {
-            Undo.RecordObject(_target, undoName);
+            // An override of a called child may live on this animation or one above it (nested prefabs), so record them all.
+            var owners = _target.GetComponentsInParent<UIAnimation>(true);
+            Undo.RecordObjects(owners, undoName);
             edit();
-            PrefabUtility.RecordPrefabInstancePropertyModifications(_target);
-            EditorUtility.SetDirty(_target);
+            foreach (var owner in owners)
+            {
+                PrefabUtility.RecordPrefabInstancePropertyModifications(owner);
+                EditorUtility.SetDirty(owner);
+            }
             if (rebuild) Rebuild();
             else _timeline.Refresh(_selTrack);
             RefreshPreview();
@@ -312,7 +317,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 _markerUndoGroup = -1;
             };
             _timeline.AddEventRequested = ShowAddEventMenu;
-            _timeline.OverrideRequested = OverrideCall;
+            _timeline.OverrideRequested = OverrideTrack;
             _timeline.RevertOverrideRequested = RevertOverride;
             _timeline.AddSoundRequested = (track, time, clip) => Modify("Add Sound", () =>
             {
@@ -529,9 +534,16 @@ namespace SeoBYP.TimelineAnimation.Editor
                 case UIAnimSound sound: foreach (var t in state.soundTracks) t.sounds.Remove(sound); break;
                 case UIAnimTrack keys:
                     _selection.ExceptWith(keys.keys);
+                    // An overridden child track: removing it from the override = back to the original track.
+                    // Like Unity: only the outermost layer goes, so a prefab's own override below it shows again.
                     if (!state.tracks.Remove(keys))
                         foreach (var call in state.childCalls)
-                            if (UIAnimTimelineView.IsOverridden(call) && call.Target.tracks.Remove(keys)) break;
+                            if (UIAnimTimelineView.LayerOf(call, keys) is { o: { } o } layer)
+                            {
+                                o.tracks.Remove(keys);
+                                if (o.tracks.Count == 0) layer.owner.overrides.Remove(o);
+                                break;
+                            }
                     break;
                 case UIAnimEventTrack events: state.eventTracks.Remove(events); break;
                 case UIAnimSoundTrack sounds: state.soundTracks.Remove(sounds); break;
@@ -647,20 +659,27 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         // ---------- current-prefab overrides of called child states ----------
 
-        // Copies the child's state into this prefab so its tracks become editable right here; the child's prefab stays as is.
-        void OverrideCall(UIAnimChildCall call)
+        // Copies one track of the child's state into this prefab so it becomes editable here; the others keep following the
+        // child, and the child's prefab stays as is.
+        void OverrideTrack(UIAnimChildCall call, UIAnimTrack track)
         {
-            var source = call.child != null ? call.child.FindState(call.state) : null;
-            if (source == null || UIAnimTimelineView.IsOverridden(call)) return;
+            if (call.child == null || track == null || UIAnimTimelineView.LayerOf(call, track).o != null) return;   // already overridden
             _preview.Stop();
-            Modify("Override Child State", () =>
-                _target.overrides.Add(new UIAnimOverride { child = call.child, state = call.state, replacement = source.Clone() }));
+            Modify("Override Child Track", () =>
+            {
+                var o = UIAnimTimelineView.OverrideOf(_target, call);
+                if (o == null) _target.overrides.Add(o = new UIAnimOverride { child = call.child, state = call.state });
+                var copy = o.Find(track);
+                if (copy == null) o.tracks.Add(copy = track.Clone());
+                _selection.Clear();
+                _selTrack = copy;
+            });
         }
 
         void RevertOverride(UIAnimChildCall call)
         {
             if (EditorUtility.DisplayDialog("Revert to Original",
-                    $"Remove {_target.name}'s override of '{call.state}' on {call.child.name} and revert to the original?", "Revert", "Cancel"))
+                    $"Revert the outermost overrides of '{call.state}' on {call.child.name}?", "Revert", "Cancel"))
                 RemoveOverride(call);
         }
 
@@ -670,14 +689,16 @@ namespace SeoBYP.TimelineAnimation.Editor
             _preview.Stop();
             Modify("Revert Child Override", () =>
             {
-                foreach (var o in _target.overrides.FindAll(o => o.child == call.child && o.state == call.state))
+                // Like Unity's Revert All: only the outermost layer that overrides this state goes; an inner prefab's own
+                // overrides (part of that prefab) show again.
+                var owner = call.child.GetComponentsInParent<UIAnimation>(true)
+                    .LastOrDefault(a => a != call.child && a.overrides.Exists(o => o.child == call.child && o.state == call.state));
+                if (owner == null) return;
+                foreach (var o in owner.overrides.FindAll(o => o.child == call.child && o.state == call.state))
                 {
-                    if (o.replacement != null)
-                    {
-                        _selection.ExceptWith(o.replacement.tracks.SelectMany(t => t.keys));
-                        if (_selTrack is UIAnimTrack t && o.replacement.tracks.Contains(t)) _selTrack = null;
-                    }
-                    _target.overrides.Remove(o);
+                    _selection.ExceptWith(o.tracks.SelectMany(t => t.keys));
+                    if (_selTrack is UIAnimTrack t && o.tracks.Contains(t)) _selTrack = null;
+                    owner.overrides.Remove(o);
                 }
             });
         }

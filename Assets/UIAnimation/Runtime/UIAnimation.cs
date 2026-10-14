@@ -291,15 +291,31 @@ namespace SeoBYP.TimelineAnimation
     }
 
     /// <summary>
-    /// A nested UIAnimation's state replaced inside this prefab only (e.g. the common button flashes differently in this popup).
-    /// Stored on the outer prefab, so the child's own prefab is never touched; the outermost override wins.
+    /// A nested UIAnimation's state changed inside this prefab only (e.g. the common button flashes differently in this popup).
+    /// Only the changed tracks are stored, matched to the child's by target + property; every other track keeps following the
+    /// child's own state, so later changes to the child prefab still show up here. Stored on the outer prefab, so the child's
+    /// prefab is never touched; for the same track the outermost override wins.
     /// </summary>
     [Serializable]
-    public sealed class UIAnimOverride
+    public sealed class UIAnimOverride : ISerializationCallbackReceiver
     {
         public UIAnimation child;
         public string state = "";
-        public UIAnimState replacement;
+        public List<UIAnimTrack> tracks = new();
+
+        // Before per-track overrides: a whole copy of the state. Its tracks become the overridden tracks when loaded.
+        [SerializeField, HideInInspector] UIAnimState replacement;   // same name as before, so both YAML and JSON load it
+
+        void ISerializationCallbackReceiver.OnBeforeSerialize() { }
+
+        void ISerializationCallbackReceiver.OnAfterDeserialize()
+        {
+            if (replacement is not { tracks: { Count: > 0 } }) return;
+            tracks.AddRange(replacement.tracks);
+            replacement = null;
+        }
+
+        public UIAnimTrack Find(UIAnimTrack childTrack) => tracks.Find(t => t.target == childTrack.target && t.property == childTrack.property);
     }
 
     /// <summary>Plays another UIAnimation's state at a point in this state's time (e.g. a popup showing its buttons).</summary>
@@ -555,15 +571,38 @@ namespace SeoBYP.TimelineAnimation
             CaptureRest();
         }
 
-        /// <summary>This state as it plays here: an ancestor's override of it (outermost wins), else the state itself.</summary>
+        /// <summary>
+        /// This state as it plays here: its own tracks, each replaced by an ancestor's override of that track (outermost wins),
+        /// plus overridden tracks the state no longer has. Without overrides it is the state itself.
+        /// </summary>
+        // ponytail: builds a new merged state per call (Playback keeps one; a child call's Duration builds one per play).
         internal UIAnimState EffectiveState(string stateName)
         {
-            UIAnimState found = null;
+            var own = FindState(stateName);
+            List<UIAnimTrack> overridden = null;
             for (var t = transform.parent; t != null; t = t.parent)
                 foreach (var ancestor in t.GetComponents<UIAnimation>())
                 foreach (var o in ancestor.overrides)
-                    if (o.child == this && o.state == stateName && o.replacement != null) found = o.replacement;   // keep climbing: outer wins
-            return found ?? FindState(stateName);
+                {
+                    if (o.child != this || o.state != stateName) continue;
+                    overridden ??= new List<UIAnimTrack>();
+                    foreach (var track in o.tracks)   // keep climbing: an outer override replaces an inner one of the same track
+                    {
+                        var i = overridden.FindIndex(x => x.target == track.target && x.property == track.property);
+                        if (i >= 0) overridden[i] = track;
+                        else overridden.Add(track);
+                    }
+                }
+            if (overridden == null || overridden.Count == 0 || own == null) return own;
+
+            var merged = new UIAnimState
+            {
+                name = own.name, eventTracks = own.eventTracks, soundTracks = own.soundTracks, childCalls = own.childCalls,
+                tracks = own.tracks.ConvertAll(t => overridden.Find(o => o.target == t.target && o.property == t.property) ?? t),
+            };
+            foreach (var track in overridden)
+                if (!merged.tracks.Contains(track)) merged.tracks.Add(track);   // the child dropped this track; the override keeps it
+            return merged;
         }
 
         /// <summary>Records the current values as the base for relative tracks. The editor preview calls this on every start.</summary>
