@@ -1144,8 +1144,18 @@ namespace SeoBYP.TimelineAnimation.Editor
             fromCurrent.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.start = e.newValue));
             var relative = new Toggle("Relative To Rest") { value = track.relativeToRest, tooltip = "Key values are added to the rest value. e.g. -14 = 14 smaller than the original." };
             relative.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.relativeToRest = e.newValue));
+            var sized = UIAnimation.SizeRelativeApplies(track.property);
+            var sizeRelative = new Toggle("Size Relative")
+            {
+                value = track.sizeRelative,
+                tooltip = sized ? "Key values are multiples of the target's own size: x = 1 is one width. e.g. a screen sliding in from x = 1, whatever the resolution."
+                    : "Position and Size tracks only.",
+            };
+            sizeRelative.SetEnabled(sized);   // shown on every track, disabled with the reason where it does not apply
+            sizeRelative.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.sizeRelative = e.newValue));
             section.Add(fromCurrent);
             section.Add(relative);
+            section.Add(sizeRelative);
             _inspector.Add(section);
         }
 
@@ -1167,7 +1177,8 @@ namespace SeoBYP.TimelineAnimation.Editor
             var live = index == 0 && track.startFromCurrent && (track.keys.Count > 1 || key.time <= 0f);   // value set at playback start
             var value = ValueField(key.IsVibration ? "Strength"
                 : track.start == UIAnimStart.Pointer ? "Value (press point +)"
-                : track.relativeToRest ? "Value (rest +)" : "Value", track, key);
+                : track.relativeToRest ? "Value (rest +)"
+                : track.sizeRelative && UIAnimation.SizeRelativeApplies(track.property) ? "Value (× own size)" : "Value", track, key);
             value.SetEnabled(!live);
             section.Add(value);
             var canCapture = !live && !IsOffset(track) && track.target != null && !IsTextProperty(track.property);

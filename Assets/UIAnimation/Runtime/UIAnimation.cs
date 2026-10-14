@@ -116,6 +116,8 @@ namespace SeoBYP.TimelineAnimation
         }
         [Tooltip("Key values are added to the value the property had on Awake (e.g. -14 = 14 smaller than the original size).")]
         public bool relativeToRest;
+        [Tooltip("Position / Size only: key values are multiples of the target's own size (x = 1 is one width), read when the state starts. e.g. a screen sliding in from x = 1.")]
+        public bool sizeRelative;
         [Tooltip("Per-character tracks only: each character starts this many seconds after the previous one.")]
         public float stagger;
         [Tooltip("Per-character tracks only: when above 0, character i plays the keys over i x this many seconds (character 0 stays still).")]
@@ -899,6 +901,25 @@ namespace SeoBYP.TimelineAnimation
             return false;
         }
 
+        /// <summary>Whether this animation has a state of that name.</summary>
+        public bool HasState(string stateName) => states.Exists(s => s.name == stateName);
+
+        /// <summary>
+        /// Adds a state at runtime, e.g. a screen container's default transition for a screen that does not define one.
+        /// A state with the same name is replaced. Call it before playing the state.
+        /// </summary>
+        public void AddState(UIAnimState state)
+        {
+            EnsureInitialized();
+            states.RemoveAll(s => s.name == state.name);
+            _playbacks.RemoveAll(p => p.state.name == state.name);
+            states.Add(state);
+            var effective = EffectiveState(state.name) ?? state;
+            CaptureRest(state);
+            if (effective != state) CaptureRest(effective);
+            _playbacks.Add(new Playback(this, effective));
+        }
+
         Playback FindPlayback(string stateName)
         {
             foreach (var p in _playbacks)
@@ -925,9 +946,13 @@ namespace SeoBYP.TimelineAnimation
                 track.startValue = track.start == UIAnimStart.Pointer && PointerPosition(track, pointer, out var pressed)
                     ? pressed : Read(track.target, track.property);
                 // Pointer: keys are offsets from the press point (0 = stay there), the only base known for them.
+                var size = track.sizeRelative && SizeRelativeApplies(track.property) ? ((RectTransform)track.target.transform).rect.size : Vector2.one;
                 foreach (var key in track.keys)
-                    key.resolved = track.start == UIAnimStart.Pointer ? track.startValue + key.value
-                        : track.relativeToRest ? track.rest + key.value : key.value;
+                {
+                    var value = new Vector4(key.value.x * size.x, key.value.y * size.y, key.value.z, key.value.w);
+                    key.resolved = track.start == UIAnimStart.Pointer ? track.startValue + value
+                        : track.relativeToRest ? track.rest + value : value;
+                }
                 // The first key becomes the live value, so the track starts where the property is. With 2+ keys it holds
                 // until its time (= a delay); a lone key keeps its value and is reached through the implicit segment.
                 if (track.startFromCurrent && (track.keys.Count > 1 || track.keys[0].time <= 0f)) track.keys[0].resolved = track.startValue;
@@ -974,6 +999,8 @@ namespace SeoBYP.TimelineAnimation
             // After every plain write (a reveal changes which characters exist), so character effects land on the final mesh.
             UIAnimTextChars.FlushAll();
         }
+
+        internal static bool SizeRelativeApplies(UIAnimProperty p) => p is UIAnimProperty.AnchoredPosition or UIAnimProperty.SizeDelta;
 
         static bool IsText(UIAnimProperty p) => p == UIAnimProperty.TextReveal || UIAnimTextChars.IsCharProperty(p);
 
