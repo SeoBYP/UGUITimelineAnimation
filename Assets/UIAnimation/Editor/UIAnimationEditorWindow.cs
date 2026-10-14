@@ -23,6 +23,54 @@ namespace SeoBYP.TimelineAnimation.Editor
             window.SetTarget(target);
         }
 
+        /// <summary>Opens the editor on one state of <paramref name="target"/>; with <paramref name="create"/>, adds it when missing.</summary>
+        public static void Open(UIAnimation target, string state, bool create = false)
+        {
+            var window = GetWindow<UIAnimationEditorWindow>("UI Animation");
+            window.SetTarget(target);
+            window.SelectState(state, create);
+        }
+
+        /// <summary>
+        /// Opens the editor on a state of <paramref name="owner"/>'s UIAnimation (in Edit or Play mode). A prefab asset is opened in
+        /// prefab mode first, so edits are saved to the prefab. With <paramref name="create"/>, a missing UIAnimation / state is added.
+        /// </summary>
+        public static UIAnimation OpenState(Component owner, string state, bool create = false)
+        {
+            var go = owner.gameObject;
+            if (EditorUtility.IsPersistent(go))
+            {
+                var stage = UnityEditor.SceneManagement.PrefabStageUtility.OpenPrefab(AssetDatabase.GetAssetPath(go));
+                var path = AnimationUtility.CalculateTransformPath(go.transform, go.transform.root);
+                go = (string.IsNullOrEmpty(path) ? stage.prefabContentsRoot.transform : stage.prefabContentsRoot.transform.Find(path)).gameObject;
+            }
+            var anim = go.GetComponent<UIAnimation>();
+            if (anim == null)
+            {
+                if (!create) return null;
+                anim = Undo.AddComponent<UIAnimation>(go);
+            }
+            Selection.activeGameObject = go;
+            Open(anim, state, create);
+            return anim;
+        }
+
+        internal void SelectState(string name, bool create = false)
+        {
+            if (_target == null || string.IsNullOrEmpty(name)) return;
+            var index = _target.states.FindIndex(s => s.name == name);
+            if (index < 0 && create)
+            {
+                Modify("Add State", () => _target.states.Add(new UIAnimState { name = name }), rebuild: false);
+                index = _target.states.Count - 1;
+            }
+            if (index < 0) return;
+            _state = index;
+            _selTrack = null;
+            _selection.Clear();
+            Rebuild();
+        }
+
         UIAnimation _target;
         int _state;
         object _selTrack;                // selected track header: UIAnimTrack, UIAnimEventTrack or UIAnimSoundTrack
@@ -1215,6 +1263,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 case UIAnimProperty.Scale:
                 case UIAnimProperty.CharScale:
                     return ScaleField(label, v, key, relative, Set);
+                case UIAnimProperty.Rotation:
                 case UIAnimProperty.CharOffset:
                 case UIAnimProperty.CharRotation:
                 {

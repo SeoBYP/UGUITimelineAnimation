@@ -16,7 +16,7 @@ namespace SeoBYP.TimelineAnimation.Tests
     /// </summary>
     public sealed class EditorLayoutMeasureTests
     {
-        const string PopupPath = "Assets/Prefabs/Popup1.prefab";
+        const string PopupPath = "Assets/Prefabs/Popup/Popup1.prefab";
         UIAnimationEditorWindow _window;
         GameObject _popup, _screen;
 

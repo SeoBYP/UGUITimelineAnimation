@@ -17,7 +17,7 @@
 3. **에디터 설치**: `ProjectSettings/ProjectVersion.txt`와 같은 버전(현재 `6000.6.3f1`)을 설치합니다. 플랫폼 모듈은 필요 없습니다.
    - 기본 설치 위치: `~/Unity/Hub/Editor/6000.6.3f1/Editor/Unity`
    - 다른 위치에 설치했다면 실행기 환경변수 `UNITY_EDITOR_ROOT`에 `.../Hub/Editor` 경로를 지정합니다.
-4. **필요한 도구**: `git`, `python3` (테스트 결과 요약에 사용)
+4. **필요한 도구**: `git`, `python3` (테스트 결과 요약에 사용), 선택: `xvfb` (에디터 창 테스트용 가상 디스플레이)
 5. **실행기 등록**
    - GitHub 레포 → Settings → Actions → Runners → **New self-hosted runner** → Linux를 선택하고, 화면에 나오는 명령을 그대로 실행합니다(다운로드 → `./config.sh ...`).
    - `config.sh`가 레이블을 물으면 **`unity`**를 추가합니다. 워크플로는 `[self-hosted, linux, unity]` 레이블의 실행기만 씁니다.
@@ -35,6 +35,8 @@
   ```
   Unity -batchmode -nographics -projectPath <workspace> -runTests -testPlatform EditMode -testResults results.xml -logFile unity-editor.log
   ```
+  - 에디터 창을 띄우는 테스트(`EditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 그래픽 장치가 필요합니다. 러너에 `xvfb-run`이 있으면 `-nographics` 대신 `xvfb-run -a Unity -batchmode ...`로 실행해서 이 테스트까지 돌립니다. 없으면 이 테스트들은 실패하지 않고 건너뜁니다.
+  - 현재 러너에는 `xvfb-run`이 없습니다. 설치하려면 `sudo apt install xvfb` (Debian/Ubuntu 계열).
 - **종료 코드**: `0` = 통과, `2` = 실패한 테스트 있음, 그 외 = 실행 오류(로그 마지막 60줄 출력)
 - **결과 확인**: 실행 요약에 통과/실패 표와 실패한 테스트 이름이 나옵니다. `editmode-test-results` 아티팩트로 결과 XML과 에디터 로그를 받을 수 있습니다.
 

@@ -13,7 +13,7 @@ namespace SeoBYP.TimelineAnimation.Tests
     /// </summary>
     public sealed class SampleButton2Tests
     {
-        const string Path = "Assets/Prefabs/Button2.prefab";
+        const string Path = "Assets/Prefabs/Buttons/Button2.prefab";
         GameObject _go;
         UIAnimation _anim;
         Image _fill, _hover;

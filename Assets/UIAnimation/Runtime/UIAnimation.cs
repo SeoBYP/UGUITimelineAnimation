@@ -28,6 +28,7 @@ namespace SeoBYP.TimelineAnimation
         // appended: values are serialized as ints, so new members go last
         FillAmount,         // Image.fillAmount
         CharacterSpacing,   // TMP_Text.characterSpacing
+        Rotation,           // Transform.localEulerAngles (degrees; -180..180 when read)
     }
 
     /// <summary>How a new state treats states that are still playing on the same properties.</summary>
@@ -185,7 +186,7 @@ namespace SeoBYP.TimelineAnimation
         static int Dimensions(UIAnimProperty p) => p switch
         {
             UIAnimProperty.SizeDelta or UIAnimProperty.AnchoredPosition => 2,
-            UIAnimProperty.Scale or UIAnimProperty.CharScale or UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => 3,
+            UIAnimProperty.Scale or UIAnimProperty.Rotation or UIAnimProperty.CharScale or UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => 3,
             UIAnimProperty.GraphicColor or UIAnimProperty.CharColor => 4,
             _ => 1,
         };
@@ -456,6 +457,7 @@ namespace SeoBYP.TimelineAnimation
             public readonly UIAnimState state;
             public MotionHandle handle;
             public bool active;
+            public bool resolved;                                 // key values resolved at least once (Sample reuses them)
             public float lastTime;                                // events in (lastTime, t] are raised on the next step
             public readonly Action onComplete;
             public AutoResetUniTaskCompletionSource completion;   // only while someone awaits PlayAsync
@@ -652,6 +654,32 @@ namespace SeoBYP.TimelineAnimation
             return task;
         }
 
+        /// <summary>
+        /// Shows a state's pose at <paramref name="time"/> without playing it: no motion, events or sounds. For effects driven
+        /// by something other than time, e.g. a scroll list item scaled by its position in the viewport.
+        /// The live start values (Start = Current) are taken the first time, then reused.
+        /// </summary>
+        public void Sample(string stateName, float time)
+        {
+            EnsureInitialized();
+            var p = FindPlayback(stateName);
+            if (p == null) return;
+            if (p.active) Stop(p);
+            if (!p.resolved)
+            {
+                Resolve(p.state);
+                p.resolved = true;
+            }
+            Evaluate(p.state, Mathf.Clamp(time, 0f, p.state.Duration));
+        }
+
+        /// <summary>Length of a state in seconds as it plays here (0 if there is no such state).</summary>
+        public float Duration(string stateName)
+        {
+            EnsureInitialized();
+            return FindPlayback(stateName)?.state.Duration ?? 0f;
+        }
+
         /// <summary>Jumps a playing state to its end; a pending PlayAsync completes normally (e.g. skipping a typewriter).</summary>
         public void Complete(string stateName)
         {
@@ -766,6 +794,7 @@ namespace SeoBYP.TimelineAnimation
 
             foreach (var track in playback.state.tracks) track.released = false;
             Resolve(playback.state, pointer);
+            playback.resolved = true;
             // Show t = 0 right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
             playback.lastTime = -1f;           // an event at 0 fires on this first step
             Step(playback, 0f);
@@ -909,6 +938,7 @@ namespace SeoBYP.TimelineAnimation
         public static Vector4 Read(Component target, UIAnimProperty property) => property switch
         {
             UIAnimProperty.Scale => target.transform.localScale,
+            UIAnimProperty.Rotation => SignedAngles(target.transform.localEulerAngles),
             UIAnimProperty.SizeDelta => ((RectTransform)target.transform).sizeDelta,
             UIAnimProperty.AnchoredPosition => ((RectTransform)target.transform).anchoredPosition,
             UIAnimProperty.GraphicColor => ((Graphic)target).color,
@@ -924,6 +954,9 @@ namespace SeoBYP.TimelineAnimation
             _ => throw new ArgumentOutOfRangeException(nameof(property)),
         };
 
+        // Unity reports 330° for -30°; animating from there to 0 would turn the long way round.
+        static Vector3 SignedAngles(Vector3 e) => new(Mathf.DeltaAngle(0f, e.x), Mathf.DeltaAngle(0f, e.y), Mathf.DeltaAngle(0f, e.z));
+
         static float RevealOf(TMP_Text text)
         {
             var count = text.textInfo?.characterCount ?? 0;
@@ -935,6 +968,7 @@ namespace SeoBYP.TimelineAnimation
             switch (property)
             {
                 case UIAnimProperty.Scale: target.transform.localScale = v; break;
+                case UIAnimProperty.Rotation: target.transform.localEulerAngles = v; break;
                 case UIAnimProperty.SizeDelta: ((RectTransform)target.transform).sizeDelta = v; break;
                 case UIAnimProperty.AnchoredPosition: ((RectTransform)target.transform).anchoredPosition = v; break;
                 case UIAnimProperty.GraphicColor: ((Graphic)target).color = v; break;

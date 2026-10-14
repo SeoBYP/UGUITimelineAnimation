@@ -1,0 +1,21 @@
+{
+    "name": "SeoBYP.TimelineAnimation.Tests.PlayMode",
+    "rootNamespace": "SeoBYP.TimelineAnimation.Tests",
+    "references": [
+        "SeoBYP.TimelineAnimation",
+        "LitMotion",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
+}

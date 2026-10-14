@@ -95,6 +95,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         public static Color PropertyColor(UIAnimProperty property) => property switch
         {
             UIAnimProperty.Scale => new Color32(74, 144, 226, 255),
+            UIAnimProperty.Rotation => new Color32(92, 107, 192, 255),
             UIAnimProperty.SizeDelta => new Color32(126, 87, 194, 255),
             UIAnimProperty.AnchoredPosition => new Color32(38, 166, 154, 255),
             UIAnimProperty.GraphicColor => new Color32(229, 115, 115, 255),
@@ -113,6 +114,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         public static string PropertyName(UIAnimProperty property) => property switch
         {
             UIAnimProperty.Scale => "Scale",
+            UIAnimProperty.Rotation => "Rotation",
             UIAnimProperty.SizeDelta => "Size",
             UIAnimProperty.AnchoredPosition => "Position",
             UIAnimProperty.GraphicColor => "Color",

@@ -16,7 +16,7 @@ namespace SeoBYP.TimelineAnimation.Tests
     /// </summary>
     public sealed class PrefabOverrideTests
     {
-        const string SamplePath = "Assets/Prefabs/Button1.prefab";
+        const string SamplePath = "Assets/Prefabs/Buttons/Button1.prefab";
         const string Folder = "Assets/__UIAnimOverrideTest";
         const string Button1Path = Folder + "/Button1.prefab";   // a copy of the sample: some tests edit the original button
         const string PopupPath = Folder + "/TestPopup.prefab";

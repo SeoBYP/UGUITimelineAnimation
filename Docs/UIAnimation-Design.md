@@ -1,9 +1,9 @@
-# UGUI Animation System — 설계 문서 (v3 · 구현 현황 반영)
+# UGUI Animation System — 설계 문서
 
-> 상태: **구현 현황 기준 문서** · 2026-10-13 (`main` 8c7d737, PR #1 머지 시점)
+> 기준: `main` 4f36ce4 (PR #8 머지 시점) + 스크롤 리스트(`feature/scroll`) · 2026-10-14
 > 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · LitMotion 2.0.2 · UniTask 2.5.11
 > 방식: **완전 커스텀**. 데이터, 런타임, 에디터 창을 모두 직접 만듭니다. Animator와 Timeline은 사용하지 않습니다.
-> 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 계획만 있음
+> 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 아직 안 함
 > 도식 원본(HTML)은 [`diagrams/`](diagrams/)에 있습니다. 브라우저로 열면 벡터로 볼 수 있습니다.
 
 ---
@@ -13,14 +13,14 @@
 | # | 요구사항 | 상태 | 현재 구현 |
 |---|---|---|---|
 | R1 | Prefab 단위로 관리 | ✅ | 애니메이션 데이터가 Prefab 안의 `UIAnimation` 컴포넌트에 직렬화됩니다. 별도 asset이 없습니다 (§3) |
-| R2 | 디자이너가 편하게 편집 | ✅ | UI Toolkit 기반 **UI Animation Editor** 창: 키프레임 타임라인, 속성 선택 창, 도착 방식 그래프 (§6) |
-| R3 | 성능 | 🟡 | 재생 중인 상태만 LitMotion이 구동, 재생 대기는 풀링 소스 사용. **측정은 아직 안 함** (§4.6) |
-| R4 | 이벤트별 편집 (Select·OnEnable·ValueChanged …) | ✅ | `UIAnimTrigger`: 이벤트 → 상태 (§5) |
-| R5 | 공용 Prefab 중첩 (Button → Popup) | 🟡 | 중첩 자체는 동작합니다(Popup1 안의 Button1). 부모가 자식 상태를 시간축에서 호출하는 기능은 미구현 (§11) |
-| R6 | 상위에서 하위 오버라이드 (현재 Prefab에서만) | ⬜ | 설계만 있음 (§11.1) |
-| R7 | Scroll 애니메이션 | ⬜ | 설계만 있음 (§11.3) |
-| R8 | Play 모드 없이 즉시 미리보기 | ✅ | 씬과 **Prefab 모드** 모두 지원. 정지·저장·Play 진입 시 원래 값으로 복원 (§6.4) |
-| R9 | 클라이언트가 타이밍을 원활하게 호출 | ✅ | `PlayAsync`(UniTask)로 끝날 때까지 대기, `Complete`로 건너뛰기 (§7) |
+| R2 | 디자이너가 편하게 편집 | ✅ | UI Toolkit 기반 **UI Animation Editor** 창: 계층형 타임라인, 트랙 추가 창, 키 인스펙터 (§6) |
+| R3 | 성능 | 🟡 | 재생 중인 상태만 LitMotion이 구동하고, 대기는 풀링 소스를 씁니다. 스크롤 리스트만 측정함(GC 0바이트) (§4.7) |
+| R4 | 이벤트별 재생 (Pointer·Select·Toggle·OnEnable·Start) | ✅ | `UIAnimTrigger`, 상태마다 **Play On** 하나 (§5) |
+| R5 | 공용 Prefab 중첩, 부모가 자식 상태 호출 | ✅ | 자식 호출(`UIAnimChildCall`): 부모 시간축의 지정 시간에 자식 상태 재생 (§4.4) |
+| R6 | 상위에서 하위 오버라이드 (현재 Prefab에서만) | ✅ | **트랙 단위** 오버라이드. 바꾼 트랙만 저장하고 나머지는 원본을 따라감. Unity 중첩 Prefab 규칙과 같음 (§8) |
+| R7 | Scroll 리스트와 애니메이션 | ✅ | `UIAnimScrollList` 하나로 스크롤 18가지 형태(리스트·그리드·메이슨리·캐러셀·무한 루프·페이지·배너·휠 피커·섹션 헤더·가변 크기·채팅·아코디언·중첩·탭·접히는 헤더·당겨서 새로고침). 모든 연출은 UI Animation Editor의 상태로 만듦 (§9) |
+| R8 | Play 모드 없이 즉시 미리보기 | ✅ | 씬과 Prefab 모드 모두 지원. 정지·저장·Play 진입 시 원래 값으로 복원 (§6.6) |
+| R9 | 클라이언트가 타이밍을 원활하게 호출 | ✅ | `PlayAsync`(UniTask)로 끝날 때까지 대기, `Complete`로 건너뛰기, 애니메이션 이벤트 수신 (§7) |
 
 ---
 
@@ -30,111 +30,138 @@
 |---|---|---|---|
 | 대기 중 비용 | 매 프레임 값을 기록 → Canvas dirty | 낮음 (Manual 구동 시) | **0** (재생 중일 때만 계산) |
 | 바인딩 | 경로 문자열 | 트랙 객체 기준. asset을 교체하면 끊어짐 | **Prefab 내부 컴포넌트 직접 참조** |
-| 중첩 자식을 부모 시간축에서 펼쳐 편집 | 불가 | Timeline 창 확장 한계 | **가능** (결정 이유) |
-| 현재 Prefab에서만 자식 연출 오버라이드 | 불가 | 불가 | **가능** (결정 이유) |
+| 중첩 자식을 부모 시간축에서 펼쳐 편집 | 불가 | Timeline 창 확장 한계 | **가능** |
+| 현재 Prefab에서만 자식 연출 오버라이드 | 불가 | 불가 | **가능** |
 | 개발 비용 | 낮음 | 낮음 | 높음. 편집기 제작이 대부분 |
 
 ### 참고 레포에서 가져온 것
 
 | 레포 | 가져온 것 |
 |---|---|
-| [UGUIAnimationSamples](https://github.com/annulusgames/UGUIAnimationSamples) | **샘플 콘텐츠 목표** (`2_Button`, `4_Toggle`, `3_Text`). 같은 시간·이징·LitMotion 공식(Punch/Shake/Scramble)으로 재현 |
+| [UGUIAnimationSamples](https://github.com/annulusgames/UGUIAnimationSamples) | **샘플 콘텐츠 목표** (`1_Hover`, `2_Button`, `3_Text`, `4_Toggle`). 같은 시간·이징·LitMotion 공식(Punch/Shake/Scramble)으로 재현 |
 | [Unity-AnimationUI](https://github.com/DhafinFawwaz/Unity-AnimationUI) | 인스펙터 기반 편집과 슬라이더 미리보기 UX |
-| [UnityScreenNavigator](https://github.com/Haruma-K/UnityScreenNavigator) | 화면 전환 계약(`Duration` + 시간 지정 재생) 참고. 도입하지 않음 |
 | [UnityUIPlayables](https://github.com/Haruma-K/UnityUIPlayables) | 미리보기 후 값 복원 개념 |
 
 ---
 
 ## 2. 구조
 
-![시스템 구조](diagrams/uianim-v3-architecture.png)
+![시스템 구조](diagrams/uianim-architecture.png)
 
-[원본 HTML](diagrams/uianim-v3-architecture.html)
+[원본 HTML](diagrams/uianim-architecture.html)
 
 | 파일 | 역할 |
 |---|---|
-| `Runtime/UIAnimation.cs` | 데이터 정의(상태·트랙·키), 재생(`Play`/`PlayAsync`/`Complete`), 속성 인계, 값 계산(`Evaluate`), 속성 읽기/쓰기 |
-| `Runtime/UIAnimTrigger.cs` | UI 이벤트 → 상태 재생 |
+| `Runtime/UIAnimation.cs` | 데이터 정의, 재생(`Play`/`PlayAsync`/`Complete`), 속성 인계, 값 계산(`Evaluate`), 이벤트·사운드·자식 호출(`Step`), 오버라이드 해석(`EffectiveState`), 속성 읽기/쓰기 |
+| `Runtime/UIAnimTrigger.cs` | UI 이벤트 → 상태 재생 (Play On) |
+| `Runtime/UIAnimEventListener.cs` | 애니메이션 이벤트 → 인스펙터의 UnityEvent |
+| `Runtime/UIAnimScrollList.cs` | 가상화 스크롤 리스트: 정렬(세로·가로·그리드·메이슨리), 가변 크기·여러 Prefab, 재사용, 바인딩, 루프, 스냅·한 장씩, 자동 넘김, 섹션 헤더, 끝에 붙기, 크기 애니메이션, 중첩 드래그, 아이템 애니메이션 |
+| `Runtime/UIAnimPageIndicator.cs` | 리스트 아이템마다 점·탭 하나, 현재 것에 On / 떠난 것에 Off 상태, 누르면 그 아이템으로 |
+| `Runtime/UIAnimScrollScrub.cs` | 스크롤한 거리로 상태를 보여줌 (접히는 헤더) |
+| `Runtime/UIAnimPullToRefresh.cs` | 당긴 거리로 Pull 상태, 놓으면 On Refresh + Refreshing 반복, `EndRefresh()` |
 | `Runtime/UIAnimTextChars.cs` | TMP 글자별 효과 누적과 메시 반영, 스크램블 텍스트 |
 | `Runtime/UIAnimVibration.cs` | LitMotion과 같은 Punch/Shake 공식, 시드 랜덤, 스크램블 문자열 생성 |
-| `Editor/UIAnimationEditorWindow.cs` | UI Animation Editor 창 (상단 바, 상태 탭, 인스펙터) |
-| `Editor/UIAnimTimelineView.cs` | 타임라인(도프시트): 눈금자, 트랙 줄, 키 다이아몬드, 선택·드래그 |
-| `Editor/UIAnimPropertyPicker.cs` | 트랙 추가용 속성 선택 창 (오브젝트 트리 + 속성 카드 + 검색) |
+| `Editor/UIAnimationEditorWindow.cs` | UI Animation Editor 창 (상단 바, 상태 탭, 인스펙터, 편집 명령) |
+| `Editor/UIAnimTimelineView.cs` | 타임라인: 눈금자, 계층형 트랙 줄, 키·마커, 선택·드래그, 확대·이동, 우클릭 메뉴 |
+| `Editor/UIAnimPropertyPicker.cs` | 트랙 추가 창 (오브젝트 트리 + 트랙 카드, 다중 선택) |
+| `Editor/UIAnimMenu.cs` | 에디터 디자인의 우클릭 메뉴 |
 | `Editor/UIAnimEaseGraph.cs` | 도착 방식 그래프 (읽기 전용) |
 | `Editor/UIAnimPreview.cs` | Play 모드 없는 미리보기와 복원 |
-| `Editor/UIAnimationInspector.cs` | `UIAnimation` 인스펙터에 "UI Animation Editor 열기" 버튼 |
+| `Editor/UIAnimAudioPreview.cs` | 미리보기 중 사운드 재생 |
+| `Editor/UIAnimationInspector.cs` | `UIAnimation` 인스펙터의 "Open UI Animation Editor" 버튼 |
+| `Editor/UIAnimScrollListEditor.cs` | 스크롤 리스트 인스펙터 (Unity Layout Group과 같은 구성) + 에디터 미리보기 |
+| `Editor/UIAnimStateField.cs` | "그 애니메이션의 상태" 한 줄: 상태 목록 + Edit / Create (UI Animation Editor로 열기) |
+| `Editor/UIAnimScrollHelperEditors.cs` | Page Indicator · Scroll Scrub · Pull To Refresh 인스펙터 (같은 상태 줄 사용) |
 
-런타임은 별도 "컴파일" 단계 없이 직렬화된 데이터를 그대로 평가합니다. 재생을 시작할 때 `Resolve`로 키 값을 한 번 확정하고(현재 값·원래 값 반영), 이후 매 프레임 `Evaluate(t)`만 실행합니다.
+런타임은 별도 "컴파일" 단계 없이 직렬화된 데이터를 그대로 평가합니다. 재생을 시작할 때 `Resolve`로 키 값을 한 번 확정하고(현재 값·원래 값·누른 위치 반영), 이후 매 프레임 `Step(t)`만 실행합니다.
 
 ---
 
 ## 3. 데이터 모델
 
-![데이터 모델](diagrams/uianim-v3-data-model.png)
+![데이터 모델](diagrams/uianim-data-model.png)
 
-[원본 HTML](diagrams/uianim-v3-data-model.html)
+[원본 HTML](diagrams/uianim-data-model.html)
 
 ```
 UIAnimation : MonoBehaviour
- └─ states : List<UIAnimState>
+ ├─ states      : List<UIAnimState>
+ ├─ overrides   : List<UIAnimOverride>     // 중첩 자식 상태의 트랙 단위 오버라이드 (§8)
+ └─ audioSource : AudioSource              // 선택. 비우면 공용 2D 소스
 
-UIAnimState  { name, actions: List<UIAnimAction>, tracks: List<UIAnimTrack> }
-             // 길이(Duration) = 트랙 중 가장 늦게 끝나는 시간 (글자 지연 포함)
+UIAnimState     { name, tracks, eventTracks, soundTracks, childCalls }
+                // Duration = 트랙·이벤트·사운드 끝·자식 호출 끝 중 가장 늦은 시간
 
-UIAnimTrack  { target: Component, property: UIAnimProperty,
-               startFromCurrent, relativeToRest,
-               stagger, durationPerChar, scramble,      // 텍스트 트랙 전용
-               keys: List<UIAnimKey> }                  // 시간순
+UIAnimTrack     { target: Component, property: UIAnimProperty,
+                  start: KeyValue | Current | Pointer, relativeToRest,
+                  stagger, durationPerChar, scramble,      // 텍스트 트랙 전용
+                  keys: List<UIAnimKey> }                  // 0초 키부터, 시간순
 
-UIAnimKey    { time, value: Vector4,
-               curveType: Ease | Curve | Punch | Shake,
-               ease, curve: AnimationCurve,
-               frequency, damping }                     // Punch/Shake 전용
+UIAnimKey       { time, value: Vector4,
+                  curveType: Ease | Curve | Punch | Shake,
+                  ease, curve: AnimationCurve,
+                  frequency, damping }                     // Punch/Shake 전용
 
-UIAnimAction { type: MoveToPointer, target: RectTransform }
+UIAnimEventTrack { events: List<UIAnimEventMarker { time, name, dataType, dataJson }> }
+UIAnimSoundTrack { source: AudioSource?, sounds: List<UIAnimSound { time, clip, volume }> }
+UIAnimChildCall  { time, child: UIAnimation, state }
+UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // 바꾼 트랙만
 ```
 
 ### 3.1 속성 (`UIAnimProperty`)
 
 | 대상 | 속성 |
 |---|---|
-| Transform / RectTransform | `Scale`, `SizeDelta`, `AnchoredPosition` |
+| Transform / RectTransform | `Scale`, `Rotation`(오일러 각, 읽을 때 -180~180), `SizeDelta`, `AnchoredPosition` |
 | Graphic (Image, TMP 등) | `GraphicColor`, `GraphicAlpha` |
-| TMP_Text | `FontSize`, `TextReveal` (타자기, 0~1) |
+| Image (Filled) | `FillAmount` |
+| TMP_Text | `FontSize`, `CharacterSpacing`, `TextReveal` (타자기, 0~1) |
 | TMP_Text 글자별 | `CharScale`, `CharOffset`, `CharRotation`, `CharColor`, `CharAlpha` |
 
 ### 3.2 키프레임과 도착 방식
 - Unity Animation 창처럼 트랙마다 키(시간, 값)를 찍습니다. 1 → 1.2 → 1은 키 3개입니다.
+- **모든 트랙은 0초 키를 가집니다.** 새 트랙은 0초 키와 끝 키로 만들어지고, 0초 키가 없는 트랙에 키를 추가하면 0초 키가 먼저 생깁니다. 0초 키도 다른 키처럼 옮기고 편집할 수 있습니다.
 - 키의 도착 방식은 **이전 키에서 이 키로 오는 방식**입니다.
   - `Ease`: LitMotion Ease 프리셋
   - `Curve`: AnimationCurve. 0 = 이전 키 값, 1 = 이 키 값
   - `Punch`: 이전 값을 중심으로 흔들리다 이전 값으로 돌아옵니다. 키 값은 목적지가 아니라 **세기**입니다.
   - `Shake`: Punch와 같지만 축마다 매 프레임 무작위로 흔들립니다.
-  - Punch/Shake의 감쇠 진동 공식과 랜덤은 LitMotion과 같습니다(`초당 진동 수`, `감쇠`).
+  - Punch/Shake의 감쇠 진동 공식과 랜덤은 LitMotion과 같습니다(`Frequency`, `Damping`).
 
 ### 3.3 트랙 옵션
-- `startFromCurrent` (현재 값에서 시작)
-  - **키가 2개 이상**: 첫 키가 재생 시작 순간의 값이 되고, 그 키 시간까지 유지됩니다. 첫 키를 0.025초에 두면 0.025초 지연이 됩니다(Toggle1).
-  - **키가 1개**: "현재 값 → 이 키"로 이어집니다(호버/언호버, 팝업 Open/Close).
-- `relativeToRest` (원래 값 기준): 키 값을 원래 값(Awake 시점, 미리보기는 시작 시점에 캡처)에 더합니다. 예: Button1 누를 때 크기 −(34, 17).
+- `Start`: 첫 키 값을 어디서 가져올지 정합니다.
+  - `Key Value`: 키에 적힌 값
+  - `Current`: 재생을 시작하는 순간의 값. 중간에 끊겨도 값이 튀지 않습니다(호버/언호버, 팝업 Open/Close). 첫 키를 0초 뒤에 두면 그만큼 기다립니다(Toggle1의 지연).
+  - `Pointer`: **Position 트랙 전용.** 상태를 재생시킨 포인터를 누른 위치입니다. 뒤 키들은 누른 자리 기준 상대값이라 `(0,0)`은 "그 자리"입니다(Button2의 리플). 포인터 없이 재생하면(코드 호출) 현재 위치를 씁니다.
+- `Relative To Rest` (원래 값 기준): 키 값을 원래 값(Awake 시점, 미리보기는 시작 시점에 캡처)에 더합니다. 예: Button1 누를 때 크기 −(34, 17).
 
 ### 3.4 텍스트 트랙
 - `TextReveal`: `maxVisibleCharacters`를 0~1 비율로 지정합니다. 리치 텍스트 태그는 글자 수에 포함하지 않습니다.
-  - `scramble`: 아직 안 나온 글자를 무작위 문자로 채웁니다(LitMotion `ScrambleMode`). 원문의 공백은 유지해서 줄바꿈이 튀지 않습니다.
+  - `Scramble`: 아직 안 나온 글자를 무작위 문자로 채웁니다(LitMotion `ScrambleMode`). 원문의 공백은 유지해서 줄바꿈이 튀지 않습니다.
 - 글자별 트랙(`Char*`)
   - 키는 **글자 하나의 움직임**입니다.
-  - `stagger`(글자 간격): i번째 글자가 i × stagger초 늦게 시작합니다.
-  - `durationPerChar`(글자당 길이): 0보다 크면 i번째 글자가 키 전체를 i × 이 값(초) 동안 재생합니다(Shake 샘플).
+  - `Stagger`(글자 간격): i번째 글자가 i × stagger초 늦게 시작합니다. 트랙 끝 = 마지막 키 + (글자 수 − 1) × stagger
+  - `Duration per Char`(글자당 길이): 0보다 크면 i번째 글자가 키 전체를 i × 이 값(초) 동안 재생합니다(Shake 샘플).
   - 같은 텍스트의 글자 트랙 여러 개(크기 + 위치 + 색 등)는 누적된 뒤 메시를 한 번만 갱신합니다.
+
+### 3.5 예전 데이터 변환
+불러올 때 자동으로 바뀌므로 수동 작업이 필요 없습니다.
+
+| 예전 | 지금 |
+|---|---|
+| 상태의 `events`/`signals`, `sounds` 목록 | 이벤트 트랙·사운드 트랙 하나로 이동 |
+| 트랙의 `startFromCurrent` (bool) | `start` (false → Key Value, true → Current) |
+| 오버라이드의 `replacement` (상태 전체 복사본) | 그 안의 트랙을 오버라이드 트랙으로 이동 |
 
 ---
 
 ## 4. 런타임 재생
 
 ### 4.1 재생 흐름
-1. `Prepare`: 같은 상태가 재생 중이면 멈추고, 다른 상태와 겹치는 속성을 인계받고(§4.2), 액션을 실행하고, 키 값을 확정(`Resolve`)한 뒤 **0초 값을 바로 씁니다.**
-2. LitMotion으로 0 → 길이 모션을 하나 만들고, 매 프레임 `Evaluate(state, t)`를 호출합니다. 상태 객체를 넘기는 static 바인딩이라 클로저 할당이 없습니다. 스케줄러는 `UpdateIgnoreTimeScale`입니다.
-3. 끝에 도달하면 완료 처리합니다.
+1. `Prepare`: 같은 상태가 재생 중이면 멈추고, 다른 상태와 겹치는 속성을 인계받고(§4.2), 키 값을 확정(`Resolve`)한 뒤 **0초 값을 바로 씁니다.**
+2. LitMotion으로 0 → 길이 모션을 하나 만들고, 매 프레임 `Step(t)`를 호출합니다. 상태 객체를 넘기는 static 바인딩이라 클로저 할당이 없습니다. 스케줄러는 `UpdateIgnoreTimeScale`입니다.
+3. `Step(t)` = 값 계산(`Evaluate`) + 이번 프레임에 지난 `(이전 t, t]` 구간의 사운드·자식 호출·이벤트 실행
+4. 끝에 도달하면 완료 처리합니다.
 
 0초 값을 바로 쓰는 이유: 대사창처럼 text를 바꾸고 타자기를 재생하면, 그렇지 않을 때 새 대사가 한 프레임 동안 전부 보입니다.
 
@@ -142,100 +169,138 @@ UIAnimAction { type: MoveToPointer, target: RectTransform }
 - 여러 상태가 동시에 재생될 수 있습니다. 새 상태는 **자기가 건드리는 속성만** 이전 상태에서 가져오고, 나머지는 계속 재생됩니다(Button2의 Hover와 Press).
 - 중단 방식(`UIAnimInterrupt`)
   - `Cancel`: 겹치는 속성만 가져오고, 속성을 모두 잃은 상태는 멈춥니다.
-  - `Complete`: 겹치는 상태를 끝 값으로 맞춘 뒤 시작합니다(Button2의 Down/Up).
+  - `Complete`: 겹치는 상태를 끝 값으로 맞춘 뒤 시작합니다(Button2의 Press/Release).
 
 ### 4.3 완료와 취소
 
-![재생 · 완료 · 취소 흐름](diagrams/uianim-v3-playback.png)
+![재생 · 완료 · 취소 흐름](diagrams/uianim-playback.png)
 
-[원본 HTML](diagrams/uianim-v3-playback.html)
+[원본 HTML](diagrams/uianim-playback.html)
 
-상태마다 "끝까지 감"과 "중간에 멈춤" 두 경로만 있습니다. 모든 정지 경로가 둘 중 하나를 거쳐서 대기 중인 Task가 걸려 있는 경우가 없습니다.
+상태마다 "끝까지 감"과 "중간에 멈춤" 두 경로만 있습니다. 모든 정지 경로가 둘 중 하나를 거치므로, 대기 중인 Task가 걸린 채 남는 경우가 없습니다.
 
-| 경우 | 결과 |
-|---|---|
-| 끝에 도달 | 완료 |
-| `Complete(state)` 호출 | 끝 값으로 이동 후 완료 |
-| 다른 상태가 `Complete` 인터럽트로 시작 | 끝 값으로 이동 후 완료 |
-| 다른 상태가 속성을 모두 가져감 | 취소 |
-| 같은 상태를 다시 재생 | 이전 재생은 취소 |
-| 오브젝트 비활성화(`OnDisable`) | 취소 |
-| `PlayAsync`에 넘긴 토큰 취소 | 멈추고 취소 |
+| 경우 | 결과 | 남은 이벤트 | 남은 사운드 |
+|---|---|---|---|
+| 끝에 도달 | 완료 | 모두 발생 | 모두 재생 |
+| `Complete(state)` 호출 | 끝 값으로 이동 후 완료 | 순서대로 발생 | 재생 안 함 |
+| 다른 상태가 `Complete` 인터럽트로 시작 | 끝 값으로 이동 후 완료 | 순서대로 발생 | 재생 안 함 |
+| 다른 상태가 속성을 모두 가져감 | 취소 | 발생 안 함 | 재생 안 함 |
+| 같은 상태를 다시 재생 | 이전 재생은 취소 | 발생 안 함 | 재생 안 함 |
+| 오브젝트 비활성화(`OnDisable`) | 취소 | 발생 안 함 | 재생 안 함 |
+| `PlayAsync`에 넘긴 토큰 취소 | 멈추고 취소 | 발생 안 함 | 재생 안 함 |
 
-### 4.4 텍스트
+### 4.4 자식 호출
+- 부모 상태의 지정 시간에 자식 `UIAnimation`의 상태를 재생합니다(Popup1이 Open 0.3초에 닫기 버튼의 Hover 재생).
+- 부모 길이에 `호출 시간 + 자식 상태 길이`가 포함됩니다. 자식 상태는 오버라이드가 적용된 것을 씁니다(§8).
+- 부모를 `Complete`하면 자식도 끝 값이 됩니다. 부모가 취소돼도 이미 시작한 자식은 계속 재생됩니다.
+- 서로 호출하는 순환은 깊이 8에서 끊습니다.
+
+### 4.5 애니메이션 이벤트와 사운드
+- **이벤트**: 이벤트 트랙의 시점마다 `EventRaised`가 발생합니다. 이름만 있는 이벤트와 `[UIAnimEvent]` struct 데이터를 가진 이벤트가 같은 형식입니다(§7.2).
+- **사운드**: 사운드 트랙의 시점마다 `PlayOneShot`으로 재생합니다.
+  - 소스 우선순위: 트랙의 AudioSource → UIAnimation의 `audioSource` → **공용 2D AudioSource**(숨김 오브젝트 하나). 그래서 UI 오브젝트에 AudioSource를 붙일 필요가 없습니다. 믹서 그룹이나 3D 사운드가 필요할 때만 지정합니다.
+  - 상태 길이에 사운드 끝까지 포함됩니다. 그래서 Close 후 Destroy해도 소리가 끊기지 않습니다.
+
+### 4.6 텍스트
 - 텍스트 속성을 쓰는 상태는 재생 시작 때 TMP 메시를 다시 만들어 글자 수를 새로 읽습니다. 그래서 text를 바꾼 뒤 재생하면 길이와 글자 간격이 새 텍스트 기준입니다.
 - 스크램블은 text 자체를 바꾸므로 원문을 따로 기억합니다. 재생 중에 외부에서 text가 바뀌면 그것을 새 원문으로 씁니다.
 
-### 4.5 액션
-- `MoveToPointer`: 상태를 재생시킨 포인터 위치로 대상을 옮깁니다(Button2의 클릭 퍼짐).
-
-### 4.6 성능 현황
+### 4.7 성능 현황
 | 항목 | 현재 |
 |---|---|
 | 대기 중 | 재생 중이 아닌 상태는 비용 0 (LitMotion 모션이 없음) |
 | 재생 대기 | `PlayAsync`는 UniTask 풀링 소스(`AutoResetUniTaskCompletionSource`). `Play`는 대기 소스를 만들지 않음 |
-| 글자 효과 | 텍스트당 프레임마다 메시 재생성 1회(`ForceMeshUpdate`). 많은 텍스트를 동시에 애니메이션하면 기본 정점 캐시가 필요할 수 있음 |
+| 오버라이드 | 오버라이드가 있는 상태는 합친 상태를 만듭니다. 재생 준비 때 한 번, 자식 호출 길이 계산 때 재생마다 한 번 할당 |
+| 글자 효과 | 텍스트당 프레임마다 메시 재생성 1회(`ForceMeshUpdate`) |
 | 스크램블 | 공개 중에는 프레임마다 문자열 1개 생성 (TMP가 string을 요구) |
-| 측정 | **미실측**. 버튼 100개 hover, 텍스트 다수 동시 재생에서 GC·ms 측정 예정 |
+| 스크롤 리스트 (측정) | 100개 리스트에서 점프 스크롤 1000번(한 번에 여러 개 재사용): 바인딩만 37.9µs/회, 위치 스크럽 포함 94.3µs/회, **GC 0바이트** (EditMode, 개발 PC). 아이템 위치는 레이아웃이 바뀔 때 한 번 계산해 두고, 보이는 범위는 이진 탐색(메이슨리만 전체 검사) |
+| 그 외 | 버튼 다수 hover, 텍스트 다수 동시 재생은 **미실측** |
 
 ---
 
-## 5. 이벤트 → 상태 (`UIAnimTrigger`)
+## 5. 재생 시점 — Play On (`UIAnimTrigger`)
 
-| 이벤트 | 출처 |
+상태마다 **재생 시점 하나**를 정합니다. 상태 인스펙터의 `Play On`에서 고르고, 필요하면 `UIAnimTrigger`가 자동으로 추가됩니다.
+
+| Play On | 출처 |
 |---|---|
+| `None` | 자동 재생 안 함. 직접 코드에서 `Play`/`PlayAsync` 호출 |
 | `OnEnable` | 컴포넌트 활성화 |
+| `Start` | 처음 활성화된 뒤 한 번 |
 | `PointerEnter` / `PointerExit` / `PointerDown` / `PointerUp` / `Click` | `IPointer*Handler` |
 | `Select` / `Deselect` | `ISelectHandler` / `IDeselectHandler` |
 | `ToggleOn` / `ToggleOff` | `Toggle.onValueChanged` |
 
-- 항목마다 `{이벤트, 상태 이름, 중단 방식}`을 지정합니다.
-- 상호작용 불가(`interactable = false`)인 Selectable은 입력 이벤트를 무시합니다. `OnEnable`은 그래도 재생합니다.
+- 이벤트를 고르면 `Interrupt`(§4.2)도 함께 정합니다.
+- **같은 순간에 재생되는 상태가 둘이면 경고**합니다. 예: `OnEnable`과 `Start`는 Instantiate할 때 둘 다 호출됩니다.
+- 상호작용 불가(`interactable = false`)인 Selectable은 입력 이벤트를 무시합니다. `OnEnable`·`Start`는 그래도 재생합니다.
+- 상태 이름을 바꾸면 바인딩도 따라 바뀌고, 상태를 지우면 바인딩도 지워집니다.
 - UnityEvent(예: Button.onClick)에서는 `PlayState(string)`을 연결합니다.
 
 ---
 
 ## 6. 에디터 — UI Animation Editor
 
-`Window/UI Animation Editor` 메뉴 또는 `UIAnimation` 인스펙터의 **UI Animation Editor 열기** 버튼으로 엽니다. 선택한 오브젝트(또는 부모)의 `UIAnimation`을 편집합니다.
+`Window/UI Animation Editor` 메뉴 또는 `UIAnimation` 인스펙터의 **Open UI Animation Editor** 버튼으로 엽니다. 선택한 오브젝트(또는 부모)의 `UIAnimation`을 편집합니다. 에디터 UI는 영문입니다.
 
 ### 6.1 창 구성
 | 영역 | 내용 |
 |---|---|
 | 상단 바 | 재생/정지/반복, 속도(0.1x~1x), 현재 시간/전체 길이, 미리보기 상태 표시 |
-| 상태 탭 | 상태 선택·추가 |
-| 타임라인 (왼쪽) | 트랙 줄(대상 경로 + 속성 이름, 속성별 색), 키 다이아몬드, 눈금자 클릭·드래그로 시간 이동 |
-| 인스펙터 (오른쪽) | Unity 인스펙터 형식의 접는 섹션: 상태 / 트랙 / 키 / 도착 방식 |
+| 상태 탭 | 상태 선택·추가. 탭 툴팁에 Play On |
+| 타임라인 (왼쪽) | 오브젝트 계층으로 묶인 트랙 줄, 눈금자, 상태 끝(`End`) 표시 |
+| 인스펙터 (오른쪽) | 상태 / 트랙 / 키 / 이벤트 / 사운드 / 자식 호출 |
 
-### 6.2 타임라인 편집
-- 키 선택: 클릭, Shift/Ctrl 클릭, 박스 선택. 여러 키를 함께 드래그, Delete로 삭제.
-- 키 추가: 트랙의 ◆ 버튼(현재 시간에 추가), 오른쪽 클릭 메뉴.
-- 트랙 추가: **속성 선택 창**에서 Prefab 안 오브젝트를 고르고 속성 카드(현재 값 미리보기 포함)를 클릭합니다. 검색 가능.
-- 눈금 간격은 확대 정도에 따라 자동으로 바뀝니다(0.05~10초).
-- 글자 트랙은 마지막 키 뒤에 **연한 막대**로 뒤 글자들이 더 재생되는 구간을 보여 줍니다. 마우스를 올리면 툴팁으로 늘어난 시간과 줄이는 방법을 알려 줍니다.
+### 6.2 타임라인
+- **계층**: 트랙이 대상 오브젝트의 Hierarchy 구조로 묶여 보이고, 오브젝트 줄을 접을 수 있습니다(접으면 키 요약 표시).
+- **트랙 종류**: 키프레임 트랙, 애니메이션 이벤트 트랙, 사운드 트랙(클립 길이만큼 막대, AudioClip 끌어다 놓기 가능), 자식 호출(오브젝트 줄의 막대).
+- **자식 호출 아래 트랙**: 호출된 자식 상태의 트랙이 호출 시간만큼 밀려서 부모 시간축에 그대로 보입니다. 오버라이드 편집은 §8.
+- **키 편집**: 클릭, Shift/Ctrl 클릭, 박스 선택, 여러 키 드래그, Delete. 줄 빈 곳을 더블클릭하면 키 추가.
+- **보기**: 눈금자 위 휠 또는 Ctrl+휠로 확대·축소, Shift+휠·가로 휠·휠 버튼 드래그로 좌우 이동, `F` 또는 `⤢`로 전체 보기.
+- **상태 끝**: 눈금자에 `End 0.80s` 표시, 그 뒤는 어둡게 칠해집니다(Unity Animation 창의 클립 끝 이후 영역처럼).
+- **글자 트랙**: 마지막 키 뒤 연한 꼬리가 뒤 글자들이 재생되는 구간입니다. 꼬리 끝 핸들을 끌면 `Stagger`가 바뀝니다.
+- **우클릭 메뉴**(에디터 디자인): `Add Track...`, `Add Child Call ▸ 오브젝트 ▸ 상태`(이미 호출 중인 상태는 ✓·비활성), 트랙·키·마커별 추가·삭제·되돌리기.
 
-### 6.3 인스펙터
-- 상태: 이름, 시작 시 동작(액션)
-- 트랙: 대상 변경, 현재 값에서 시작, 원래 값 기준. 텍스트 트랙은 글자 간격·글자당 길이 또는 스크램블
-- 키: 시간, 값(Punch/Shake는 "세기"), 현재 값 캡처 버튼. 여러 키를 선택하면 공통 값만 편집
-- 도착 방식: 방식, Ease, 초당 진동 수·감쇠(Punch/Shake), AnimationCurve, **읽기 전용 그래프**
+### 6.3 트랙 추가 창
+- 왼쪽에 Prefab 안 오브젝트 트리, 오른쪽에 그 오브젝트에서 만들 수 있는 트랙 카드(현재 값 미리보기 포함). 검색 가능.
+- 카드를 클릭해 여러 개 고른 뒤 `Add N`, 또는 더블클릭으로 바로 추가. 오브젝트를 옮겨 다니며 골라도 선택이 유지됩니다.
+- 루트에는 `Animation Events`, `Sound` 카드, AudioSource가 있는 오브젝트에는 `Sound` 카드가 있습니다.
+
+### 6.4 인스펙터
+- **상태**: 이름, Play On(§5)
+- **트랙**: 대상 변경, `Start`, `Relative To Rest`. 텍스트 트랙은 Stagger·Duration per Char 또는 Scramble
+- **키**: 어떤 키든 `Key`(Time, Value, Capture Current Value) → `Arrival`(Type, Ease, Frequency·Damping, AnimationCurve, 그래프) 순서
+  - 해당하지 않는 칸은 숨기지 않고 **비활성화 + 이유 한 줄**입니다. 예: 시작 값이 재생 때 정해지는 키의 Value, 첫 키의 Arrival.
+  - 값 라벨은 의미에 따라 `Value` / `Value (rest +)` / `Value (press point +)` / `Strength`(Punch/Shake)
+- **이벤트**: 이름, 시간, 형식(`Name Only` 또는 `[UIAnimEvent]` struct). struct 필드를 바로 편집
+- **사운드**: 클립, 볼륨, 시간, 미리 듣기
+- **자식 호출**: 자식, 상태, 시간
 - 모든 편집은 Unity Undo로 되돌릴 수 있습니다.
 
-### 6.4 Play 모드 없는 미리보기
-- 런타임과 **같은 `Evaluate`**를 씁니다. 그래서 미리보기와 실제 재생 결과가 같습니다.
-- **씬**: 바뀌는 속성을 `AnimationMode`에 등록하고, 값은 샘플링 블록 밖에서 씁니다. 블록을 닫을 때(`EndSampling`) 등록된 속성이 원래 값으로 되돌아가기 때문입니다. 등록만으로도 값이 저장되지 않고, 정지하면 복원됩니다.
+### 6.5 같은 형태 규칙
+같은 개념은 항상 같은 모양으로 그립니다. 다르게 보여야 하는 경우가 생기면 먼저 확인을 받고 만듭니다.
+1. 내 트랙·오버라이드한 트랙·원본(읽기 전용) 트랙은 같은 줄 하나로 그리고, 읽기 전용은 흐리게만 표시합니다.
+2. 키는 항상 같은 다이아몬드이고 잘리지 않습니다(줄 왼쪽 여백 9px). 상태 차이는 색으로만 표시합니다.
+3. 트랙은 움직이는 구간을 같은 막대로 그립니다. 글자 꼬리·끝 핸들은 그 위에 더하기만 합니다.
+4. 같은 종류의 인스펙터는 섹션 구성이 같습니다(§6.4).
+5. 옵션은 데이터의 의미만 바꾸고 화면 모양은 바꾸지 않습니다.
+
+### 6.6 Play 모드 없는 미리보기
+- 런타임과 **같은 계산**을 씁니다. 그래서 미리보기와 실제 재생 결과가 같습니다. 자식 호출과 오버라이드도 반영됩니다.
+- **씬**: 바뀌는 속성을 `AnimationMode`에 등록하고, 값은 샘플링 블록 밖에서 씁니다. 블록을 닫을 때(`EndSampling`) 등록된 속성이 원래 값으로 되돌아가기 때문입니다. 정지하면 복원됩니다.
 - **Prefab 모드**: Scene 뷰가 샘플링 블록 밖에서 쓴 값을 다시 그리지 않아서, 속성을 등록하지 않고 블록 안에서 씁니다. 복원은 시작 시점의 스냅샷으로 합니다.
-  - 미리보기 후 Prefab에 '수정됨'(`*`) 표시가 생깁니다. 값은 정확히 복원되므로 저장해도 내용은 같습니다. 값을 건드렸다는 신호로 그대로 둡니다.
+  - 미리보기 후 Prefab에 '수정됨'(`*`) 표시가 생깁니다. 값은 정확히 복원되므로 저장해도 내용은 같습니다.
+- **사운드**: 재생 중에 지나간 사운드를 에디터 오디오로 들려줍니다. 눈금자를 끌 때는 재생하지 않습니다.
 - **시작 상태 자동 결정**: 어떤 상태는 다른 상태가 끝난 모습에서 시작해야 움직임이 보입니다.
   1. 트리거 이벤트 짝: Exit←Enter, Up←Down, Deselect←Select, ToggleOff←ToggleOn
-  2. 이름 짝 (트리거 없이 코드로 재생하는 상태): Open↔Close, Show↔Hide, In↔Out
+  2. 이름 짝 (코드로 재생하는 상태): Open↔Close, Show↔Hide, In↔Out
 - **자동 정지·복원 시점**: 정지 버튼, 다른 `UIAnimation` 선택, 씬/Prefab 저장 직전, 씬 닫기·되돌리기, Play 모드 진입, 스크립트 리로드, 창 닫기.
-- 스크램블로 바뀐 text와 글자 효과(메시)도 복원합니다.
 
 ---
 
 ## 7. 클라이언트 API
 
+### 7.1 재생
 ```csharp
 public sealed class UIAnimation : MonoBehaviour
 {
@@ -246,6 +311,8 @@ public sealed class UIAnimation : MonoBehaviour
     public void Complete(string stateName);   // 재생 중인 상태를 끝으로 건너뛰기
     public bool IsPlaying(string stateName);
     public void PlayState(string stateName);  // UnityEvent 연결용
+    public void Sample(string stateName, float time);   // 재생하지 않고 그 시간의 모습만 (이벤트·사운드 없음)
+    public float Duration(string stateName);
 }
 ```
 
@@ -265,47 +332,191 @@ var typing = anim.PlayAsync("Typewriter");
 await typing;
 ```
 
+### 7.2 애니메이션 이벤트
+```csharp
+[UIAnimEvent("Popup Sound")]                 // 에디터의 이벤트 형식 목록에 나옴
+public struct PopupSoundEvent { public string clip; public float volume; }
+
+anim.EventRaised += (in UIAnimEventInfo e) => Debug.Log($"{e.State}:{e.Name} @ {e.Time}");
+using var sub = anim.AddListener<PopupSoundEvent>((in UIAnimEventInfo e, in PopupSoundEvent data) => Play(data.clip));
+var info = await anim.WaitEventAsync("Shown");
+```
+- `UIAnimEventInfo`(readonly struct, `in`으로 전달): `Animation`, `State`, `Name`, `Time`, `TryGetData<T>()`
+- 코드 없이 받기: `UI Anim Event Listener` 컴포넌트에 이벤트 이름 → UnityEvent를 연결합니다.
+- 이벤트 형식 목록에는 플레이어 빌드에 포함되는 struct만 나옵니다(테스트 어셈블리 제외).
+
 **정책**
 - 끝나지 않은 재생은 **취소(OperationCanceledException)**로 끝납니다. "끝나야만 다음 동작"이 기본이 되도록 하기 위해서입니다. 예외 없이 받으려면 `SuppressCancellationThrow()`를 씁니다.
 - 상태는 문자열 이름으로 지정합니다. 없는 이름은 경고 로그를 남기고 무시합니다.
 
 ---
 
-## 8. 샘플 콘텐츠 (개발용, 배포 안 됨)
+## 8. 현재 Prefab에서만 동작하는 오버라이드 (트랙 단위)
+
+> **오버라이드는 그것을 만든 Prefab 안에서만 동작한다. 원본 Prefab의 애니메이션은 절대 수정되지 않는다.**
+
+- **저장 위치**: 자식 인스턴스의 필드가 아니라 **바깥 Prefab 자신의 `UIAnimation.overrides`**에 `{자식, 상태 이름, 바꾼 트랙들}`로 저장합니다. 그래서 원본 Prefab 파일은 바뀌지 않습니다.
+- **트랙 단위**: 바꾼 트랙만 저장합니다. 원본 트랙과는 대상 오브젝트 + 속성으로 매칭합니다.
+
+| 원본 Prefab에서 일어난 일 | 오버라이드한 트랙 | 오버라이드 안 한 트랙 |
+|---|---|---|
+| 키 값·시간 수정 | 팝업 값 유지 | 팝업도 따라감 |
+| 트랙 추가 | — | 팝업에도 생김 |
+| 트랙 삭제 | 팝업에 남음 | 팝업에서도 사라짐 |
+
+- **여러 단계 (Unity 중첩 Prefab 규칙과 같음)**: 같은 트랙을 여러 단계가 오버라이드하면 **가장 바깥이 이깁니다**(예: Screen > Popup1 > Button).
+- **에디터에서**
+  - 지금 맥락에서 실제 재생되는 값을 보여 줍니다. 어느 단계든 오버라이드된 트랙은 **파란 이름**이고 편집할 수 있으며, 툴팁에 덮어쓴 Prefab(`Overridden in Screen`)이 나옵니다. 편집은 그 단계의 오버라이드를 고칩니다.
+  - 흐린 원본 트랙을 클릭하면 **그 트랙만** 오버라이드됩니다.
+  - `×`: 그 트랙의 가장 바깥 단계 하나만 지웁니다. 아래 단계 값이 다시 보이고, 다 지우면 원본입니다.
+  - `↺`: 가장 바깥 단계의 오버라이드 전체를 지웁니다(Unity의 Revert All).
+  - 씬 인스턴스에서 만든 오버라이드는 Unity의 Prefab 인스턴스 오버라이드로 기록되므로, Inspector › Overrides › Revert도 동작합니다.
+
+---
+
+## 9. 스크롤 리스트 (`UIAnimScrollList`)
+
+`ScrollRect`에 붙이는 **가상화 리스트**입니다. 화면에 보이는 아이템만 만들고, 스크롤하면 그 오브젝트들을 재사용합니다.
+스크롤 형태는 따로 컴포넌트를 두지 않고 이 리스트의 설정 조합으로 만들고, **연출은 전부 아이템(또는 점·헤더)의 `UIAnimation` 상태**입니다.
+
+### 9.1 정렬 (인스펙터는 Unity Layout Group과 같은 구성)
+| Layout | 항목 |
+|---|---|
+| Vertical / Horizontal | Padding, Spacing, Child Alignment, Reverse Arrangement, Control Child Size (Width 또는 Height) |
+| Grid | Padding, Cell Size, Spacing, Child Alignment, Constraint (Flexible / Fixed Column Count / Fixed Row Count), Constraint Count |
+| Masonry | Grid와 같음(Cell Size의 폭 = 열 폭). 아이템은 가장 짧은 열에 쌓임 |
+
+- 스크롤 방향은 Layout으로 정해집니다. Grid에서 `Fixed Row Count`면 가로 스크롤입니다.
+- 아이템 크기(스크롤 방향): `sizeOf(index)` 콜백 → `Measure Items`(레이아웃의 선호 크기, 예: 글이 길면 커지는 말풍선) → Prefab 크기 순. Grid는 Cell Size.
+- 여러 Prefab: `Item Prefab`(0번) + `Extra Prefabs`(1번…), `prefabOf(index)`로 고름. 종류마다 따로 재사용합니다.
+- 아이템 위치는 레이아웃이 바뀔 때 한 번 계산해 두고 `LayoutGroup`은 쓰지 않습니다(대기 비용 0).
+- 내용이 뷰포트보다 짧으면 Child Alignment가 스크롤 방향에도 적용됩니다(예: 채팅은 Lower로 아래부터 쌓음).
+
+### 9.2 데이터 바인딩 (UI Toolkit `ListView`와 같은 콜백 방식)
+```csharp
+list.SetCount(100, (ItemView view, int index) => view.Set(items[index]),
+                   (ItemView view, int index) => view.Clear());          // unbind는 선택
+list.SetData(items, (ItemView view, string item, int index) => view.Set(item));
+list.SetCount(48, (RectTransform item, int index) => ...);               // 여러 Prefab일 때
+list.Refresh();         // 보이는 아이템 전부 다시 바인딩 (Measure Items면 크기도 다시)
+list.RefreshItem(5);
+list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To End면 끝 유지). 남아 있는 아이템은 그대로(등장 연출 다시 안 함), 새로 보이는 것만 Appear
+```
+- 아이템 Prefab은 상속 제약이 없습니다. `ItemView`는 Prefab에 붙은 아무 컴포넌트입니다.
+- 바인딩은 아이템이 보이게 될 때만 호출됩니다.
+
+### 9.3 위치와 이동
+| API / 설정 | 내용 |
+|---|---|
+| `GetItem(index)`, `GetItem<TView>(index)` | 보이는 중이면 그 오브젝트, 아니면 null |
+| `IndexAt(screenPoint, camera)` | 화면 좌표(포인터 등) 아래의 아이템 인덱스 |
+| `ItemPosition(index)`, `SizeOf(index)`, `VisibleRange`, `Offset`, `AtEnd` | 위치·크기, 보이는 범위, 스크롤 양, 끝에 있는지 |
+| `ScrollTo(index, Start/Center/End, duration)` | 그 아이템을 시작·가운데·끝에 맞춤 (루프면 가까운 쪽으로) |
+| `CurrentIndex`, `CurrentIndexChanged` | Snap Alignment 자리에 있는 아이템 (페이지, 캐러셀·휠 선택) |
+| Snap: Nearest / One Per Swipe | 놓으면 가장 가까운 아이템에 맞춤 / 드래그 한 번에 정확히 한 칸(30px 미만은 제자리). 끝 너머로 당긴 채 놓으면 그 자리에서 부드럽게 돌아옴(이동 중엔 ScrollRect의 탄성 복귀를 멈췄다가 끝나면 되돌림) |
+| Loop | 끝 다음에 처음이 이어짐(세로·가로). 위치가 커지면 몇 바퀴씩 되돌려 값이 작게 유지됨 |
+| Auto Scroll (s) | 초마다 다음 아이템으로, 드래그 중엔 멈춤 (배너) |
+| Stick To End | 끝을 보고 있을 때 아이템이 늘면 끝 유지 (채팅) |
+| Sticky Header | 이 Prefab 종류는 섹션 헤더. 지나간 헤더가 위에 고정되고 다음 헤더가 밀어 올림 |
+| `ResizeItem(index, size, duration)` | 한 아이템 크기를 애니메이션으로 바꾸고 뒤 아이템이 따라 이동 (아코디언) |
+| 중첩 | 리스트 축과 다른 방향 드래그는 감싼 `ScrollRect`로 넘김 (페이지 안의 세로 리스트, 세로 리스트 안의 가로 줄) |
+| `ItemShown` / `ItemHidden` | 아이템이 보이게 됨 / 사라짐 이벤트 |
+
+### 9.4 애니메이션 (상태는 인스펙터에서 고르고, Edit / Create로 바로 편집)
+| 항목 | 동작 |
+|---|---|
+| Entry State + Stagger | `PlayEntry()`(또는 처음 채울 때)에 보이는 아이템이 Stagger 간격으로 차례로 재생. 기다리는 아이템은 시작 모습, 끝난 뒤 들어오는 아이템은 끝 모습 |
+| Appear State | 스크롤로 새로 보이게 된 아이템에 재생. 처음 채울 때는 재생하지 않음 |
+| Scrub State | 아이템의 뷰포트 안 위치(0 = 시작 가장자리, 0.5 = 가운데, 1 = 끝)를 상태 시간으로 씀(`UIAnimation.Sample`). 캐러셀 확대, 휠 피커 기울기, 페이지 패럴랙스 |
+
+- 재사용되는 오브젝트는 이전 인덱스의 애니메이션 모습이 남아 있을 수 있어서, 보이게 될 때 진입 끝 모습으로 맞춘 뒤 등장 상태를 재생합니다.
+- 코드에서 열기: `UIAnimationEditorWindow.OpenState(owner, state)` (Edit·Play 모드 모두, Prefab 에셋이면 Prefab 모드로). Play 모드에서 Prefab을 고치면 그 뒤에 새로 만들어지는 아이템부터 반영됩니다.
+- 상태 줄의 **Edit**은 그 상태를 UI Animation Editor로 엽니다(Prefab 에셋이면 Prefab 모드로 먼저 엶). 상태가 없으면 **Create**: `UIAnimation`이 없으면 붙이고, 상태를 만들고, 그 상태를 엽니다. Page Indicator(On/Off), Scroll Scrub, Pull To Refresh(Pull/Refreshing)도 같은 줄을 씁니다.
+- **에디터 미리보기**: 인스펙터 Preview에서 아이템 N개를 저장되지 않는 오브젝트(`DontSave`)로 배치하고, Scroll 슬라이더로 위치(스크럽 상태 포함)를, Play Entry로 진입 연출을 Play 모드 없이 봅니다. Clear로 지웁니다.
+
+### 9.5 도우미 컴포넌트
+| 컴포넌트 | 쓰임 | 상태 |
+|---|---|---|
+| `UIAnimPageIndicator` | 페이지 점, 배너 점, 탭 바. 아이템 Prefab을 리스트 개수만큼 만들고(이 오브젝트의 Layout Group이 배치) 누르면 그 아이템으로 이동. `labels`로 탭 글자 | On / Off |
+| `UIAnimScrollScrub` | 접히는 헤더처럼 스크롤 거리(0 ~ Distance px)를 상태 시간으로 | 아무 상태 1개 |
+| `UIAnimPullToRefresh` | 리스트와 같은 오브젝트에 붙임. 시작보다 더 당긴 거리로 Pull, Distance 넘겨 놓으면 `onRefresh` + Refreshing 반복, 그동안 리스트 위쪽을 Distance만큼 열어 둠, `EndRefresh()`로 닫힘(세로 리스트용) | Pull / Refreshing |
+
+---
+
+## 10. 샘플 콘텐츠 (개발용, 배포 안 됨)
 
 모두 `Assets/Editor/SampleContentBuilder.cs`가 코드로 생성합니다. 메뉴: `Tools/UIAnimation Dev/Rebuild Sample …`. 모든 씬의 Canvas 기준 해상도는 **1920×1080**입니다.
 
 | 씬 | 프리팹 | 상태 | 참고 원본 |
 |---|---|---|---|
 | `Buttons` | Button1 | Hover/Unhover(색), Press/Release(크기·글자 크기 축소) | `2_Button` Button_1 |
-| | Button2 | Hover/Unhover(오버레이), Press(포인터 위치에서 원 퍼짐)/Release | `2_Button` Button_2 |
+| | Button2 | Hover/Unhover(오버레이), Press(누른 자리에서 원이 퍼짐, Start = Pointer)/Release | `2_Button` Button_2 |
+| `Hover` | Hover1~6 | Hover/Unhover 6종 | `1_Hover` |
 | `Toggles` | Toggle1 | On(체크 → 0.025초 뒤 채우기)/Off(역순) | `4_Toggle` Toggle_1 |
 | | Toggle2 | On/Off(손잡이 이동 + 채우기) | `4_Toggle` Toggle_2 |
 | `Text` | TextDemo | Typewriter, Scramble, Flip, PopUp, Punch, Shake | `3_Text` Animation1~6 |
-| `Popup` | Popup1 (+ 공용 Button1 중첩) | Open/Close, `PopupSample`로 Close 후 Destroy, 도중 취소 시 유지 | — |
+| `Scroll` | 페이지 18장(`Prefabs/Scroll/Pages`), 아이템 13종(`Prefabs/Scroll/Items`) | 스크롤 형태 18가지를 한 장씩 넘겨 봄(한 장씩 넘기기 + 점 + Prev/Next, 페이지 위 세로 리스트에서 가로로 밀어도 넘어감). 위쪽 도구 막대: 현재 페이지의 아이템 수 슬라이더(0~200), Add / Remove, **Edit Animation**(그 페이지의 상태를 UI Animation Editor로 엶, Play 모드에서도 됨). 아래 표 참고 | — |
+| `Popup` | Popup1 (+ 공용 Button1 중첩) | Open(이벤트 `Shown`, 사운드, 닫기 버튼 Hover·Unhover 호출, Hover 2배 빠르게 오버라이드)/Close. `PopupSample`이 코드로 Open/Close 후 Destroy | — |
 
-- 생성 규칙: 프리팹은 같은 경로에 다시 저장해서 GUID를 유지합니다. 씬은 파일이 없을 때만 만들고, 열려 있는 씬은 덮어쓰지 않습니다.
-- `PopupSample`의 `Close>Open` 버튼은 닫기 0.15초 뒤에 다시 열어 취소 상황을 재현합니다. `pauseOnReopen`을 켜면 그 순간 에디터가 멈춰 프레임 단위로 볼 수 있습니다.
+Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일 때 데이터를 채움):
+
+| # | 형태 | 쓰는 설정 / 상태 |
+|---|---|---|
+| 1 | 세로 리스트 | 100개, Entry `Show` + Appear `Appear` |
+| 2 | 가로 리스트 | Horizontal, Entry `Show` |
+| 3 | 그리드 | Grid Flexible, Entry·Appear `Show` |
+| 4 | 가로 그리드 | Grid Fixed Row Count 2 |
+| 5 | 캐러셀 | Scrub `Focus`(가운데 확대·색), Snap Nearest Center |
+| 6 | 페이징 | One Per Swipe, Scrub `Parallax`, 점(On/Off) |
+| 7 | 무한 루프 | Loop + Scrub `Focus` + Snap |
+| 8 | 자동 배너 | Loop + One Per Swipe + Auto Scroll 2.5s + 점 |
+| 9 | 휠 피커 | Scrub `Wheel`(Rotation X·투명도·크기), Snap Nearest Center, 선택 표시 |
+| 10 | 섹션 헤더 | Prefab 2종, Sticky Header |
+| 11 | 가변 크기 | Measure Items (글 길이만큼 높이), Appear `Appear` |
+| 12 | 채팅 | 말풍선 Prefab 2종, Measure Items, Stick To End, Lower 정렬, Send 버튼 |
+| 13 | 아코디언 | 누르면 `Open`/`Close`(+ → ×, 본문 페이드) + `ResizeItem` |
+| 14 | 메이슨리 | Masonry 4열 |
+| 15 | 중첩 스크롤 | 세로 리스트의 각 줄에 가로 리스트 |
+| 16 | 탭 | 탭 바(Page Indicator, On/Off 밑줄) + One Per Swipe |
+| 17 | 접히는 헤더 | Scroll Scrub `Collapse`(높이·글자 크기·색) |
+| 18 | 당겨서 새로고침 | Pull To Refresh `Pull`(채우기·회전)/`Refreshing`(회전 반복) |
+
+- 생성 규칙: 프리팹은 같은 경로에 다시 저장해서 GUID를 유지합니다. 모든 트랙에 0초 키가 들어갑니다.
+- 프리팹 폴더: `Prefabs/{Buttons, Toggles, Hover, Text, Popup, Scroll/Items, Scroll/Pages}`.
+- 씬은 없을 때만 만듭니다. 저장된 씬이 열려 있으면 추가로 열어 만든 뒤 닫고, 이름 없는 씬만 있으면(batchmode) 그 자리에서 만듭니다. 그래서 `-executeMethod SampleContentBuilder.Build…`로 CLI에서도 생성됩니다.
+- `PopupSample`의 `Close>Open` 버튼은 닫기 0.15초 뒤에 다시 열어 취소 상황을 재현합니다.
 
 ---
 
-## 9. 테스트와 CI
+## 11. 테스트와 CI
 
-### 9.1 EditMode 테스트 (26개, 메서드 이름은 한국어)
+### 11.1 EditMode 테스트 (113개, 메서드 이름은 한국어)
 | 파일 | 개수 | 다루는 것 |
 |---|---|---|
-| `UIAnimationTests.cs` | 15 | 키 보간, 현재 값 시작·지연, 원래 값 기준, Ease, 속성 인계(Cancel/Complete), **완료 대기·취소 7종** |
-| `UIAnimationTextTests.cs` | 11 | 공개 비율, 글자 간격 길이, 글자 크기, Punch, 스크램블(길이·공백·원문 복원), **대사창 텍스트 교체 5종** |
+| `UIAnimationTests.cs` | 43 | 키 보간, 시작 값(현재 값·지연·누른 위치), 원래 값 기준, 속성 인계, 완료 대기·취소, 이벤트·struct 데이터, 사운드, 자식 호출, 오버라이드 해석, 예전 데이터 변환 |
+| `UIAnimationTextTests.cs` | 12 | 공개 비율, 글자 간격 길이, 글자 크기, Punch, 스크램블, 대사창 텍스트 교체 |
+| `SampleButton2Tests.cs` | 8 | Button2 샘플: 바인딩, 0초 키, Hover, 누른 자리 리플, Release, 끼어들기 |
+| `EditorWorkflowTests.cs` | 4 | **실제 에디터 창**을 인스펙터 칸으로 조작해 버튼을 처음부터 만들기, 같은 형태 규칙 |
+| `PrefabOverrideTests.cs` | 9 | 실제 Prefab 파일로 트랙 단위 오버라이드, 원본 불변, 원본 수정 추종, 트랙/전체 되돌리기, 씬 인스턴스 Unity Revert |
+| `EditorLayoutMeasureTests.cs` | 3 | 에디터 레이아웃 실측(줄 높이, 키 위치·폭, 투명도, 글자색), 바깥 Prefab 단계, ↺ 범위 |
+| `UIAnimScrollListTests.cs` | 17 | 정렬(세로·가로·그리드·가운데·반대·자식 크기), 재사용, 바인딩·해제, 데이터 목록, 개수 변경, ScrollTo·가장 가까운 아이템, 화면 좌표로 찾기, 진입·등장·스크럽, `Sample`, **성능 측정 2종** |
+| `UIAnimScrollFormsTests.cs` | 15 | 가변 크기, 여러 Prefab, 측정, 메이슨리, 루프, 한 장씩 넘기기, 크기 변경, 끝에 붙기, 섹션 헤더, 중첩 드래그, `Rotation`, Page Indicator, Scroll Scrub, Pull To Refresh, 에디터 미리보기 |
+| `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
-### 9.2 CI
+### 11.2 PlayMode 테스트 (12개, `Tests/PlayMode`)
+Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
+
+- 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 113개 전부 실행, `-nographics`: 95개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`.
+
+### 11.3 CI
 - GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 EditMode 테스트를 실행합니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
-  - Unity Personal 라이선스는 Hub 로그인으로만 활성화되어 GameCI(`.ulf` 필요)를 쓸 수 없기 때문입니다.
-- `main` 보호 규칙: "Unity EditMode Tests" 통과 필수(최신 main 기준), 관리자 포함, 강제 push·삭제 금지.
-- 저장소 설정: 자동 머지 허용, 머지 후 브랜치 자동 삭제.
+- 러너에 `xvfb-run`이 있으면 가상 디스플레이로 에디터 창 테스트까지 실행하고, 없으면 `-nographics`로 실행합니다. **현재 러너에는 없어서** CI에서는 에디터 창 테스트 18개가 건너뛰어집니다. CI는 EditMode만 실행합니다.
+- `main` 보호 규칙: "Unity EditMode Tests" 통과 필수(최신 main 기준), 관리자 포함, 강제 push·삭제 금지. 자동 머지 허용, 머지 후 브랜치 자동 삭제.
 
 ---
 
-## 10. 폴더와 배포
+## 12. 폴더와 배포
 
 레포는 **개발용 Unity 프로젝트**이고, 배포 대상은 `package.json`이 있는 `Assets/UIAnimation/` 하나입니다.
 
@@ -314,14 +525,16 @@ Assets/
   UIAnimation/                              ← 배포 대상 (com.seobyp.timelineanimation 0.0.1)
     Runtime/      (asmdef SeoBYP.TimelineAnimation)
     Editor/       (asmdef SeoBYP.TimelineAnimation.Editor)
-    Tests/Editor/ (asmdef SeoBYP.TimelineAnimation.Tests.Editor)
+    Tests/Editor/   (asmdef SeoBYP.TimelineAnimation.Tests.Editor)
+    Tests/PlayMode/ (asmdef SeoBYP.TimelineAnimation.Tests.PlayMode)
   Editor/SampleContentBuilder.cs            ← 샘플 생성기 (개발용)
-  Scripts/PopupSample.cs                    ← 샘플 스크립트 (개발용)
-  Prefabs/  Scenes/  Textures/  Fonts/      ← 샘플 리소스 (개발용)
+  Scripts/                                  ← 샘플 스크립트: PopupSample, ScrollBrowser, ScrollDemoPage, ScrollItemView (개발용)
+  Prefabs/{Buttons,Toggles,Hover,Text,Popup,Scroll/Items,Scroll/Pages}/
+  Audio/  Scenes/  Textures/  Fonts/        ← 샘플 리소스 (개발용)
 Docs/                                       ← 문서 (배포 안 됨)
 ```
 
-- **배포 경계**: `Assets/UIAnimation` 안의 코드는 샘플을 참조하지 않습니다(asmdef로 분리).
+- **배포 경계**: `Assets/UIAnimation`의 런타임·에디터 코드는 샘플을 참조하지 않습니다(asmdef로 분리). 테스트 일부(`SampleButton2Tests`, 샘플 Prefab을 쓰는 테스트)는 샘플이 없으면 건너뜁니다.
 - **의존성**: LitMotion·UniTask는 Unity 공식 레지스트리에 없어서, 설치하는 쪽이 Git URL이나 OpenUPM으로 추가해야 합니다.
 - **배포 절차 (예정)**: 직접 써 본 뒤 `0.1.0`으로 올리고 태그를 붙입니다.
   ```
@@ -330,57 +543,12 @@ Docs/                                       ← 문서 (배포 안 됨)
 
 ---
 
-## 11. 진행 현황과 다음 단계
+## 13. 남은 일
 
-진행 방식은 **콘텐츠 주도**입니다. 실제 UI를 하나씩 만들면서 그 콘텐츠에 필요한 기능만 추가합니다. 기능마다 브랜치를 만들고 PR로 머지합니다.
-
-| 단계 | 콘텐츠 | 상태 | 추가한 기능 |
-|---|---|---|---|
-| P0 | — | ✅ | 패키지 뼈대, LitMotion·UniTask |
-| M1 | 샘플 버튼 | ✅ | 런타임 코어, 이벤트 트리거, 속성 인계, MoveToPointer |
-| M2 | 버튼 편집 | ✅ | UI Animation Editor, 키프레임 모델, 미리보기 |
-| M4 | 토글 | ✅ | On/Off, 시작 상태 자동 결정 |
-| M6 일부 | 텍스트 | ✅ | TMP 글자별 애니메이션, 타자기·스크램블, Punch/Shake |
-| M5 일부 | 팝업 | 🟡 | `PlayAsync`/`Complete`, Prefab 모드 미리보기. 오버라이드·자식 호출·Signal은 미구현 |
-| M3 | Hover 6종 (`1_Hover`) | ⬜ | `FillAmount` 등 부족한 속성 |
-| M6 나머지 | 스크롤 리스트 | ⬜ | 보이는 아이템만 stagger, 스크롤 스크럽, **성능 첫 측정** |
-
-### 11.1 ⬜ 현재 Prefab에서만 동작하는 오버라이드 (R6)
-
-![오버라이드 범위](diagrams/uianim-override-scope.png)
-
-> **오버라이드는 그것을 만든 Prefab 안에서만 동작한다. 원본 Prefab의 애니메이션은 절대 수정되지 않는다.**
-
-- 저장 위치: 자식 인스턴스의 필드(Unity Prefab override)가 아니라 **바깥 Prefab 자신의 `UIAnimation`**에 `{자식 참조, 상태 이름, 교체 상태 복사본}`으로 저장합니다. 그래서 "Apply to Prefab"으로 원본에 실수로 반영되는 경로가 없습니다.
-- 편집: 중첩 인스턴스의 원본 상태는 읽기 전용으로 보이고, `[이 Prefab에서 오버라이드]`를 누르면 복사본을 만들어 그것만 편집합니다. `[되돌리기]`는 복사본만 삭제합니다.
-- 해석: 가장 바깥 Prefab이 이깁니다. 재생 시작 시 부모 방향으로 오버라이드를 찾습니다.
-- 검증: 오버라이드 생성·편집 후 원본 Prefab 파일 해시가 변하지 않는지 자동 테스트로 고정합니다.
-
-### 11.2 ⬜ 부모가 자식 상태를 호출 (R5)
-- 부모 상태에 자식 호출 트랙(`{자식, 상태, 시작 시간}`)을 넣습니다. 에디터에서 펼치면 자식 트랙이 부모 시간축에 보입니다.
-- Signal 마커: 디자이너가 찍은 시점에 이벤트(효과음 등)를 받습니다.
-
-### 11.3 ⬜ Scroll 애니메이션 (R7)
-| 패턴 | 예시 | 구동 |
-|---|---|---|
-| 진입 stagger | 리스트를 열 때 아이템이 차례로 등장 | 보이는 아이템만 재생, 화면 밖은 즉시 끝 상태 |
-| 가시성 이벤트 | 새로 보이는 아이템 fade-in | 스크롤 값이 바뀔 때만 가시성 계산 |
-| 위치 스크럽 | 접히는 헤더, 캐러셀 중앙 확대 | 스크롤 값 → 상태의 시간 지정 (시간 지정 API 필요) |
-
----
-
-## 12. 열린 검증 항목
-- [x] Prefab 모드에서 미리보기 동작과 복원 — 샘플링 블록 방식으로 해결 (§6.4)
-- [ ] 바깥 Prefab이 중첩 인스턴스 내부 컴포넌트를 참조할 때, 원본 구조가 바뀌어도 참조가 유지되는지
-- [ ] 오버라이드 생성·편집 후 원본 Prefab 파일 해시 불변 (자동 테스트)
-- [ ] 버튼 100개 hover, 텍스트 다수 동시 재생, 스크롤 리스트 50개에서 GC·ms 측정
-- [ ] Play 모드에서 `PlayAsync`가 실제 LitMotion 완료로 풀리는 경로의 자동 테스트 (현재는 PlayMode 수동 확인만)
-
----
-
-## 부록: 초기 설계 도식
-
-아래는 구현 전에 그린 도식입니다. 실제 구현과 다른 부분이 있습니다. 예를 들어 런타임에는 `CompiledState`·전역 러너가 없고 키프레임 모델을 직접 평가하며, 에디터 화면도 목업과 다릅니다.
-
-- [시스템 구조](diagrams/uianim-architecture.png) · [데이터 모델](diagrams/uianim-data-model.png) · [재생 흐름](diagrams/uianim-play-sequence.png) · [에디터 목업](diagrams/uianim-editor-mockups.png)
-- HTML 원본: [`diagrams/`](diagrams/)
+| 항목 | 내용 |
+|---|---|
+| ⬜ 스크롤 손맛 확인 | 실제 마우스·터치 드래그의 스냅·관성 느낌은 사람이 직접 확인해야 함(자동 테스트는 드래그 이벤트를 코드로 보냄) |
+| ⬜ 성능 측정 (R3) | 버튼 다수 hover, 텍스트 다수 동시 재생에서 GC·ms 측정 (스크롤 리스트는 측정함) |
+| ⬜ PlayMode 테스트 확장 | 스크롤은 있음. `PlayAsync`가 실제 LitMotion 완료로 풀리는 경로는 아직 직접 확인만. CI에 PlayMode 실행 추가 |
+| ⬜ CI 에디터 창 테스트 | 러너에 `xvfb` 설치 시 자동으로 실행됨 |
+| ⬜ 배포 | `0.1.0` 태그 |

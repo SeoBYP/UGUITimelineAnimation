@@ -51,6 +51,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         public static IEnumerable<(Component component, UIAnimProperty property)> Properties(Transform tr)
         {
             yield return (tr, UIAnimProperty.Scale);
+            yield return (tr, UIAnimProperty.Rotation);
             if (tr is RectTransform)
             {
                 yield return (tr, UIAnimProperty.SizeDelta);
@@ -277,6 +278,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             var text = property switch
             {
                 UIAnimProperty.Scale => Mathf.Approximately(v.x, v.y) && Mathf.Approximately(v.y, v.z) ? $"{v.x:0.##}" : $"{v.x:0.##}, {v.y:0.##}, {v.z:0.##}",
+                UIAnimProperty.Rotation => $"{v.x:0.#}, {v.y:0.#}, {v.z:0.#}",
                 UIAnimProperty.SizeDelta => $"{v.x:0.#} × {v.y:0.#}",
                 UIAnimProperty.AnchoredPosition => $"{v.x:0.#}, {v.y:0.#}",
                 _ => $"{v.x:0.##}",
