@@ -304,6 +304,10 @@ namespace SeoBYP.TimelineAnimation.Editor
                 case UIAnimProperty.Scale:
                     Add(root, target.transform, "m_LocalScale", "x", "y", "z");
                     break;
+                case UIAnimProperty.Rotation:
+                    Add(root, target.transform, "m_LocalRotation", "x", "y", "z", "w");
+                    Add(root, target.transform, "m_LocalEulerAnglesHint", "x", "y", "z");
+                    break;
                 case UIAnimProperty.SizeDelta:
                     Add(root, target.transform, "m_SizeDelta", "x", "y");
                     break;

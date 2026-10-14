@@ -14,18 +14,21 @@ using UnityEngine.UI;
 static class SampleContentBuilder
 {
     const string FontPath = "Assets/Fonts/Montserrat/Montserrat-SemiBold SDF.asset";
-    const string Button1Path = "Assets/Prefabs/Button1.prefab";
-    const string Button2Path = "Assets/Prefabs/Button2.prefab";
+    const string Button1Path = "Assets/Prefabs/Buttons/Button1.prefab";
+    const string Button2Path = "Assets/Prefabs/Buttons/Button2.prefab";
     const string ButtonsScene = "Assets/Scenes/Buttons.unity";
-    const string Toggle1Path = "Assets/Prefabs/Toggle1.prefab";
-    const string Toggle2Path = "Assets/Prefabs/Toggle2.prefab";
+    const string Toggle1Path = "Assets/Prefabs/Toggles/Toggle1.prefab";
+    const string Toggle2Path = "Assets/Prefabs/Toggles/Toggle2.prefab";
     const string TogglesScene = "Assets/Scenes/Toggles.unity";
-    const string TextDemoPath = "Assets/Prefabs/TextDemo.prefab";
+    const string TextDemoPath = "Assets/Prefabs/Text/TextDemo.prefab";
     const string TextScene = "Assets/Scenes/Text.unity";
-    const string Popup1Path = "Assets/Prefabs/Popup1.prefab";
+    const string Popup1Path = "Assets/Prefabs/Popup/Popup1.prefab";
     const string HoverScene = "Assets/Scenes/Hover.unity";
-    static string HoverPath(int n) => $"Assets/Prefabs/Hover{n}.prefab";
+    static string HoverPath(int n) => $"Assets/Prefabs/Hover/Hover{n}.prefab";
     const string PopupScene = "Assets/Scenes/Popup.unity";
+    const string ScrollItemPath = "Assets/Prefabs/Scroll/Items/ScrollItem.prefab";
+    const string ScrollCardPath = "Assets/Prefabs/Scroll/Items/ScrollCard.prefab";
+    const string ScrollScene = "Assets/Scenes/Scroll.unity";
 
     static readonly Color Red = new(1f, 0.3254902f, 0.3254902f, 1f);
     static Color Clear(Color c) => new(c.r, c.g, c.b, 0f);
@@ -40,6 +43,7 @@ static class SampleContentBuilder
             EditorApplication.delayCall += BuildText;
         if (!System.IO.File.Exists(Popup1Path)) EditorApplication.delayCall += BuildPopup;
         if (!System.IO.File.Exists(HoverPath(1))) EditorApplication.delayCall += BuildHovers;
+        if (!System.IO.File.Exists(ScrollPages + "01 Vertical.prefab")) EditorApplication.delayCall += BuildScroll;
     }
 
     // Prefabs saved before the keyframe model serialized clips instead of keys. Checked on the file,
@@ -563,6 +567,658 @@ static class SampleContentBuilder
         }
     }
 
+    // ---------- Scroll (R7): 18 forms, one page each, in a pager ----------
+
+    const string ScrollItems = "Assets/Prefabs/Scroll/Items/";
+    const string ScrollPages = "Assets/Prefabs/Scroll/Pages/";
+    static readonly Color Navy = new(0.13f, 0.18f, 0.28f, 1f);
+    static readonly Color Slate = new(0.55f, 0.6f, 0.7f, 1f);
+
+    [MenuItem("Tools/UIAnimation Dev/Rebuild Sample Scroll")]
+    static void BuildScroll()
+    {
+        if (!EnsureTmp(BuildScroll)) return;
+        var font = LoadOrCreateFont();
+        var items = new ScrollPrefabs
+        {
+            row = SavePrefab(BuildScrollItem(font), ScrollItemPath),
+            card = SavePrefab(BuildScrollCard(font), ScrollCardPath),
+            tile = SavePrefab(BuildScrollTile(font), ScrollItems + "ScrollTile.prefab"),
+            page = SavePrefab(BuildScrollPage(font), ScrollItems + "ScrollPage.prefab"),
+            wheel = SavePrefab(BuildWheelItem(font), ScrollItems + "WheelItem.prefab"),
+            header = SavePrefab(BuildSectionHeader(font), ScrollItems + "SectionHeader.prefab"),
+            chatLeft = SavePrefab(BuildChatBubble(font, false), ScrollItems + "ChatLeft.prefab"),
+            chatRight = SavePrefab(BuildChatBubble(font, true), ScrollItems + "ChatRight.prefab"),
+            accordion = SavePrefab(BuildAccordionItem(font), ScrollItems + "AccordionItem.prefab"),
+            dot = SavePrefab(BuildPageDot(), ScrollItems + "PageDot.prefab"),
+            tab = SavePrefab(BuildTabButton(font), ScrollItems + "TabButton.prefab"),
+            button = AssetDatabase.LoadAssetAtPath<GameObject>(Button1Path),
+        };
+        items.nested = SavePrefab(BuildNestedRow(font, items.tile), ScrollItems + "NestedRow.prefab");
+
+        var pages = new List<GameObject>();
+        var kinds = (ScrollDemoPage.Kind[])System.Enum.GetValues(typeof(ScrollDemoPage.Kind));
+        for (var i = 0; i < kinds.Length; i++)
+            pages.Add(SavePrefab(BuildScrollDemoPage(font, i + 1, kinds[i], items), $"{ScrollPages}{i + 1:00} {kinds[i]}.prefab"));
+
+        var scene = BuildSceneIfMissing(ScrollScene, font, "- Scroll -", 470f, panel => PopulateScrollScene(panel, font, pages, items));
+        Debug.Log($"[SampleContentBuilder] Built {ScrollItems}*, {pages.Count} pages in {ScrollPages}{scene}");
+    }
+
+    sealed class ScrollPrefabs
+    {
+        public GameObject row, card, tile, page, wheel, header, chatLeft, chatRight, accordion, nested, dot, tab, button;
+    }
+
+    // Root (positioned by the list) > Card (moved by the states) > Background.
+    static RectTransform CardRoot(string name, Vector2 size, out RectTransform card, out Image background)
+    {
+        var root = Rect(name, null);
+        root.sizeDelta = size;
+        card = Stretch("Card", root);
+        background = Img("Background", card, Sprite("Circle"), Navy, Image.Type.Sliced, 2.5f);
+        return root;
+    }
+
+    static Vector4 Alpha(float a) => new(a, 0, 0, 0);
+
+    // A state sampled by position (0 = start edge, 0.5 = center, 1 = end edge): edge → center → edge.
+    static UIAnimTrack Scrub(Component target, UIAnimProperty property, Vector4 start, Vector4 center, Vector4 end)
+    {
+        var track = new UIAnimTrack { target = target, property = property, start = UIAnimStart.KeyValue };
+        track.keys.Add(new UIAnimKey { time = 0f, value = start });
+        track.keys.Add(new UIAnimKey { time = 0.5f, value = center, ease = Ease.InOutSine });
+        track.keys.Add(new UIAnimKey { time = 1f, value = end, ease = Ease.InOutSine });
+        return track;
+    }
+
+    static UIAnimTrack Scrub(Component target, UIAnimProperty property, Vector4 edge, Vector4 center) => Scrub(target, property, edge, center, edge);
+
+    // A list row: Show (rises and fades in, the entry stagger) and Appear (a small pop when scrolled into view).
+    // The list positions the root, so the states move the inner Card.
+    static GameObject BuildScrollItem(TMP_FontAsset font)
+    {
+        var root = CardRoot("ScrollItem", new Vector2(840, 120), out var card, out var background);
+        var title = Label("Title", card, font, "Item", Color.white, 44);
+        title.alignment = TextAlignmentOptions.MidlineLeft;
+        title.rectTransform.offsetMin = new Vector2(48, 0);
+        var index = Label("Index", card, font, "#1", Red, 36);
+        index.alignment = TextAlignmentOptions.MidlineRight;
+        index.rectTransform.offsetMax = new Vector2(-48, 0);
+        var view = root.gameObject.AddComponent<ScrollItemView>();
+        view.title = title;
+        view.index = index;
+
+        root.gameObject.AddComponent<UIAnimation>().States(
+            State("Show", FromTo(card, UIAnimProperty.AnchoredPosition, new Vector4(0, -60), Vector4.zero, 0.35f),
+                          FromTo(card, UIAnimProperty.Scale, Vector3.one * 0.9f, Vector3.one, 0.35f),
+                          FromTo(background, UIAnimProperty.GraphicAlpha, Vector4.zero, Alpha(1), 0.3f),
+                          FromTo(title, UIAnimProperty.GraphicAlpha, Vector4.zero, Alpha(1), 0.3f),
+                          FromTo(index, UIAnimProperty.GraphicAlpha, Vector4.zero, Alpha(1), 0.3f)),
+            State("Appear", FromTo(card, UIAnimProperty.Scale, Vector3.one * 0.94f, Vector3.one, 0.2f)));
+        return root.gameObject;
+    }
+
+    // A carousel card: Focus is sampled by the card's place in the viewport (0 = left edge, 0.5 = center, 1 = right edge).
+    static GameObject BuildScrollCard(TMP_FontAsset font)
+    {
+        var root = CardRoot("ScrollCard", new Vector2(360, 480), out var card, out var background);
+        var number = Label("Number", card, font, "1", Color.white, 140);
+        root.gameObject.AddComponent<ScrollItemView>().title = number;
+        root.gameObject.AddComponent<UIAnimation>().States(
+            State("Focus", Scrub(card, UIAnimProperty.Scale, Vector3.one * 0.75f, Vector3.one),
+                           Scrub(background, UIAnimProperty.GraphicColor, Navy, Red)));
+        return root.gameObject;
+    }
+
+    // A grid / masonry tile: Show pops it in.
+    static GameObject BuildScrollTile(TMP_FontAsset font)
+    {
+        var root = CardRoot("ScrollTile", new Vector2(200, 200), out var card, out var background);
+        var number = Label("Number", card, font, "1", Color.white, 56);
+        root.gameObject.AddComponent<ScrollItemView>().title = number;
+        root.gameObject.AddComponent<UIAnimation>().States(
+            State("Show", FromTo(card, UIAnimProperty.Scale, Vector3.one * 0.6f, Vector3.one, 0.3f),
+                          FromTo(background, UIAnimProperty.GraphicAlpha, Vector4.zero, Alpha(1), 0.25f),
+                          FromTo(number, UIAnimProperty.GraphicAlpha, Vector4.zero, Alpha(1), 0.25f)));
+        return root.gameObject;
+    }
+
+    // A page / banner / tab page: Parallax slides the text against the page as it moves through the viewport.
+    static GameObject BuildScrollPage(TMP_FontAsset font)
+    {
+        var root = CardRoot("ScrollPage", new Vector2(900, 460), out var card, out _);
+        var label = Label("Title", card, font, "Page", Color.white, 96);
+        root.gameObject.AddComponent<ScrollItemView>().title = label;
+        root.gameObject.AddComponent<UIAnimation>().States(
+            State("Parallax", Scrub(label.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(-300, 0), Vector4.zero, new Vector4(300, 0)),
+                              Scrub(label, UIAnimProperty.GraphicAlpha, Alpha(0), Alpha(1))));
+        return root.gameObject;
+    }
+
+    // A wheel picker row: Wheel turns it on a cylinder (Rotation X) and fades it away from the center.
+    static GameObject BuildWheelItem(TMP_FontAsset font)
+    {
+        var root = Rect("WheelItem", null);
+        root.sizeDelta = new Vector2(400, 80);
+        var label = Label("Title", root, font, "00:00", Color.white, 52);
+        root.gameObject.AddComponent<ScrollItemView>().title = label;
+        root.gameObject.AddComponent<UIAnimation>().States(
+            State("Wheel", Scrub(label.rectTransform, UIAnimProperty.Rotation, new Vector3(70, 0, 0), Vector3.zero, new Vector3(-70, 0, 0)),
+                           Scrub(label, UIAnimProperty.GraphicAlpha, Alpha(0.15f), Alpha(1)),
+                           Scrub(label.rectTransform, UIAnimProperty.Scale, Vector3.one * 0.8f, Vector3.one)));
+        return root.gameObject;
+    }
+
+    static GameObject BuildSectionHeader(TMP_FontAsset font)
+    {
+        var root = Rect("SectionHeader", null);
+        root.sizeDelta = new Vector2(840, 64);
+        Img("Background", root, Sprite("Square"), new Color(0.2f, 0.27f, 0.4f, 1f), Image.Type.Simple, 1f);
+        var label = Label("Title", root, font, "Section", Red, 34);
+        label.alignment = TextAlignmentOptions.MidlineLeft;
+        label.rectTransform.offsetMin = new Vector2(32, 0);
+        return root.gameObject;
+    }
+
+    // A chat bubble whose height follows its text (the list measures it): Root (layout) > Bubble (layout, image) > Text.
+    static GameObject BuildChatBubble(TMP_FontAsset font, bool me)
+    {
+        var root = Rect(me ? "ChatRight" : "ChatLeft", null);
+        root.sizeDelta = new Vector2(840, 100);
+        var rows = root.gameObject.AddComponent<VerticalLayoutGroup>();
+        rows.padding = me ? new RectOffset(240, 0, 6, 6) : new RectOffset(0, 240, 6, 6);
+        rows.childControlWidth = rows.childControlHeight = true;
+        rows.childForceExpandHeight = false;
+
+        var bubble = Rect("Bubble", root);
+        // The image is a child outside the layout: a sliced Image reports its border size as a preferred height.
+        var image = Img("Background", bubble, Sprite("Circle"), me ? Red : Navy, Image.Type.Sliced, 4f);
+        image.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        var inside = bubble.gameObject.AddComponent<VerticalLayoutGroup>();
+        inside.padding = new RectOffset(32, 32, 20, 20);
+        inside.childControlWidth = inside.childControlHeight = true;
+        inside.childForceExpandHeight = false;
+
+        var text = Rect("Text", bubble).gameObject.AddComponent<TextMeshProUGUI>();
+        text.font = font;
+        text.fontSize = 34;
+        text.color = Color.white;
+        text.text = "Message";
+        text.alignment = me ? TextAlignmentOptions.TopRight : TextAlignmentOptions.TopLeft;
+        root.gameObject.AddComponent<ScrollItemView>().title = text;
+
+        root.gameObject.AddComponent<UIAnimation>().States(
+            State("Appear", FromTo(bubble, UIAnimProperty.Scale, Vector3.one * 0.85f, Vector3.one, 0.25f),
+                            FromTo(image, UIAnimProperty.GraphicAlpha, Vector4.zero, Alpha(1), 0.2f),
+                            FromTo(text, UIAnimProperty.GraphicAlpha, Vector4.zero, Alpha(1), 0.2f)));
+        return root.gameObject;
+    }
+
+    // An accordion row: click → Open / Close (the + turns into ×, the answer fades in) while the list resizes the row.
+    static GameObject BuildAccordionItem(TMP_FontAsset font)
+    {
+        var root = Rect("AccordionItem", null);
+        root.sizeDelta = new Vector2(840, 110);
+        var background = Img("Background", root, Sprite("Circle"), Navy, Image.Type.Sliced, 2.5f);
+        root.gameObject.AddComponent<RectMask2D>();
+        root.gameObject.AddComponent<Button>().targetGraphic = background;
+
+        RectTransform Top(string name, float height, float y)
+        {
+            var rt = Rect(name, root);
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(1, 1);
+            rt.pivot = new Vector2(0.5f, 1);
+            rt.sizeDelta = new Vector2(-96, height);
+            rt.anchoredPosition = new Vector2(0, y);
+            return rt;
+        }
+        var title = Label("Title", Top("Header", 110, 0), font, "Question", Color.white, 40);
+        title.alignment = TextAlignmentOptions.MidlineLeft;
+        var plus = Label("Plus", title.rectTransform.parent, font, "+", Red, 64);
+        plus.rectTransform.anchorMin = plus.rectTransform.anchorMax = new Vector2(1, 0.5f);
+        plus.rectTransform.sizeDelta = new Vector2(80, 80);
+        plus.rectTransform.anchoredPosition = new Vector2(-40, 0);
+        var body = Label("Body", Top("Answer", 170, -110), font,
+            "The list animates this row's height and moves the rows below; the row's own Open state turns the + and fades this text in.",
+            Slate, 30);
+        body.alignment = TextAlignmentOptions.TopLeft;
+        var view = root.gameObject.AddComponent<ScrollItemView>();
+        view.title = title;
+
+        root.gameObject.AddComponent<UIAnimation>().States(
+            State("Open", To(plus.rectTransform, UIAnimProperty.Rotation, new Vector3(0, 0, 45), 0.3f, Ease.OutCubic),
+                          To(body, UIAnimProperty.GraphicAlpha, Alpha(1), 0.3f, Ease.OutSine)),
+            State("Close", To(plus.rectTransform, UIAnimProperty.Rotation, Vector3.zero, 0.3f, Ease.OutCubic),
+                           To(body, UIAnimProperty.GraphicAlpha, Alpha(0), 0.2f, Ease.OutSine)));
+        return root.gameObject;
+    }
+
+    // A row with its own horizontal list (nested scrolling): vertical drags go to the outer list.
+    static GameObject BuildNestedRow(TMP_FontAsset font, GameObject tile)
+    {
+        var root = Rect("NestedRow", null);
+        root.sizeDelta = new Vector2(840, 300);
+        var title = Label("Title", root, font, "Row", Color.white, 36);
+        title.alignment = TextAlignmentOptions.TopLeft;
+        var inner = ScrollList("Row List", root, new Vector2(840, 220), new Vector2(0, -40), tile);
+        inner.layout = UIAnimScrollList.LayoutType.Horizontal;
+        inner.spacing = 16;
+        inner.childAlignment = TextAnchor.MiddleLeft;
+        inner.entryState = "Show";
+        inner.entryStagger = 0.04f;
+        return root.gameObject;
+    }
+
+    static UIAnimation DotStates(GameObject go, Graphic graphic, Transform scaled, Color on, Color off, Vector3 onScale, Vector3 offScale)
+    {
+        var anim = go.AddComponent<UIAnimation>();
+        anim.States(
+            State("On", To(scaled, UIAnimProperty.Scale, onScale, 0.25f, Ease.OutBack), To(graphic, UIAnimProperty.GraphicColor, on, 0.2f, Ease.OutSine)),
+            State("Off", To(scaled, UIAnimProperty.Scale, offScale, 0.25f, Ease.OutSine), To(graphic, UIAnimProperty.GraphicColor, off, 0.2f, Ease.OutSine)));
+        return anim;
+    }
+
+    static GameObject BuildPageDot()
+    {
+        var root = Rect("PageDot", null);
+        root.sizeDelta = new Vector2(24, 24);
+        var image = root.gameObject.AddComponent<Image>();
+        image.sprite = Sprite("Circle");
+        image.color = Slate;
+        root.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
+        DotStates(root.gameObject, image, root, Color.white, Slate, Vector3.one * 1.5f, Vector3.one);
+        return root.gameObject;
+    }
+
+    static GameObject BuildTabButton(TMP_FontAsset font)
+    {
+        var root = Rect("TabButton", null);
+        root.sizeDelta = new Vector2(200, 72);
+        root.gameObject.AddComponent<Image>().color = Color.clear;   // click area
+        root.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
+        var label = Label("Label", root, font, "Tab", Slate, 34);
+        var underline = Rect("Underline", root);
+        underline.anchorMin = new Vector2(0.1f, 0);
+        underline.anchorMax = new Vector2(0.9f, 0);
+        underline.sizeDelta = new Vector2(0, 6);
+        underline.anchoredPosition = new Vector2(0, 3);
+        underline.localScale = new Vector3(0, 1, 1);
+        underline.gameObject.AddComponent<Image>().color = Red;
+        DotStates(root.gameObject, label, underline, Color.white, Slate, Vector3.one, new Vector3(0, 1, 1));
+        return root.gameObject;
+    }
+
+    static TextMeshProUGUI Caption(string name, Transform parent, TMP_FontAsset font, string text, Color color, float size, Vector2 position, Vector2 box)
+    {
+        var label = Rect(name, parent).gameObject.AddComponent<TextMeshProUGUI>();
+        label.rectTransform.sizeDelta = box;
+        label.rectTransform.anchoredPosition = position;
+        label.font = font;
+        label.text = text;
+        label.fontSize = size;
+        label.color = color;
+        label.alignment = TextAlignmentOptions.Center;
+        label.raycastTarget = false;
+        return label;
+    }
+
+    static UIAnimPageIndicator Dots(Transform parent, UIAnimScrollList list, GameObject prefab, Vector2 position, float spacing = 16)
+    {
+        var root = Rect("Dots", parent);
+        root.sizeDelta = new Vector2(1200, 80);
+        root.anchoredPosition = position;
+        var layout = root.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = spacing;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = layout.childControlHeight = false;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+        var indicator = root.gameObject.AddComponent<UIAnimPageIndicator>();
+        indicator.list = list;
+        indicator.itemPrefab = (RectTransform)prefab.transform;
+        return indicator;
+    }
+
+    static readonly Dictionary<ScrollDemoPage.Kind, (string title, string description)> PageText = new()
+    {
+        [ScrollDemoPage.Kind.Vertical] = ("Vertical List", "100 rows, only the visible ones exist · entry stagger, appear on scroll"),
+        [ScrollDemoPage.Kind.Horizontal] = ("Horizontal List", "Horizontal layout · entry stagger"),
+        [ScrollDemoPage.Kind.Grid] = ("Grid", "Flexible columns · entry stagger, appear on scroll"),
+        [ScrollDemoPage.Kind.HorizontalGrid] = ("Horizontal Grid", "Fixed Row Count 2 scrolls sideways"),
+        [ScrollDemoPage.Kind.Carousel] = ("Carousel", "Scrub state by position: the centered card grows · snap to center"),
+        [ScrollDemoPage.Kind.Paging] = ("Paging", "One page per swipe · dots (On / Off states) · parallax text"),
+        [ScrollDemoPage.Kind.InfiniteLoop] = ("Infinite Loop", "8 cards, forever in both directions · snap to center"),
+        [ScrollDemoPage.Kind.AutoBanner] = ("Auto Banner", "Moves on every 2.5 s, pauses while dragged · loop · dots"),
+        [ScrollDemoPage.Kind.WheelPicker] = ("Wheel Picker", "Rotation X / alpha / scale scrubbed by position · snap to center"),
+        [ScrollDemoPage.Kind.StickyHeaders] = ("Sticky Headers", "Two item prefabs; the section header stays on top, pushed by the next"),
+        [ScrollDemoPage.Kind.VariableSize] = ("Variable Size", "Measure Items: each row as tall as its text"),
+        [ScrollDemoPage.Kind.Chat] = ("Chat", "Two bubble prefabs · stacks from the bottom · stays at the end when messages arrive"),
+        [ScrollDemoPage.Kind.Accordion] = ("Accordion", "Click a row: Open / Close state + animated row height"),
+        [ScrollDemoPage.Kind.Masonry] = ("Masonry", "4 columns, each tile goes to the shortest column"),
+        [ScrollDemoPage.Kind.Nested] = ("Nested Scroll", "Horizontal lists inside a vertical list: each drag goes to its own axis"),
+        [ScrollDemoPage.Kind.Tabs] = ("Tabs", "Tab bar (On / Off states) + one page per swipe"),
+        [ScrollDemoPage.Kind.CollapsingHeader] = ("Collapsing Header", "Scroll Scrub: the header's Collapse state follows the scroll distance"),
+        [ScrollDemoPage.Kind.PullToRefresh] = ("Pull To Refresh", "Pull down past the line: Pull state by distance, Refreshing until done"),
+    };
+
+    static GameObject BuildScrollDemoPage(TMP_FontAsset font, int number, ScrollDemoPage.Kind kind, ScrollPrefabs items)
+    {
+        var (titleText, description) = PageText[kind];
+        var root = Rect($"{number:00} {kind}", null);
+        root.sizeDelta = new Vector2(1920, 860);
+        root.gameObject.AddComponent<Image>().color = Color.clear;   // drags on the page turn pages
+        Caption("Heading", root, font, $"{number}. {titleText}", Color.white, 56, new Vector2(0, 380), new Vector2(1800, 80));
+        Caption("Description", root, font, description, Slate, 30, new Vector2(0, 320), new Vector2(1800, 50));
+        var demo = Rect("Demo", root);
+        demo.sizeDelta = new Vector2(1800, 680);
+        demo.anchoredPosition = new Vector2(0, -60);
+
+        var page = root.gameObject.AddComponent<ScrollDemoPage>();
+        page.kind = kind;
+        page.title = titleText;
+
+        UIAnimScrollList MakeList(GameObject item, Vector2 size, Vector2 position = default)
+        {
+            var list = ScrollList("List", demo, size, position, item);
+            page.list = list;
+            return list;
+        }
+        UIAnimScrollList Rows(GameObject item, float width = 840, float height = 680, float y = 0)
+        {
+            var list = MakeList(item, new Vector2(width, height), new Vector2(0, y));
+            list.spacing = 12;
+            list.padding = new RectOffset(0, 0, 8, 8);
+            list.controlChildSize = true;
+            list.childAlignment = TextAnchor.UpperCenter;
+            return list;
+        }
+
+        switch (kind)
+        {
+            case ScrollDemoPage.Kind.Vertical:
+            {
+                var list = Rows(items.row);
+                list.entryState = "Show";
+                list.entryStagger = 0.05f;
+                list.appearState = "Appear";
+                break;
+            }
+            case ScrollDemoPage.Kind.Horizontal:
+            {
+                var list = MakeList(items.tile, new Vector2(1600, 260));
+                list.layout = UIAnimScrollList.LayoutType.Horizontal;
+                list.padding = new RectOffset(20, 20, 0, 0);
+                list.spacing = 20;
+                list.childAlignment = TextAnchor.MiddleLeft;
+                list.entryState = "Show";
+                list.entryStagger = 0.04f;
+                break;
+            }
+            case ScrollDemoPage.Kind.Grid:
+            case ScrollDemoPage.Kind.HorizontalGrid:
+            {
+                var horizontal = kind == ScrollDemoPage.Kind.HorizontalGrid;
+                var list = MakeList(items.tile, horizontal ? new Vector2(1600, 440) : new Vector2(1000, 680));
+                list.layout = UIAnimScrollList.LayoutType.Grid;
+                list.cellSize = new Vector2(180, 180);
+                list.gridSpacing = new Vector2(20, 20);
+                list.padding = new RectOffset(20, 20, 20, 20);
+                list.childAlignment = horizontal ? TextAnchor.MiddleLeft : TextAnchor.UpperCenter;
+                list.constraint = horizontal ? UIAnimScrollList.GridConstraint.FixedRowCount : UIAnimScrollList.GridConstraint.Flexible;
+                list.constraintCount = 2;
+                list.entryState = "Show";
+                list.entryStagger = 0.02f;
+                list.appearState = horizontal ? "" : "Show";
+                break;
+            }
+            case ScrollDemoPage.Kind.Carousel:
+            case ScrollDemoPage.Kind.InfiniteLoop:
+            {
+                var list = MakeList(items.card, new Vector2(1600, 560));
+                list.layout = UIAnimScrollList.LayoutType.Horizontal;
+                list.loop = kind == ScrollDemoPage.Kind.InfiniteLoop;
+                list.padding = list.loop ? new RectOffset() : new RectOffset(620, 620, 0, 0);   // first and last cards can reach the center
+                list.spacing = 24;
+                list.childAlignment = TextAnchor.MiddleLeft;
+                list.scrubState = "Focus";
+                list.snap = UIAnimScrollList.SnapMode.Nearest;
+                list.snapAlignment = UIAnimScrollList.Alignment.Center;
+                list.playEntryOnFill = false;
+                break;
+            }
+            case ScrollDemoPage.Kind.Paging:
+            case ScrollDemoPage.Kind.AutoBanner:
+            {
+                var list = MakeList(items.page, new Vector2(900, 460), new Vector2(0, 40));
+                list.layout = UIAnimScrollList.LayoutType.Horizontal;
+                list.controlChildSize = true;
+                list.loop = kind == ScrollDemoPage.Kind.AutoBanner;
+                list.snap = UIAnimScrollList.SnapMode.OnePerSwipe;
+                list.snapAlignment = UIAnimScrollList.Alignment.Center;
+                list.snapDuration = 0.35f;
+                list.scrubState = "Parallax";
+                list.autoScrollInterval = kind == ScrollDemoPage.Kind.AutoBanner ? 2.5f : 0f;
+                list.playEntryOnFill = false;
+                Dots(demo, list, items.dot, new Vector2(0, -250));
+                break;
+            }
+            case ScrollDemoPage.Kind.WheelPicker:
+            {
+                var band = Img("Selection", demo, Sprite("Circle"), new Color(1, 1, 1, 0.08f), Image.Type.Sliced, 4f).rectTransform;
+                band.anchorMin = band.anchorMax = new Vector2(0.5f, 0.5f);
+                band.sizeDelta = new Vector2(420, 84);
+                var list = MakeList(items.wheel, new Vector2(400, 480));
+                list.padding = new RectOffset(0, 0, 200, 200);   // first and last rows can reach the center
+                list.controlChildSize = true;
+                list.scrubState = "Wheel";
+                list.snap = UIAnimScrollList.SnapMode.Nearest;
+                list.snapAlignment = UIAnimScrollList.Alignment.Center;
+                list.playEntryOnFill = false;
+                list.GetComponent<Image>().color = Color.clear;
+                page.status = Caption("Status", demo, font, "", Red, 44, new Vector2(520, 0), new Vector2(500, 80));
+                break;
+            }
+            case ScrollDemoPage.Kind.StickyHeaders:
+            {
+                var list = Rows(items.row);
+                list.extraPrefabs.Add((RectTransform)items.header.transform);
+                list.stickyHeaderPrefab = 1;
+                list.padding = new RectOffset();
+                break;
+            }
+            case ScrollDemoPage.Kind.VariableSize:
+            {
+                var list = Rows(items.chatLeft);
+                list.measureItems = true;
+                list.spacing = 4;
+                list.appearState = "Appear";
+                break;
+            }
+            case ScrollDemoPage.Kind.Chat:
+            {
+                var list = Rows(items.chatLeft, 840, 560, 50);
+                list.extraPrefabs.Add((RectTransform)items.chatRight.transform);
+                list.measureItems = true;
+                list.spacing = 4;
+                list.stickToEnd = true;
+                list.childAlignment = TextAnchor.LowerCenter;
+                list.appearState = "Appear";
+                var send = (GameObject)PrefabUtility.InstantiatePrefab(items.button, demo);
+                send.name = "Button Send";
+                var rect = (RectTransform)send.transform;
+                rect.anchoredPosition = new Vector2(0, -290);
+                rect.localScale = Vector3.one * 0.45f;
+                send.GetComponentInChildren<TMP_Text>().text = "Send";
+                UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(send.GetComponent<Button>().onClick, page.Send);
+                break;
+            }
+            case ScrollDemoPage.Kind.Accordion:
+                Rows(items.accordion);
+                break;
+            case ScrollDemoPage.Kind.Masonry:
+            {
+                var list = MakeList(items.tile, new Vector2(1000, 680));
+                list.layout = UIAnimScrollList.LayoutType.Masonry;
+                list.constraint = UIAnimScrollList.GridConstraint.FixedColumnCount;
+                list.constraintCount = 4;
+                list.cellSize = new Vector2(220, 220);
+                list.gridSpacing = new Vector2(16, 16);
+                list.padding = new RectOffset(20, 20, 20, 20);
+                list.childAlignment = TextAnchor.UpperCenter;
+                list.entryState = "Show";
+                list.entryStagger = 0.02f;
+                list.appearState = "Show";
+                break;
+            }
+            case ScrollDemoPage.Kind.Nested:
+            {
+                var list = MakeList(items.nested, new Vector2(900, 680));
+                list.spacing = 24;
+                list.padding = new RectOffset(0, 0, 16, 16);
+                list.childAlignment = TextAnchor.UpperCenter;
+                break;
+            }
+            case ScrollDemoPage.Kind.Tabs:
+            {
+                var list = MakeList(items.page, new Vector2(900, 500), new Vector2(0, -60));
+                list.layout = UIAnimScrollList.LayoutType.Horizontal;
+                list.controlChildSize = true;
+                list.snap = UIAnimScrollList.SnapMode.OnePerSwipe;
+                list.snapAlignment = UIAnimScrollList.Alignment.Start;
+                list.snapDuration = 0.3f;
+                list.scrubState = "Parallax";
+                list.playEntryOnFill = false;
+                var tabs = Dots(demo, list, items.tab, new Vector2(0, 260), 0);
+                tabs.labels = new List<string> { "Home", "Search", "Inbox", "Profile" };
+                break;
+            }
+            case ScrollDemoPage.Kind.CollapsingHeader:
+            {
+                var list = Rows(items.row);
+                list.padding = new RectOffset(0, 0, 312, 8);   // the rows start below the open header
+                var header = Rect("Header", demo);
+                header.pivot = new Vector2(0.5f, 1);
+                header.sizeDelta = new Vector2(840, 300);
+                header.anchoredPosition = new Vector2(0, 340);
+                var background = Img("Background", header, Sprite("Circle"), Red, Image.Type.Sliced, 2.5f);
+                background.raycastTarget = false;   // drags pass to the list below
+                var name = Label("Title", header, font, "Profile", Color.white, 80);
+                name.raycastTarget = false;
+                var anim = header.gameObject.AddComponent<UIAnimation>();
+                anim.States(State("Collapse",
+                    FromTo(header, UIAnimProperty.SizeDelta, new Vector2(840, 300), new Vector2(840, 110), 1f),
+                    FromTo(name, UIAnimProperty.FontSize, Alpha(80), Alpha(44), 1f),
+                    FromTo(background, UIAnimProperty.GraphicColor, Red, Navy, 1f)));
+                foreach (var track in anim.states[0].tracks) track.keys[^1].ease = Ease.Linear;   // the scroll distance is the time
+                var scrub = header.gameObject.AddComponent<UIAnimScrollScrub>();
+                scrub.list = list;
+                scrub.target = anim;
+                scrub.state = "Collapse";
+                scrub.distance = 190;
+                break;
+            }
+            case ScrollDemoPage.Kind.PullToRefresh:
+            {
+                var spinner = Rect("Spinner", demo);
+                spinner.sizeDelta = new Vector2(72, 72);
+                spinner.anchoredPosition = new Vector2(0, 190);   // in the gap that opens above the list (list top = 260), behind it until pulled
+                var ring = spinner.gameObject.AddComponent<Image>();
+                ring.sprite = Sprite("Circle Frame");
+                ring.type = Image.Type.Filled;
+                ring.fillMethod = Image.FillMethod.Radial360;
+                ring.color = Red;
+                ring.raycastTarget = false;
+                var anim = spinner.gameObject.AddComponent<UIAnimation>();
+                var spin = new UIAnimTrack { target = spinner, property = UIAnimProperty.Rotation, start = UIAnimStart.KeyValue };
+                spin.keys.Add(new UIAnimKey { time = 0f, value = new Vector3(0, 0, -270) });
+                spin.keys.Add(new UIAnimKey { time = 0.8f, value = new Vector3(0, 0, -630), ease = Ease.Linear });   // ≡ -270: repeats seamlessly
+                anim.States(
+                    State("Pull", FromTo(ring, UIAnimProperty.FillAmount, Alpha(0), Alpha(0.75f), 1f),
+                                  FromTo(spinner, UIAnimProperty.Rotation, Vector3.zero, new Vector3(0, 0, -270), 1f),
+                                  FromTo(ring, UIAnimProperty.GraphicAlpha, Alpha(0.2f), Alpha(1), 1f)),
+                    State("Refreshing", spin));
+                foreach (var track in anim.states[0].tracks) track.keys[^1].ease = Ease.Linear;
+
+                var list = Rows(items.row, 840, 600, -40);   // drawn over the spinner, which shows when the list is pulled down
+                var pull = list.gameObject.AddComponent<UIAnimPullToRefresh>();
+                pull.target = anim;
+                pull.distance = 140;
+                UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(pull.onRefresh, page.Refresh);
+                page.pull = pull;
+                list.GetComponent<Image>().color = Color.clear;
+                page.status = Caption("Status", demo, font, "", Slate, 30, new Vector2(0, 320), new Vector2(800, 40));
+                break;
+            }
+        }
+        return root.gameObject;
+    }
+
+    static void PopulateScrollScene(RectTransform panel, TMP_FontAsset font, List<GameObject> pages, ScrollPrefabs items)
+    {
+        var browser = panel.gameObject.AddComponent<ScrollBrowser>();
+        var pager = ScrollList("Pages", panel, new Vector2(1920, 820), new Vector2(0, 0), pages[0]);   // y -410 … 410
+        pager.GetComponent<Image>().color = Color.clear;
+        for (var i = 1; i < pages.Count; i++) pager.extraPrefabs.Add((RectTransform)pages[i].transform);
+        pager.layout = UIAnimScrollList.LayoutType.Horizontal;
+        pager.controlChildSize = true;
+        pager.snap = UIAnimScrollList.SnapMode.OnePerSwipe;
+        pager.snapAlignment = UIAnimScrollList.Alignment.Start;
+        pager.snapDuration = 0.35f;
+        pager.playEntryOnFill = false;
+        browser.pages = pager;
+        browser.counter = Caption("Counter", panel, font, "1 / 18", Slate, 34, new Vector2(820, 470), new Vector2(240, 60));
+
+        // Two rows under the pages: the toolbar (y -448) and page navigation (y -508), so nothing overlaps the title.
+        Dots(panel, pager, items.dot, new Vector2(0, -508), 14);
+        (string label, Vector2 at, float scale, UnityEngine.Events.UnityAction action)[] buttons =
+        {
+            ("Prev", new Vector2(-820, -508), 0.35f, browser.Previous), ("Next", new Vector2(820, -508), 0.35f, browser.Next),
+            ("Remove", new Vector2(-40, -448), 0.3f, browser.RemoveItem), ("Add", new Vector2(120, -448), 0.3f, browser.AddItem),
+            ("Edit Animation", new Vector2(380, -448), 0.35f, browser.EditAnimation),
+        };
+        foreach (var (label, at, scale, action) in buttons)
+        {
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(items.button, panel);
+            instance.name = $"Button {label}";
+            var rect = (RectTransform)instance.transform;
+            rect.anchoredPosition = at;
+            rect.localScale = Vector3.one * scale;
+            instance.GetComponentInChildren<TMP_Text>().text = label;
+            UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(instance.GetComponent<Button>().onClick, action);
+        }
+
+        // Item count of the current page: a slider and its value.
+        var slider = DefaultControls.CreateSlider(new DefaultControls.Resources()).GetComponent<Slider>();
+        slider.name = "Item Count";
+        var sliderRect = (RectTransform)slider.transform;
+        sliderRect.SetParent(panel, false);
+        sliderRect.sizeDelta = new Vector2(320, 24);
+        sliderRect.anchoredPosition = new Vector2(-500, -448);
+        slider.fillRect.GetComponent<Image>().color = Red;
+        browser.itemCount = slider;
+        browser.itemCountLabel = Caption("Item Count Label", panel, font, "Items", Slate, 30, new Vector2(-220, -448), new Vector2(200, 50));
+        browser.itemCountLabel.alignment = TextAlignmentOptions.MidlineLeft;   // grows to the right, away from the slider
+    }
+
+    static UIAnimScrollList ScrollList(string name, Transform parent, Vector2 size, Vector2 position, GameObject itemPrefab)
+    {
+        var root = Rect(name, parent);
+        root.sizeDelta = size;
+        root.anchoredPosition = position;
+        root.gameObject.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.04f);   // backdrop, also catches drags
+        var viewport = Stretch("Viewport", root);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        var content = Rect("Content", viewport);
+        var scroll = root.gameObject.AddComponent<ScrollRect>();
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.scrollSensitivity = 40f;
+        var list = root.gameObject.AddComponent<UIAnimScrollList>();
+        list.itemPrefab = (RectTransform)itemPrefab.transform;
+        return list;
+    }
+
     // Keys at absolute values (text tracks never start from the live value).
     static UIAnimTrack Keys(Component target, UIAnimProperty property, float stagger, params (float time, Vector4 value, Ease ease)[] keys)
     {
@@ -718,8 +1374,10 @@ static class SampleContentBuilder
         if (System.IO.File.Exists(path)) return "";
 
         // Additive + closed afterwards, so whatever scene is open (and unsaved) is never replaced.
+        // Only an untitled scene (batchmode, a fresh editor) can't take an additive one: then it is replaced.
         var previous = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        var additive = !string.IsNullOrEmpty(previous.path);
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, additive ? NewSceneMode.Additive : NewSceneMode.Single);
         UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);   // new GameObjects land here
 
         var camera = new GameObject("Main Camera").AddComponent<Camera>();
@@ -751,6 +1409,7 @@ static class SampleContentBuilder
         new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem), typeof(InputSystemUIInputModule));
 
         EditorSceneManager.SaveScene(scene, path);
+        if (!additive) return $", {path}";
         if (previous.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(previous);
         EditorSceneManager.CloseScene(scene, true);
         return $", {path}";
