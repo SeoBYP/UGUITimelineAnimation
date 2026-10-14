@@ -24,7 +24,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         }
 
         UIAnimation _target;
-        int _state, _track = -1;
+        int _state;
+        object _selTrack;                // selected track header: UIAnimTrack, UIAnimEventTrack or UIAnimSoundTrack
         readonly HashSet<UIAnimKey> _selection = new();
         readonly Dictionary<UIAnimKey, float> _dragStartTimes = new();
         int _dragUndoGroup = -1;
@@ -38,8 +39,24 @@ namespace SeoBYP.TimelineAnimation.Editor
         Button _play, _loop;
         UIAnimTimelineView _timeline;
 
+        // Tests drive the window through the same entry points as its UI.
+        internal UIAnimTimelineView Timeline => _timeline;
+        internal VisualElement Inspector => _inspector;
+
         UIAnimState CurrentState => _target != null && _state < _target.states.Count ? _target.states[_state] : null;
-        UIAnimTrack CurrentTrack => CurrentState != null && _track >= 0 && _track < CurrentState.tracks.Count ? CurrentState.tracks[_track] : null;
+        UIAnimTrack CurrentTrack => _selTrack as UIAnimTrack;
+
+        // Keyframe tracks editable on this timeline: the state's own, plus those of called child states overridden in this prefab
+        // (the override lives on _target, so undo and saving go there and the child's prefab never changes).
+        IEnumerable<UIAnimTrack> EditableTracks()
+        {
+            var state = CurrentState;
+            if (state == null) yield break;
+            foreach (var track in state.tracks) yield return track;
+            foreach (var call in state.childCalls)
+                if (UIAnimTimelineView.IsOverridden(call))
+                    foreach (var track in call.Target.tracks) yield return track;
+        }
 
         void OnEnable()
         {
@@ -69,10 +86,10 @@ namespace SeoBYP.TimelineAnimation.Editor
             _targetLabel = new Label();
             _targetLabel.AddToClassList("uia-target");
             topbar.Add(_targetLabel);
-            _play = IconButton("▶", "재생 / 일시정지 (Play 모드 없이 미리보기)", TogglePlay, accent: true);
+            _play = IconButton("▶", "Play / Pause (preview without Play Mode)", TogglePlay, accent: true);
             topbar.Add(_play);
-            topbar.Add(IconButton("■", "정지하고 원래 값으로 복원", () => _preview.Stop()));
-            _loop = IconButton("⟲", "반복 재생", () =>
+            topbar.Add(IconButton("■", "Stop and restore the original values", () => _preview.Stop()));
+            _loop = IconButton("⟲", "Loop", () =>
             {
                 _preview.Loop = !_preview.Loop;
                 _loop.EnableInClassList("uia-iconbtn--accent", _preview.Loop);
@@ -126,13 +143,13 @@ namespace SeoBYP.TimelineAnimation.Editor
             return b;
         }
 
-        void SetTarget(UIAnimation target)
+        internal void SetTarget(UIAnimation target)
         {
             if (target == _target) return;
             _preview.Stop();
             _target = target;
             _state = 0;
-            _track = -1;
+            _selTrack = null;
             _selection.Clear();
             Rebuild();
         }
@@ -149,6 +166,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             _selection.Clear();   // undo deserializes new key objects; old references are stale
             _marker = null;
+            _selTrack = null;
             Rebuild();
             RefreshPreview();
         }
@@ -162,7 +180,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             PrefabUtility.RecordPrefabInstancePropertyModifications(_target);
             EditorUtility.SetDirty(_target);
             if (rebuild) Rebuild();
-            else _timeline.Refresh(_track);
+            else _timeline.Refresh(_selTrack);
             RefreshPreview();
         }
 
@@ -182,9 +200,9 @@ namespace SeoBYP.TimelineAnimation.Editor
             if (_selection.Count > 0)
             {
                 var first = _selection.First();
-                _track = CurrentState.tracks.FindIndex(t => t.keys.Contains(first));
+                _selTrack = EditableTracks().FirstOrDefault(t => t.keys.Contains(first));
             }
-            _timeline.Refresh(_track);
+            _timeline.Refresh(_selTrack);
             RebuildInspector();
         }
 
@@ -198,7 +216,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             _timeline.TrackSelected = track =>
             {
                 _selection.Clear();
-                _track = track;
+                _selTrack = track;
                 SelectionChanged();
             };
             _timeline.KeyClicked = (key, additive) =>
@@ -217,7 +235,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             _timeline.SelectionCleared = () =>
             {
                 _selection.Clear();
-                _track = -1;
+                _selTrack = null;
                 SelectionChanged();
             };
             _timeline.SelectedKeysDragStarted = () =>
@@ -241,7 +259,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 // Keys may have passed their neighbours; restore time order inside each track.
                 Modify("Move Keys", () =>
                 {
-                    foreach (var t in CurrentState.tracks) t.keys.Sort((a, b) => a.time.CompareTo(b.time));
+                    foreach (var t in EditableTracks()) t.keys.Sort((a, b) => a.time.CompareTo(b.time));
                 });
                 if (_dragUndoGroup >= 0) Undo.CollapseUndoOperations(_dragUndoGroup);
                 _dragUndoGroup = -1;
@@ -249,29 +267,37 @@ namespace SeoBYP.TimelineAnimation.Editor
             _timeline.DeleteRequested = DeleteSelectedKeys;
             _timeline.AddKeyRequested = (track, time) => Modify("Add Key", () =>
             {
-                var t = CurrentState.tracks[track];
-                var key = new UIAnimKey { time = time, value = RawValueAt(t, time) };
-                var index = t.keys.FindIndex(k => k.time > time);
-                t.keys.Insert(index < 0 ? t.keys.Count : index, key);
+                EnsureStartKey(track);
+                if (track.keys.Exists(k => Mathf.Approximately(k.time, time))) return;   // already a key there
+                var key = new UIAnimKey { time = time, value = RawValueAt(track, time) };
+                var index = track.keys.FindIndex(k => k.time > time);
+                track.keys.Insert(index < 0 ? track.keys.Count : index, key);
                 _selection.Clear();
                 _selection.Add(key);
-                _track = track;
+                _selTrack = track;
             });
-            _timeline.RemoveTrackRequested = track => Modify("Remove Track", () =>
+            _timeline.RemoveRequested = RemoveItem;
+            _timeline.StaggerDragged = (track, stagger) =>
             {
-                _selection.ExceptWith(CurrentState.tracks[track].keys);
-                CurrentState.tracks.RemoveAt(track);
-                _track = -1;
-            });
+                if (_markerUndoGroup < 0) _markerUndoGroup = Undo.GetCurrentGroup();
+                Modify("Edit Stagger", () => track.stagger = stagger, rebuild: false);
+                OnPreviewChanged();   // the state's length follows
+            };
+            _timeline.StaggerDragFinished = () =>
+            {
+                if (_markerUndoGroup >= 0) Undo.CollapseUndoOperations(_markerUndoGroup);
+                _markerUndoGroup = -1;
+                Rebuild();
+            };
             _timeline.AddTrackMenuRequested = rect => ShowPropertyMenu(rect, null);
 
             _timeline.MarkerClicked = marker =>
             {
                 _selection.Clear();
-                _track = -1;
+                _selTrack = null;
                 _marker = marker;
                 _timeline.SelectedMarker = marker;
-                _timeline.Refresh(_track);
+                _timeline.Refresh(_selTrack);
                 RebuildInspector();
             };
             _timeline.MarkerMoved = (marker, time) =>
@@ -285,59 +311,138 @@ namespace SeoBYP.TimelineAnimation.Editor
                 if (_markerUndoGroup >= 0) Undo.CollapseUndoOperations(_markerUndoGroup);
                 _markerUndoGroup = -1;
             };
-            _timeline.AddEventRequested = time => Modify("Add Animation Event", () =>
+            _timeline.AddEventRequested = ShowAddEventMenu;
+            _timeline.OverrideRequested = OverrideCall;
+            _timeline.RevertOverrideRequested = RevertOverride;
+            _timeline.AddSoundRequested = (track, time, clip) => Modify("Add Sound", () =>
             {
-                var name = "Event";
-                for (var n = 1; CurrentState.events.Exists(x => x.name == name); n++) name = $"Event {n}";
-                var marker = new UIAnimEventMarker { time = time, name = name };
-                CurrentState.events.Add(marker);
-                SelectNewMarker(marker);
+                var sound = new UIAnimSound { time = time, clip = clip };
+                track.sounds.Add(sound);
+                SelectNewMarker(sound);
             });
             _timeline.AddCallRequested = ShowChildCallMenu;
+            _timeline.PopulateChildCallMenu = (menu, time) =>
+            {
+                var choices = ChildCallChoices().ToList();
+                foreach (var (path, child, state) in choices)
+                {
+                    var called = IsCalled(child, state);   // already played by this state: shown checked, not added twice
+                    menu.Add($"Add Child Call/{path}/{state}", () => AddCall(child, state, time), enabled: !called, isChecked: called);
+                }
+                if (choices.Count == 0) menu.Add("Add Child Call", null);
+            };
         }
+
+        // ---------- animation events: plain named ones, or a registered [UIAnimEvent] struct with parameters ----------
+
+        // Only types that exist in a player build: an editor-only struct (e.g. in tests) could never be received at runtime.
+        static List<Type> EventTypes()
+        {
+            var player = new HashSet<string>(UnityEditor.Compilation.CompilationPipeline
+                .GetAssemblies(UnityEditor.Compilation.AssembliesType.PlayerWithoutTestAssemblies).Select(a => a.name));
+            return TypeCache.GetTypesWithAttribute<UIAnimEventAttribute>()
+                .Where(t => t.IsValueType && !t.IsGenericType && player.Contains(t.Assembly.GetName().Name))
+                .OrderBy(EventDisplayName).ToList();
+        }
+
+        static string EventDisplayName(Type type)
+        {
+            var attribute = (UIAnimEventAttribute)Attribute.GetCustomAttribute(type, typeof(UIAnimEventAttribute));
+            return string.IsNullOrEmpty(attribute?.DisplayName) ? type.Name : attribute.DisplayName;
+        }
+
+        void ShowAddEventMenu(UIAnimEventTrack track, Rect at, float time)
+        {
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Name Only"), false, () => AddEvent(track, time, null));
+            menu.AddSeparator("");
+            var types = EventTypes();
+            foreach (var type in types)
+            {
+                var t = type;
+                menu.AddItem(new GUIContent($"{EventDisplayName(t)}  ({t.Name})"), false, () => AddEvent(track, time, t));
+            }
+            if (types.Count == 0) menu.AddDisabledItem(new GUIContent("Structs marked [UIAnimEvent] appear here"));
+            menu.DropDown(at);
+        }
+
+        void AddEvent(UIAnimEventTrack track, float time, Type dataType) => Modify("Add Animation Event", () =>
+        {
+            var baseName = dataType != null ? EventDisplayName(dataType) : "Event";
+            var name = baseName;
+            for (var n = 1; CurrentState.eventTracks.Any(t => t.events.Exists(x => x.name == name)); n++) name = $"{baseName} {n}";
+            var marker = new UIAnimEventMarker
+            {
+                time = time, name = name,
+                dataType = UIAnimEventMarker.TypeKey(dataType),
+                dataJson = dataType != null ? JsonUtility.ToJson(Activator.CreateInstance(dataType)) : "",
+            };
+            track.events.Add(marker);
+            SelectNewMarker(marker);
+        });
 
         static void SetMarkerTime(object marker, float time)
         {
             time = Mathf.Max(0f, time);
             if (marker is UIAnimEventMarker e) e.time = time;
             else if (marker is UIAnimChildCall call) call.time = time;
+            else if (marker is UIAnimSound sound) sound.time = time;
         }
 
         void SortMarkers()
         {
-            CurrentState.events.Sort((a, b) => a.time.CompareTo(b.time));
+            foreach (var track in CurrentState.eventTracks) track.events.Sort((a, b) => a.time.CompareTo(b.time));
+            foreach (var track in CurrentState.soundTracks) track.sounds.Sort((a, b) => a.time.CompareTo(b.time));
             CurrentState.childCalls.Sort((a, b) => a.time.CompareTo(b.time));
         }
+
+        bool HasMarker(object marker) => marker switch
+        {
+            UIAnimEventMarker e => CurrentState.eventTracks.Any(t => t.events.Contains(e)),
+            UIAnimSound sound => CurrentState.soundTracks.Any(t => t.sounds.Contains(sound)),
+            UIAnimChildCall call => CurrentState.childCalls.Contains(call),
+            _ => false,
+        };
 
         void SelectNewMarker(object marker)
         {
             SortMarkers();
             _selection.Clear();
-            _track = -1;
+            _selTrack = null;
             _marker = marker;
         }
 
-        // Child UIAnimations under this one, each with its states: pick one to play at `time`.
+        // Child UIAnimations under this one with their states (path joined with › so menus don't split it into submenus).
+        IEnumerable<(string path, UIAnimation child, string state)> ChildCallChoices()
+        {
+            foreach (var child in _target.GetComponentsInChildren<UIAnimation>(true))
+            {
+                if (child == _target) continue;
+                var path = UIAnimTimelineView.TargetPath(_target, child).Replace("/", " › ");
+                foreach (var state in child.states) yield return (path, child, state.name);
+            }
+        }
+
+        bool IsCalled(UIAnimation child, string state) => CurrentState.childCalls.Exists(c => c.child == child && c.state == state);
+
+        internal void AddCall(UIAnimation child, string state, float time) => Modify("Add Child Call", () =>
+        {
+            var call = new UIAnimChildCall { time = time, child = child, state = state };
+            CurrentState.childCalls.Add(call);
+            SelectNewMarker(call);
+        });
+
+        // Pick a child state to play at `time`.
         void ShowChildCallMenu(Rect at, float time)
         {
             var menu = new GenericMenu();
-            var children = _target.GetComponentsInChildren<UIAnimation>(true).Where(c => c != _target).ToArray();
-            foreach (var child in children)
+            var choices = ChildCallChoices().ToList();
+            foreach (var (path, child, state) in choices)
             {
-                var path = UIAnimTimelineView.TargetPath(_target, child).Replace('/', '\\');
-                if (child.states.Count == 0) menu.AddDisabledItem(new GUIContent($"{path}/(상태 없음)"));
-                foreach (var state in child.states)
-                {
-                    var (c, name) = (child, state.name);
-                    menu.AddItem(new GUIContent($"{path}/{name}"), false, () => Modify("Add Child Call", () =>
-                    {
-                        var call = new UIAnimChildCall { time = time, child = c, state = name };
-                        CurrentState.childCalls.Add(call);
-                        SelectNewMarker(call);
-                    }));
-                }
+                if (IsCalled(child, state)) menu.AddDisabledItem(new GUIContent($"{path}/{state}"), true);
+                else menu.AddItem(new GUIContent($"{path}/{state}"), false, () => AddCall(child, state, time));
             }
-            if (children.Length == 0) menu.AddDisabledItem(new GUIContent("이 오브젝트 아래에 UIAnimation이 있는 자식이 없습니다"));
+            if (choices.Count == 0) menu.AddDisabledItem(new GUIContent("No child UIAnimation with states under this object"));
             menu.DropDown(at);
         }
 
@@ -348,8 +453,9 @@ namespace SeoBYP.TimelineAnimation.Editor
                 var marker = _marker;
                 Modify("Delete Marker", () =>
                 {
-                    if (marker is UIAnimEventMarker e) CurrentState.events.Remove(e);
-                    else if (marker is UIAnimChildCall call) CurrentState.childCalls.Remove(call);
+                    foreach (var t in CurrentState.eventTracks) t.events.Remove(marker as UIAnimEventMarker);
+                    foreach (var t in CurrentState.soundTracks) t.sounds.Remove(marker as UIAnimSound);
+                    CurrentState.childCalls.Remove(marker as UIAnimChildCall);
                     _marker = null;
                 });
                 return;
@@ -357,40 +463,81 @@ namespace SeoBYP.TimelineAnimation.Editor
             if (_selection.Count == 0) return;
             Modify("Delete Keys", () =>
             {
-                foreach (var t in CurrentState.tracks) t.keys.RemoveAll(_selection.Contains);
+                foreach (var t in EditableTracks()) t.keys.RemoveAll(_selection.Contains);
                 _selection.Clear();
             });
         }
 
         // ---------- property picker: the animated object's hierarchy, like the Animation window's "Add Property" ----------
 
-        /// <summary>Opens the property picker. <paramref name="retarget"/> changes that track instead of adding one.</summary>
+        /// <summary>Opens the track picker. <paramref name="retarget"/> changes that track instead of adding any.</summary>
         void ShowPropertyMenu(Rect at, UIAnimTrack retarget)
         {
             var used = new HashSet<(Component, UIAnimProperty)>(CurrentState.tracks.Select(t => (t.target, t.property)));
             (Component, UIAnimProperty)? current = retarget != null ? (retarget.target, retarget.property) : null;
-            UIAnimPropertyPicker.Show(this, at, _target, used, current, (component, property) =>
+            UIAnimPropertyPicker.Show(this, at, _target, used, current, picks =>
             {
-                if (retarget == null) AddTrack(component, property);
-                else Retarget(retarget, component, property);
+                if (retarget == null) AddTracks(picks);
+                else Retarget(retarget, picks[0].component, picks[0].property);
             });
         }
 
-        void AddTrack(Component target, UIAnimProperty property) => Modify("Add Track", () =>
+        internal void AddTracks(List<(UIAnimPickKind kind, Component component, UIAnimProperty property)> picks) => Modify("Add Track", () =>
         {
-            var time = CurrentState.Duration > 0f ? CurrentState.Duration : 0.2f;
-            var key = new UIAnimKey { time = time, value = UIAnimation.Read(target, property) };
-            // Text tracks animate absolute values (reveal 0→1, per-character effects), so they never start from the live value.
-            var text = IsTextProperty(property);
-            CurrentState.tracks.Add(new UIAnimTrack
-            {
-                target = target, property = property, startFromCurrent = !text,
-                stagger = UIAnimTextChars.IsCharProperty(property) ? 0.05f : 0f,
-                keys = { key },
-            });
-            _track = CurrentState.tracks.Count - 1;
+            var state = CurrentState;
+            var time = state.Duration > 0f ? state.Duration : 0.2f;
             _selection.Clear();
-            _selection.Add(key);
+            foreach (var (kind, component, property) in picks)
+            {
+                switch (kind)
+                {
+                    case UIAnimPickKind.Event:
+                        var events = new UIAnimEventTrack();
+                        state.eventTracks.Add(events);
+                        _selTrack = events;
+                        break;
+                    case UIAnimPickKind.Sound:
+                        var sounds = new UIAnimSoundTrack { source = component as AudioSource };
+                        state.soundTracks.Add(sounds);
+                        _selTrack = sounds;
+                        break;
+                    default:
+                        var key = new UIAnimKey { time = time, value = UIAnimation.Read(component, property) };
+                        // Text tracks animate absolute values (reveal 0→1, per-character effects), so they never start from the live value.
+                        var track = new UIAnimTrack
+                        {
+                            target = component, property = property, startFromCurrent = !IsTextProperty(property),
+                            stagger = UIAnimTextChars.IsCharProperty(property) ? 0.05f : 0f,
+                            keys = { new UIAnimKey { time = 0f, value = key.value }, key },   // a key at 0, like the Animation window
+                        };
+                        state.tracks.Add(track);
+                        _selTrack = track;
+                        if (picks.Count == 1) _selection.Add(key);
+                        break;
+                }
+            }
+        });
+
+        // Removes a track (own, or of an overridden child state), a child call, an animation event or a sound.
+        void RemoveItem(object track) => Modify("Remove", () =>
+        {
+            var state = CurrentState;
+            switch (track)
+            {
+                case UIAnimChildCall call: state.childCalls.Remove(call); break;
+                case UIAnimEventMarker e: foreach (var t in state.eventTracks) t.events.Remove(e); break;
+                case UIAnimSound sound: foreach (var t in state.soundTracks) t.sounds.Remove(sound); break;
+                case UIAnimTrack keys:
+                    _selection.ExceptWith(keys.keys);
+                    if (!state.tracks.Remove(keys))
+                        foreach (var call in state.childCalls)
+                            if (UIAnimTimelineView.IsOverridden(call) && call.Target.tracks.Remove(keys)) break;
+                    break;
+                case UIAnimEventTrack events: state.eventTracks.Remove(events); break;
+                case UIAnimSoundTrack sounds: state.soundTracks.Remove(sounds); break;
+            }
+            if (_selTrack == track) _selTrack = null;
+            if (_marker == track) _marker = null;
         });
 
         void Retarget(UIAnimTrack track, Component target, UIAnimProperty property) => Modify("Change Track Target", () =>
@@ -399,6 +546,29 @@ namespace SeoBYP.TimelineAnimation.Editor
             track.property = property;
         });
 
+        // Every edited track gets a key at 0 (the Animation window's habit), so a key added before the old first key
+        // never silently becomes the start. The playback stays the same:
+        // - start from current, one key: the 0 key is the live value, so it's still "current → key".
+        // - start from current, a delayed first key: that key held the live value; it now holds the value read right now.
+        // - absolute values: the 0 key copies the first key, which the track held anyway before it.
+        public static void EnsureStartKey(UIAnimTrack track)
+        {
+            if (track.keys.Count == 0 || track.keys[0].time <= 0f) return;
+            var first = track.keys[0];
+            if (first.IsVibration && !track.startFromCurrent) return;   // a strength, not a value to start from
+            var start = new UIAnimKey { time = 0f, value = first.value };
+            if (track.startFromCurrent && track.target != null)
+            {
+                var current = IsOffset(track) ? Vector4.zero : UIAnimation.Read(track.target, track.property);
+                start.value = current;
+                if (track.keys.Count > 1) first.value = current;
+            }
+            track.keys.Insert(0, start);
+        }
+
+        // Key values added to a base instead of absolute: the rest value, or the press point of a Pointer track.
+        static bool IsOffset(UIAnimTrack track) => track.relativeToRest || track.start == UIAnimStart.Pointer;
+
         static bool IsTextProperty(UIAnimProperty p) => p == UIAnimProperty.TextReveal || UIAnimTextChars.IsCharProperty(p);
 
         // The value a new key should get: what the track's keys say at that time, or the live value for an empty track.
@@ -406,7 +576,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             var keys = track.keys;
             if (keys.Count == 0)
-                return track.relativeToRest || track.target == null ? Vector4.zero : UIAnimation.Read(track.target, track.property);
+                return IsOffset(track) || track.target == null ? Vector4.zero : UIAnimation.Read(track.target, track.property);
             if (time <= keys[0].time) return keys[0].value;
             for (var i = 1; i < keys.Count; i++)
             {
@@ -426,22 +596,32 @@ namespace SeoBYP.TimelineAnimation.Editor
             _tabs.Clear();
             var hasTarget = _target != null;
             _body.SetEnabled(hasTarget);
-            _targetLabel.text = hasTarget ? _target.name : "UIAnimation 없음";
+            _targetLabel.text = hasTarget ? _target.name : "No UIAnimation";
 
             if (!hasTarget)
             {
-                _timeline.SetState(null, null, -1, _selection);
+                _timeline.SetState(null, null, null, _selection);
                 _inspector.Clear();
-                var section = Section("시작하기");
-                section.Add(Hint("UIAnimation 컴포넌트가 있는 오브젝트를 선택하세요."));
+                var section = Section("Getting Started");
+                section.Add(Hint("Select an object with a UIAnimation component."));
                 var go = Selection.activeGameObject;
                 if (go != null && go.transform is RectTransform)
-                    section.Add(new Button(() => SetTarget(Undo.AddComponent<UIAnimation>(go))) { text = $"'{go.name}'에 UIAnimation 추가" });
+                    section.Add(new Button(() => SetTarget(Undo.AddComponent<UIAnimation>(go))) { text = $"Add UIAnimation to '{go.name}'" });
                 _inspector.Add(section);
                 OnPreviewChanged();
                 return;
             }
 
+            BuildStateTabs();
+
+            if (_marker != null && (CurrentState == null || !HasMarker(_marker))) _marker = null;   // state switched or marker removed
+            _timeline.SelectedMarker = _marker;
+            _timeline.SetState(_target, CurrentState, _selTrack, _selection);
+            RebuildInspector();
+        }
+
+        void BuildStateTabs()
+        {
             _state = Mathf.Clamp(_state, 0, Mathf.Max(0, _target.states.Count - 1));
             for (var i = 0; i < _target.states.Count; i++)
             {
@@ -451,24 +631,55 @@ namespace SeoBYP.TimelineAnimation.Editor
                     if (index == _state) return;
                     _preview.Stop();
                     _state = index;
-                    _track = -1;
+                    _selTrack = null;
                     _selection.Clear();
                     Rebuild();
-                }) { text = _target.states[i].name };
+                }) { text = _target.states[i].name, tooltip = $"Play On: {PlayOn(_target.states[i].name)?.evt.ToString() ?? "None (your code)"}" };
                 tab.AddToClassList("uia-tab");
                 tab.EnableInClassList("uia-tab--selected", i == _state);
                 _tabs.Add(tab);
             }
-            var add = new Button(AddState) { text = "+", tooltip = "상태 추가" };
+            var add = new Button(AddState) { text = "+", tooltip = "Add state" };
             add.AddToClassList("uia-tab");
             add.AddToClassList("uia-tab--add");
             _tabs.Add(add);
+        }
 
-            if (_marker != null && !CurrentState.events.Contains(_marker) && !CurrentState.childCalls.Contains(_marker))
-                _marker = null;   // state switched or marker removed
-            _timeline.SelectedMarker = _marker;
-            _timeline.SetState(_target, CurrentState, _track, _selection);
-            RebuildInspector();
+        // ---------- current-prefab overrides of called child states ----------
+
+        // Copies the child's state into this prefab so its tracks become editable right here; the child's prefab stays as is.
+        void OverrideCall(UIAnimChildCall call)
+        {
+            var source = call.child != null ? call.child.FindState(call.state) : null;
+            if (source == null || UIAnimTimelineView.IsOverridden(call)) return;
+            _preview.Stop();
+            Modify("Override Child State", () =>
+                _target.overrides.Add(new UIAnimOverride { child = call.child, state = call.state, replacement = source.Clone() }));
+        }
+
+        void RevertOverride(UIAnimChildCall call)
+        {
+            if (EditorUtility.DisplayDialog("Revert to Original",
+                    $"Remove {_target.name}'s override of '{call.state}' on {call.child.name} and revert to the original?", "Revert", "Cancel"))
+                RemoveOverride(call);
+        }
+
+        // The ↺ button after its confirmation (tests call this directly).
+        internal void RemoveOverride(UIAnimChildCall call)
+        {
+            _preview.Stop();
+            Modify("Revert Child Override", () =>
+            {
+                foreach (var o in _target.overrides.FindAll(o => o.child == call.child && o.state == call.state))
+                {
+                    if (o.replacement != null)
+                    {
+                        _selection.ExceptWith(o.replacement.tracks.SelectMany(t => t.keys));
+                        if (_selTrack is UIAnimTrack t && o.replacement.tracks.Contains(t)) _selTrack = null;
+                    }
+                    _target.overrides.Remove(o);
+                }
+            });
         }
 
         void RebuildInspector()
@@ -477,16 +688,19 @@ namespace SeoBYP.TimelineAnimation.Editor
             var state = CurrentState;
             if (state == null)
             {
-                var section = Section("상태 없음");
-                section.Add(Hint("위의 + 탭으로 상태를 추가하세요."));
+                var section = Section("No States");
+                section.Add(Hint("Add a state with the + tab above."));
                 _inspector.Add(section);
             }
             else if (_marker is UIAnimEventMarker marker) BuildEventInspector(marker);
             else if (_marker is UIAnimChildCall call) BuildCallInspector(call);
+            else if (_marker is UIAnimSound sound) BuildSoundInspector(sound);
             else if (_selection.Count == 1 && CurrentTrack != null && CurrentTrack.keys.Contains(_selection.First()))
                 BuildKeyInspector(CurrentTrack, _selection.First());
             else if (_selection.Count > 1) BuildMultiKeyInspector();
             else if (CurrentTrack != null) BuildTrackInspector(CurrentTrack);
+            else if (_selTrack is UIAnimEventTrack events) BuildEventTrackInspector(events);
+            else if (_selTrack is UIAnimSoundTrack sounds) BuildSoundTrackInspector(sounds);
             else BuildStateInspector(state);
 
             // Same label column as Unity's Inspector.
@@ -494,24 +708,24 @@ namespace SeoBYP.TimelineAnimation.Editor
             OnPreviewChanged();
         }
 
-        void AddState() => Modify("Add State", () =>
+        internal void AddState() => Modify("Add State", () =>
         {
             var name = "State";
             for (var n = 1; _target.states.Any(s => s.name == name); n++) name = $"State {n}";
             _target.states.Add(new UIAnimState { name = name });
             _state = _target.states.Count - 1;
-            _track = -1;
+            _selTrack = null;
             _selection.Clear();
         });
 
         void BuildEventInspector(UIAnimEventMarker marker)
         {
             _inspector.Add(Heading($"▼ {marker.name}", new Color32(255, 183, 77, 255)));
-            var section = Section("애니메이션 이벤트");
-            var name = new TextField("이름") { value = marker.name, isDelayed = true };
+            var section = Section("Animation Event");
+            var name = new TextField("Name") { value = marker.name, isDelayed = true };
             name.RegisterValueChangedCallback(e => Modify("Rename Animation Event", () => marker.name = e.newValue));
             section.Add(name);
-            var time = new FloatField("시간 (s)") { value = marker.time, isDelayed = true };
+            var time = new FloatField("Time (s)") { value = marker.time, isDelayed = true };
             time.RegisterValueChangedCallback(e => Modify("Move Marker", () =>
             {
                 marker.time = Mathf.Max(0f, e.newValue);
@@ -522,34 +736,38 @@ namespace SeoBYP.TimelineAnimation.Editor
 
             _inspector.Add(EventDataSection(marker));
 
-            var usage = Section("받는 방법");
+            var usage = Section("How to Receive");
             var dataType = marker.DataType;
-            usage.Add(Hint("코드:\n" +
+            usage.Add(Hint("Code:\n" +
                            "anim.EventRaised += (in UIAnimEventInfo e) => { if (e.Name == \"" + marker.name + "\") ... };\n" +
                            "await anim.WaitEventAsync(\"" + marker.name + "\");" +
                            (dataType != null ? $"\nanim.AddListener<{dataType.Name}>((in UIAnimEventInfo e, in {dataType.Name} data) => ...);" : "") +
-                           "\n인스펙터: UI Anim Event Listener 컴포넌트에 이벤트 이름과 UnityEvent를 연결합니다.\n" +
-                           "Complete로 건너뛰면 남은 이벤트도 순서대로 발생하고, 취소되면 발생하지 않습니다."));
-            var remove = new Button(DeleteSelectedKeys) { text = "이벤트 삭제", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+                           "\nInspector: map event names to UnityEvents on a UI Anim Event Listener component.\n" +
+                           "Complete still raises the remaining events in order; a cancelled playback raises none."));
+            var remove = new Button(DeleteSelectedKeys) { text = "Delete Event", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
             remove.AddToClassList("uia-danger");
             usage.Add(remove);
             _inspector.Add(usage);
         }
 
-        // Custom data: an IUIAnimEventData struct picked from the project, its fields edited through JsonUtility.
+        // Event type: none (name only) or a [UIAnimEvent] struct whose fields are this event's parameters (edited through JsonUtility).
         VisualElement EventDataSection(UIAnimEventMarker marker)
         {
-            var section = Section("데이터 (struct)");
-            var types = TypeCache.GetTypesDerivedFrom<IUIAnimEventData>()
-                .Where(t => t.IsValueType && !t.IsGenericType).OrderBy(t => t.Name).ToList();
+            var section = Section("Event Type");
+            var types = EventTypes();
             var current = marker.DataType;
-            var choices = new List<string> { "(없음)" };
+            var choices = new List<string> { "Name Only" };
             choices.AddRange(types.Select(t => t.FullName));
             var missing = current == null && !string.IsNullOrEmpty(marker.dataType);
             if (missing) choices.Add(marker.dataType);
-            var selected = current != null ? current.FullName : missing ? marker.dataType : "(없음)";
+            var selected = current != null ? current.FullName : missing ? marker.dataType : "Name Only";
 
-            var type = new PopupField<string>("형식", choices, selected);
+            string Label(string fullName)
+            {
+                var t = types.FirstOrDefault(x => x.FullName == fullName);
+                return t != null ? $"{EventDisplayName(t)}  ({t.Name})" : fullName;
+            }
+            var type = new PopupField<string>("Type", choices, selected, Label, Label);
             type.RegisterValueChangedCallback(e => Modify("Change Event Data", () =>
             {
                 var t = types.FirstOrDefault(x => x.FullName == e.newValue);
@@ -559,11 +777,12 @@ namespace SeoBYP.TimelineAnimation.Editor
             }));
             section.Add(type);
 
-            if (missing) section.Add(Hint($"형식 '{marker.dataType}'을 찾을 수 없습니다. 이름이 바뀌었거나 삭제됐습니다."));
+            if (missing) section.Add(Hint($"Type '{marker.dataType}' was not found. It was renamed or deleted."));
             if (current == null)
             {
                 if (types.Count == 0)
-                    section.Add(Hint("IUIAnimEventData를 구현한 struct가 없습니다.\n예: public struct HitEvent : IUIAnimEventData { public float damage; }"));
+                    section.Add(Hint("No event types registered. Mark a struct with the attribute in code and it appears here.\n" +
+                                     "e.g. [UIAnimEvent(\"Hit\")] public struct HitEvent { public float damage; }"));
                 return section;
             }
 
@@ -576,7 +795,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                     marker.dataJson = JsonUtility.ToJson(boxed);
                     marker.InvalidateData();
                 }, rebuild: false));
-                section.Add(editor ?? Hint($"{field.Name}: {field.FieldType.Name} 형식은 편집할 수 없습니다 (숫자·문자열·벡터·색·enum만 지원)."));
+                section.Add(editor ?? Hint($"{field.Name}: {field.FieldType.Name} can't be edited (numbers, strings, vectors, colors and enums only)."));
             }
             return section;
         }
@@ -608,13 +827,77 @@ namespace SeoBYP.TimelineAnimation.Editor
             return null;
         }
 
+        void BuildSoundInspector(UIAnimSound sound)
+        {
+            _inspector.Add(Heading($"♪ {(sound.clip != null ? sound.clip.name : "Sound")}", new Color32(129, 199, 132, 255)));
+            var section = Section("Sound");
+            var clip = new ObjectField("Clip") { objectType = typeof(AudioClip), allowSceneObjects = false, value = sound.clip };
+            clip.RegisterValueChangedCallback(e => Modify("Change Sound", () => sound.clip = e.newValue as AudioClip));
+            section.Add(clip);
+            var volume = new Slider("Volume", 0f, 1f) { value = sound.volume, showInputField = true };
+            volume.RegisterValueChangedCallback(e => Modify("Change Sound", () => sound.volume = e.newValue, rebuild: false));
+            section.Add(volume);
+            var time = new FloatField("Time (s)") { value = sound.time, isDelayed = true };
+            time.RegisterValueChangedCallback(e => Modify("Move Marker", () =>
+            {
+                sound.time = Mathf.Max(0f, e.newValue);
+                SortMarkers();
+            }));
+            section.Add(time);
+            if (sound.clip != null)
+            {
+                section.Add(Hint($"Length {sound.clip.length:0.00}s · plays {sound.time:0.00}s ~ {sound.End:0.00}s\n" +
+                                 "The state's duration includes the sound's end, so destroying after Close doesn't cut it off.\n" +
+                                 "Sounds skipped by Complete don't play."));
+                var listen = new Button(() => UIAnimAudioPreview.Play(sound.clip)) { text = "▶  Preview", style = { marginTop = 4, marginLeft = 4, marginRight = 4 } };
+                section.Add(listen);
+            }
+            else section.Add(Hint("Assign a clip, or drop an AudioClip from the Project window onto the sound track."));
+            section.Add(Hint("Plays with PlayOneShot on the track's AudioSource; empty uses a shared 2D source, so nothing needs to be added."));
+            var remove = new Button(DeleteSelectedKeys) { text = "Delete Sound", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            remove.AddToClassList("uia-danger");
+            section.Add(remove);
+            _inspector.Add(section);
+        }
+
+        void BuildEventTrackInspector(UIAnimEventTrack track)
+        {
+            _inspector.Add(Heading("Animation Event Track", UIAnimTimelineView.EventColor));
+            var section = Section("Track");
+            section.Add(Hint($"{track.events.Count} event(s). Double-click the lane or press + to add one at the playhead.\n" +
+                             "Tracks are only for organizing: events on any track arrive through the same EventRaised."));
+            section.Add(RemoveTrackButton(track));
+            _inspector.Add(section);
+        }
+
+        void BuildSoundTrackInspector(UIAnimSoundTrack track)
+        {
+            _inspector.Add(Heading("Sound Track", UIAnimTimelineView.SoundColor));
+            var section = Section("Track");
+            var source = new ObjectField("Audio Source (optional)") { objectType = typeof(AudioSource), allowSceneObjects = true, value = track.source };
+            source.RegisterValueChangedCallback(e => Modify("Change Sound Track", () => track.source = e.newValue as AudioSource));
+            section.Add(source);
+            section.Add(Hint($"{track.sounds.Count} sound(s). No AudioSource needed: empty plays 2D through a shared source (PlayOneShot).\n" +
+                             "Assign one only for a mixer group or 3D sound.\n" +
+                             "Drop AudioClips from the Project window onto the lane to add them there."));
+            section.Add(RemoveTrackButton(track));
+            _inspector.Add(section);
+        }
+
+        Button RemoveTrackButton(object track)
+        {
+            var remove = new Button(() => RemoveItem(track)) { text = "Remove Track", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            remove.AddToClassList("uia-danger");
+            return remove;
+        }
+
         void BuildCallInspector(UIAnimChildCall call)
         {
-            var childName = call.child != null ? call.child.name : "(없음)";
+            var childName = call.child != null ? call.child.name : "(None)";
             _inspector.Add(Heading($"▸ {childName} · {call.state}", new Color32(120, 170, 255, 255)));
-            var section = Section("자식 상태 호출");
+            var section = Section("Child State Call");
 
-            var child = new ObjectField("자식") { objectType = typeof(UIAnimation), allowSceneObjects = true, value = call.child };
+            var child = new ObjectField("Child") { objectType = typeof(UIAnimation), allowSceneObjects = true, value = call.child };
             child.RegisterValueChangedCallback(e => Modify("Change Child Call", () =>
             {
                 call.child = e.newValue as UIAnimation;
@@ -624,12 +907,12 @@ namespace SeoBYP.TimelineAnimation.Editor
 
             var names = call.child != null ? call.child.states.Select(st => st.name).ToList() : new List<string>();
             if (!names.Contains(call.state)) names.Insert(0, call.state);
-            var state = new PopupField<string>("상태", names, call.state);
+            var state = new PopupField<string>("State", names, call.state);
             state.SetEnabled(call.child != null);
             state.RegisterValueChangedCallback(e => Modify("Change Child Call", () => call.state = e.newValue));
             section.Add(state);
 
-            var time = new FloatField("시간 (s)") { value = call.time, isDelayed = true };
+            var time = new FloatField("Time (s)") { value = call.time, isDelayed = true };
             time.RegisterValueChangedCallback(e => Modify("Move Marker", () =>
             {
                 call.time = Mathf.Max(0f, e.newValue);
@@ -639,52 +922,107 @@ namespace SeoBYP.TimelineAnimation.Editor
 
             var length = call.Target?.Duration ?? 0f;
             section.Add(Hint(call.Target == null
-                ? "자식 또는 상태가 없어서 재생되지 않습니다."
-                : $"{call.time:0.00}초에 {childName}의 '{call.state}'({length:0.00}s)를 재생합니다. 부모 길이는 {call.time + length:0.00}초까지 늘어납니다.\n" +
-                  "부모를 Complete로 건너뛰면 자식도 끝 값이 되고, 부모가 취소돼도 이미 시작한 자식은 계속 재생됩니다."));
+                ? "Nothing plays: the child or state is missing."
+                : $"Plays '{call.state}' of {childName} ({length:0.00}s) at {call.time:0.00}s. The parent lasts until at least {call.time + length:0.00}s.\n" +
+                  "Completing the parent completes the child too; cancelling the parent lets an already started child keep playing."));
 
-            var remove = new Button(DeleteSelectedKeys) { text = "호출 삭제", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            var remove = new Button(DeleteSelectedKeys) { text = "Delete Call", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
             remove.AddToClassList("uia-danger");
             section.Add(remove);
             _inspector.Add(section);
+        }
+
+        // ---------- Play On: one binding per state (UI Anim Trigger), or None = played by your own code ----------
+
+        UIAnimBinding PlayOn(string stateName) => _target.GetComponent<UIAnimTrigger>()?.bindings.Find(b => b.state == stateName);
+
+        VisualElement PlayOnSection(UIAnimState state)
+        {
+            var section = Section("Play On");
+            var binding = PlayOn(state.name);
+            const string none = "None";
+            var choices = new List<string> { none };
+            choices.AddRange(Enum.GetNames(typeof(UIAnimEvent)));
+            var field = new PopupField<string>("Play On", choices, binding != null ? binding.evt.ToString() : none)
+            {
+                tooltip = "When this state plays by itself. None: it never plays automatically; call Play/PlayAsync from your own code.",
+            };
+            field.RegisterValueChangedCallback(e =>
+                SetPlayOn(state.name, e.newValue == none ? null : (UIAnimEvent)Enum.Parse(typeof(UIAnimEvent), e.newValue), binding?.interrupt ?? default));
+            section.Add(field);
+
+            if (binding == null)
+            {
+                section.Add(Hint("Not played automatically. Call it from your own code, or pick an event to play it on."));
+                return section;
+            }
+
+            var interrupt = new EnumField("Interrupt", binding.interrupt) { tooltip = "What happens to a state already playing on the same properties." };
+            interrupt.RegisterValueChangedCallback(e => SetPlayOn(state.name, binding.evt, (UIAnimInterrupt)e.newValue));
+            section.Add(interrupt);
+
+            // Two states on events that fire together fight over the same object (e.g. OnEnable and Start both run on Instantiate).
+            static bool OnCreate(UIAnimEvent e) => e is UIAnimEvent.OnEnable or UIAnimEvent.Start;
+            var clash = _target.GetComponent<UIAnimTrigger>().bindings
+                .Where(b => b.state != state.name && (b.evt == binding.evt || OnCreate(b.evt) && OnCreate(binding.evt)))
+                .Select(b => $"'{b.state}' ({b.evt})").ToList();
+            if (clash.Count > 0)
+                section.Add(Hint($"⚠ Also played at the same moment: {string.Join(", ", clash)}. Only one of them should play."));
+            return section;
+        }
+
+        // One binding per state: replaces whatever the state had (null = None).
+        void SetPlayOn(string stateName, UIAnimEvent? evt, UIAnimInterrupt interrupt)
+        {
+            var trigger = _target.GetComponent<UIAnimTrigger>();
+            if (trigger == null)
+            {
+                if (evt == null) return;
+                trigger = Undo.AddComponent<UIAnimTrigger>(_target.gameObject);
+            }
+            Undo.RecordObject(trigger, "Play On");
+            trigger.bindings.RemoveAll(b => b.state == stateName);
+            if (evt != null) trigger.bindings.Add(new UIAnimBinding { evt = evt.Value, state = stateName, interrupt = interrupt });
+            PrefabUtility.RecordPrefabInstancePropertyModifications(trigger);
+            EditorUtility.SetDirty(trigger);
+            Rebuild();
+        }
+
+        // Keeps bindings pointing at the state when it is renamed (to = null: the state is deleted).
+        void RenameBindings(string from, string to)
+        {
+            var trigger = _target.GetComponent<UIAnimTrigger>();
+            if (trigger == null || !trigger.bindings.Exists(b => b.state == from)) return;
+            Undo.RecordObject(trigger, "Play On");
+            if (to == null) trigger.bindings.RemoveAll(b => b.state == from);
+            else foreach (var b in trigger.bindings) if (b.state == from) b.state = to;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(trigger);
+            EditorUtility.SetDirty(trigger);
         }
 
         void BuildStateInspector(UIAnimState state)
         {
             _inspector.Add(Heading(state.name, null));
 
-            var info = Section("상태");
-            var name = new TextField("이름") { value = state.name, isDelayed = true };
-            name.RegisterValueChangedCallback(e => Modify("Rename State", () => state.name = e.newValue));
-            info.Add(name);
-            info.Add(Hint($"길이 {state.Duration:0.00}s · 트랙 {state.tracks.Count}개"));
-            _inspector.Add(info);
-
-            var actions = Section("시작 시 동작");
-            actions.Add(Hint("상태가 재생을 시작하는 순간 한 번 실행됩니다. 예) 포인터 위치로 이동: 누른 곳에서 원이 퍼지는 연출(Button2)."));
-            for (var i = 0; i < state.actions.Count; i++)
+            var info = Section("State");
+            var name = new TextField("Name") { value = state.name, isDelayed = true };
+            name.RegisterValueChangedCallback(e =>
             {
-                var action = state.actions[i];
-                var index = i;
-                var row = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 2 } };
-                var type = new EnumField(action.type) { style = { width = 120 } };
-                type.RegisterValueChangedCallback(e => Modify("Change Action", () => action.type = (UIAnimActionType)e.newValue));
-                var target = new ObjectField { objectType = typeof(RectTransform), allowSceneObjects = true, value = action.target, style = { flexGrow = 1, flexShrink = 1 } };
-                target.RegisterValueChangedCallback(e => Modify("Change Action Target", () => action.target = e.newValue as RectTransform));
-                row.Add(type);
-                row.Add(target);
-                row.Add(new Button(() => Modify("Remove Action", () => state.actions.RemoveAt(index))) { text = "×" });
-                actions.Add(row);
-            }
-            actions.Add(new Button(() => Modify("Add Action", () => state.actions.Add(new UIAnimAction()))) { text = "+ 동작 추가" });
-            _inspector.Add(actions);
+                RenameBindings(state.name, e.newValue);   // the Play On binding follows the name
+                Modify("Rename State", () => state.name = e.newValue);
+            });
+            info.Add(name);
+            info.Add(Hint($"Duration {state.Duration:0.00}s · {state.tracks.Count} track(s)"));
+            _inspector.Add(info);
+            _inspector.Add(PlayOnSection(state));
 
             var remove = new Button(() =>
             {
-                if (!EditorUtility.DisplayDialog("상태 삭제", $"'{state.name}' 상태를 삭제할까요?", "삭제", "취소")) return;
+                if (!EditorUtility.DisplayDialog("Delete State", $"Delete the state '{state.name}'?", "Delete", "Cancel")) return;
                 _preview.Stop();
+                RenameBindings(state.name, null);
                 Modify("Remove State", () => { _target.states.Remove(state); _state = 0; });
-            }) { text = "상태 삭제", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            }) { text = "Delete State", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
             remove.AddToClassList("uia-danger");
             _inspector.Add(remove);
         }
@@ -693,35 +1031,50 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             _inspector.Add(Heading(TrackTitle(track), UIAnimTimelineView.PropertyColor(track.property)));
 
-            var section = Section("트랙");
-            var change = new Button { text = $"{TrackTitle(track)}   ▾", tooltip = "다른 오브젝트/속성으로 변경", style = { unityTextAlign = TextAnchor.MiddleLeft } };
+            var section = Section("Track");
+            var change = new Button { text = $"{TrackTitle(track)}   ▾", tooltip = "Change to another object/property", style = { unityTextAlign = TextAnchor.MiddleLeft } };
             change.clicked += () => ShowPropertyMenu(change.worldBound, track);
             section.Add(change);
             if (IsTextProperty(track.property))
             {
                 if (UIAnimTextChars.IsCharProperty(track.property))
                 {
-                    var stagger = new FloatField("글자 간격 (s)") { value = track.stagger, isDelayed = true, tooltip = "각 글자가 앞 글자보다 이만큼 늦게 시작합니다. 0이면 모든 글자가 함께 움직입니다." };
+                    var stagger = new FloatField("Stagger (s)") { value = track.stagger, isDelayed = true, tooltip = "Each character starts this much later than the previous one. 0 moves all characters together." };
                     stagger.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.stagger = Mathf.Max(0f, e.newValue)));
                     section.Add(stagger);
-                    var perChar = new FloatField("글자당 길이 (s)") { value = track.durationPerChar, isDelayed = true, tooltip = "0보다 크면 i번째 글자가 키 전체를 i × 이 값(초) 동안 재생합니다. 뒤 글자일수록 길게 움직입니다. 0이면 키 시간 그대로." };
+                    var perChar = new FloatField("Duration per Char (s)") { value = track.durationPerChar, isDelayed = true, tooltip = "Above 0, the i-th character plays all keys over i × this value (s), so later characters move longer. 0 uses the key times as is." };
                     perChar.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.durationPerChar = Mathf.Max(0f, e.newValue)));
                     section.Add(perChar);
-                    section.Add(Hint("키는 글자 하나의 움직임입니다. 글자마다 '글자 간격'만큼 늦게 같은 움직임을 재생합니다."));
+                    section.Add(Hint("The keys are one character's motion; each character plays it 'Stagger' later than the previous."));
                 }
                 else
                 {
-                    var scramble = new EnumField("스크램블", track.scramble) { tooltip = "아직 나오지 않은 글자를 무작위 문자로 채웁니다." };
+                    var scramble = new EnumField("Scramble", track.scramble) { tooltip = "Fills characters not revealed yet with random characters." };
                     scramble.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.scramble = (ScrambleMode)e.newValue));
                     section.Add(scramble);
-                    section.Add(Hint("0 = 글자 없음, 1 = 전체 표시. 리치 텍스트 태그는 글자 수에 포함되지 않습니다."));
+                    section.Add(Hint("0 = nothing shown, 1 = fully shown. Rich text tags don't count as characters."));
                 }
                 _inspector.Add(section);
                 return;
             }
-            var fromCurrent = new Toggle("현재 값에서 시작") { value = track.startFromCurrent, tooltip = "첫 키가 재생 시작 순간의 값이 됩니다. 중간에 끊겨도 값이 튀지 않습니다. 첫 키를 뒤로 옮기면 그만큼 기다렸다가 시작합니다(딜레이). 키가 하나면 현재 값 → 그 키." };
-            fromCurrent.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.startFromCurrent = e.newValue));
-            var relative = new Toggle("원래 값 기준") { value = track.relativeToRest, tooltip = "키 값을 원래 값에 더합니다. 예: -14 = 원래 크기보다 14 작게." };
+            // Pointer only makes sense for a position; other properties offer the first two.
+            var starts = new List<UIAnimStart> { UIAnimStart.KeyValue, UIAnimStart.Current };
+            if (track.property == UIAnimProperty.AnchoredPosition || track.start == UIAnimStart.Pointer) starts.Add(UIAnimStart.Pointer);
+            static string StartLabel(UIAnimStart s) => s switch
+            {
+                UIAnimStart.KeyValue => "Key Value",
+                UIAnimStart.Current => "Current Value",
+                _ => "Pointer (press position)",
+            };
+            var fromCurrent = new PopupField<UIAnimStart>("Start", starts, track.start, StartLabel, StartLabel)
+            {
+                tooltip = "Where the first key's value comes from when the state starts.\n" +
+                          "Key Value: the value written in the key.\n" +
+                          "Current Value: the value at that moment, so an interrupted animation never jumps.\n" +
+                          "Pointer: where the pointer pressed (a ripple from the touch point). Needs a pointer event in Play On.",
+            };
+            fromCurrent.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.start = e.newValue));
+            var relative = new Toggle("Relative To Rest") { value = track.relativeToRest, tooltip = "Key values are added to the rest value. e.g. -14 = 14 smaller than the original." };
             relative.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.relativeToRest = e.newValue));
             section.Add(fromCurrent);
             section.Add(relative);
@@ -733,8 +1086,8 @@ namespace SeoBYP.TimelineAnimation.Editor
             var index = track.keys.IndexOf(key);
             _inspector.Add(Heading($"◆ {TrackTitle(track)}", UIAnimTimelineView.PropertyColor(track.property)));
 
-            var section = Section("키");
-            var time = new FloatField("시간 (s)") { value = key.time, isDelayed = true };
+            var section = Section("Key");
+            var time = new FloatField("Time (s)") { value = key.time, isDelayed = true };
             time.RegisterValueChangedCallback(e => Modify("Edit Key", () =>
             {
                 key.time = Mathf.Max(0f, e.newValue);
@@ -742,35 +1095,52 @@ namespace SeoBYP.TimelineAnimation.Editor
             }));
             section.Add(time);
 
-            var usesCurrent = index == 0 && track.startFromCurrent && (track.keys.Count > 1 || key.time <= 0f);
-            if (usesCurrent)
-                section.Add(Hint(key.time > 0f
-                    ? "'현재 값에서 시작': 이 키는 재생 시작 순간의 값입니다. 이 시간까지 그 값을 유지합니다(딜레이)."
-                    : "'현재 값에서 시작': 이 키는 재생 시작 순간의 값입니다."));
-            else
+            // Every key shows the same fields; what doesn't apply is disabled with the reason, never hidden.
+            var live = index == 0 && track.startFromCurrent && (track.keys.Count > 1 || key.time <= 0f);   // value set at playback start
+            var value = ValueField(key.IsVibration ? "Strength"
+                : track.start == UIAnimStart.Pointer ? "Value (press point +)"
+                : track.relativeToRest ? "Value (rest +)" : "Value", track, key);
+            value.SetEnabled(!live);
+            section.Add(value);
+            var canCapture = !live && !IsOffset(track) && track.target != null && !IsTextProperty(track.property);
+            var capture = new Button(() =>
             {
-                section.Add(ValueField(key.IsVibration ? "세기" : track.relativeToRest ? "값 (원래 값 +)" : "값", track, key));
-                if (!track.relativeToRest && track.target != null && !IsTextProperty(track.property))
-                    section.Add(new Button(() =>
-                    {
-                        _preview.Stop();   // capture the real value, not a previewed one
-                        var current = UIAnimation.Read(track.target, track.property);
-                        Modify("Capture Value", () => key.value = current);
-                    }) { text = "현재 값 캡처", tooltip = "씬에서 오브젝트를 원하는 모양으로 바꾼 뒤 누르세요." });
-            }
+                _preview.Stop();   // capture the real value, not a previewed one
+                var current = UIAnimation.Read(track.target, track.property);
+                Modify("Capture Value", () => key.value = current);
+            })
+            {
+                text = "Capture Current Value",
+                tooltip = canCapture ? "Pose the object in the scene, then press this."
+                    : live ? "This key's value is set when playback starts."
+                    : "Only for absolute values (not offsets from the rest value or press point, not text tracks).",
+            };
+            capture.SetEnabled(canCapture);
+            section.Add(capture);
+            if (live)
+                section.Add(Hint((track.start == UIAnimStart.Pointer
+                                     ? "Set when playback starts: where the pointer pressed."
+                                     : "Set when playback starts: the property's current value.")
+                                 + (key.time > 0f ? " Held until this time (delay)." : "")));
             _inspector.Add(section);
 
-            // How the track arrives at this key. The first key has no incoming segment unless the track starts from current.
-            if (index > 0 || (track.startFromCurrent && track.keys.Count == 1 && key.time > 0f))
-                _inspector.Add(ArrivalSection(new[] { key }, UIAnimTimelineView.PropertyColor(track.property)));
+            // How the track arrives at this key. The first key has no incoming segment unless a lone key starts from current.
+            var arrives = index > 0 || (track.startFromCurrent && track.keys.Count == 1 && key.time > 0f);
+            var arrival = ArrivalSection(new[] { key }, UIAnimTimelineView.PropertyColor(track.property));
+            if (!arrives)
+            {
+                foreach (var child in arrival.Children()) child.SetEnabled(false);
+                arrival.Add(Hint("First key: nothing arrives before it."));
+            }
+            _inspector.Add(arrival);
         }
 
         void BuildMultiKeyInspector()
         {
-            _inspector.Add(Heading($"◆ 키 {_selection.Count}개 선택", null));
+            _inspector.Add(Heading($"◆ {_selection.Count} Keys Selected", null));
             var keys = _selection.ToArray();
             _inspector.Add(ArrivalSection(keys, new Color(0.42f, 0.70f, 1f)));
-            var remove = new Button(DeleteSelectedKeys) { text = "선택한 키 삭제 (Delete)", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
+            var remove = new Button(DeleteSelectedKeys) { text = "Delete Selected Keys (Delete)", style = { marginTop = 8, marginLeft = 4, marginRight = 4 } };
             remove.AddToClassList("uia-danger");
             _inspector.Add(remove);
         }
@@ -779,8 +1149,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         VisualElement ArrivalSection(UIAnimKey[] keys, Color color)
         {
             var first = keys[0];
-            var arrival = Section("도착 방식");
-            var type = new EnumField("방식", first.curveType) { showMixedValue = keys.Any(k => k.curveType != first.curveType) };
+            var arrival = Section("Arrival");
+            var type = new EnumField("Type", first.curveType) { showMixedValue = keys.Any(k => k.curveType != first.curveType) };
             type.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.curveType = (UIAnimCurveType)e.newValue; }));
             arrival.Add(type);
             if (keys.All(k => k.curveType != UIAnimCurveType.Curve))
@@ -791,9 +1161,9 @@ namespace SeoBYP.TimelineAnimation.Editor
             }
             if (keys.All(k => k.IsVibration))
             {
-                var frequency = new FloatField("초당 진동 수") { value = first.frequency, isDelayed = true, showMixedValue = keys.Any(k => k.frequency != first.frequency) };
+                var frequency = new FloatField("Frequency (per s)") { value = first.frequency, isDelayed = true, showMixedValue = keys.Any(k => k.frequency != first.frequency) };
                 frequency.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.frequency = Mathf.Max(0f, e.newValue); }));
-                var damping = new FloatField("감쇠") { value = first.damping, isDelayed = true, showMixedValue = keys.Any(k => k.damping != first.damping) };
+                var damping = new FloatField("Damping") { value = first.damping, isDelayed = true, showMixedValue = keys.Any(k => k.damping != first.damping) };
                 damping.RegisterValueChangedCallback(e => Modify("Edit Keys", () => { foreach (var k in keys) k.damping = Mathf.Max(0f, e.newValue); }));
                 arrival.Add(frequency);
                 arrival.Add(damping);
@@ -911,7 +1281,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                     if (!uniform) { Modify("Link Scale", () => key.value = new Vector4(v.x, v.x, v.x, 0)); return; }
                 }
                 RebuildInspector();
-            }) { tooltip = linked ? "축별로 편집" : "X/Y/Z 함께 편집 (X 값으로 맞춤)" };
+            }) { tooltip = linked ? "Edit per axis" : "Edit X/Y/Z together (matches X)" };
             link.AddToClassList("uia-link");
             link.EnableInClassList("uia-link--on", linked);
             var icon = EditorGUIUtility.IconContent(linked ? "Linked" : "Unlinked")?.image as Texture2D;
@@ -966,7 +1336,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             var t = _preview.IsActive && _preview.State == state ? _preview.Time : _timeline.Time;
             _timeLabel.text = $"{t:0.00} / {duration:0.00}s";
             _play.text = _preview.IsPlaying ? "❚❚" : "▶";
-            _status.text = _preview.IsActive ? "● 프리뷰 중 — 값은 저장되지 않음" : "";
+            _status.text = _preview.IsActive ? "● Previewing — values are not saved" : "";
             _timeline.SetTime(t);
         }
     }

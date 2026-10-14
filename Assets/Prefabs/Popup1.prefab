@@ -378,16 +378,45 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Open
-    actions: []
     tracks:
     - target: {fileID: 8412918858295001581}
       property: 4
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 0.6, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.25
         value: {x: 0.6, y: 0, z: 0, w: 0}
         curveType: 0
@@ -420,12 +449,42 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 4133973769865443666}
       property: 0
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 1, y: 1, z: 1, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.35
         value: {x: 1, y: 1, z: 1, w: 0}
         curveType: 0
@@ -458,12 +517,42 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 4133973769865443666}
       property: 2
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 1
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 0, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.35
         value: {x: 0, y: 0, z: 0, w: 0}
         curveType: 0
@@ -494,11 +583,18 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
-    events:
-    - time: 0.2
-      name: Shown
-      dataType: PopupSoundEvent, Assembly-CSharp
-      dataJson: '{"clip":"popup_open","volume":0.800000011920929}'
+    eventTracks:
+    - events:
+      - time: 0.2
+        name: Shown
+        dataType: PopupSoundEvent, Assembly-CSharp
+        dataJson: '{"clip":"popup_open","volume":0.800000011920929}'
+    soundTracks:
+    - source: {fileID: 0}
+      sounds:
+      - time: 0
+        clip: {fileID: 8300000, guid: 3148091949b5e294ab40c6824d2e883f, type: 3}
+        volume: 0.8
     childCalls:
     - time: 0.3
       child: {fileID: 8250529368727914200}
@@ -506,17 +602,48 @@ MonoBehaviour:
     - time: 0.6
       child: {fileID: 8250529368727914200}
       state: Unhover
+    events: []
+    sounds: []
   - name: Close
-    actions: []
     tracks:
     - target: {fileID: 8412918858295001581}
       property: 4
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 0.6, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.4
         value: {x: 0, y: 0, z: 0, w: 0}
         curveType: 0
@@ -549,12 +676,42 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 4133973769865443666}
       property: 0
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 1, y: 1, z: 1, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.4
         value: {x: 0.6, y: 0.6, z: 0.6, w: 0}
         curveType: 0
@@ -587,12 +744,42 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 4133973769865443666}
       property: 2
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 1
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 0, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.4
         value: {x: 0, y: -192, z: 0, w: 0}
         curveType: 0
@@ -623,8 +810,159 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
-    events: []
+    eventTracks: []
+    soundTracks: []
     childCalls: []
+    events: []
+    sounds: []
+  audioSource: {fileID: 0}
+  overrides:
+  - child: {fileID: 8250529368727914200}
+    state: Hover
+    replacement:
+      name: Hover
+      tracks:
+      - target: {fileID: 4128427679106050380}
+        property: 3
+        start: 1
+        relativeToRest: 0
+        stagger: 0
+        durationPerChar: 0
+        scramble: 0
+        keys:
+        - time: 0
+          value: {x: 1, y: 0.3254902, z: 0.3254902, w: 0}
+          curveType: 0
+          ease: 2
+          curve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          frequency: 10
+          damping: 1
+        - time: 0.1
+          value: {x: 1, y: 0.3254902, z: 0.3254902, w: 1}
+          curveType: 0
+          ease: 2
+          curve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          frequency: 10
+          damping: 1
+      - target: {fileID: 6831974524644899815}
+        property: 3
+        start: 1
+        relativeToRest: 0
+        stagger: 0
+        durationPerChar: 0
+        scramble: 0
+        keys:
+        - time: 0
+          value: {x: 1, y: 0.3254902, z: 0.3254902, w: 1}
+          curveType: 0
+          ease: 2
+          curve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          frequency: 10
+          damping: 1
+        - time: 0.1
+          value: {x: 1, y: 1, z: 1, w: 1}
+          curveType: 0
+          ease: 2
+          curve:
+            serializedVersion: 2
+            m_Curve:
+            - serializedVersion: 3
+              time: 0
+              value: 0
+              inSlope: 0
+              outSlope: 1
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            - serializedVersion: 3
+              time: 1
+              value: 1
+              inSlope: 1
+              outSlope: 0
+              tangentMode: 0
+              weightedMode: 0
+              inWeight: 0
+              outWeight: 0
+            m_PreInfinity: 2
+            m_PostInfinity: 2
+            m_RotationOrder: 4
+          frequency: 10
+          damping: 1
+      eventTracks: []
+      soundTracks: []
+      childCalls: []
+      events: []
+      sounds: []
 --- !u!1 &8584557259412121170
 GameObject:
   m_ObjectHideFlags: 0
@@ -865,11 +1203,33 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
+--- !u!114 &4128427679106050380 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2185232995185939713, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
+  m_PrefabInstance: {fileID: 2817176170284776525}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!224 &6667486644850968586 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8907896905305175111, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
   m_PrefabInstance: {fileID: 2817176170284776525}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &6831974524644899815 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8775424870721701802, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
+  m_PrefabInstance: {fileID: 2817176170284776525}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!114 &8250529368727914200 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6153986863182936725, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}

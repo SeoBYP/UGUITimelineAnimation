@@ -117,9 +117,10 @@ static class SampleContentBuilder
 
         var anim = AddComponents<Button>(root.gameObject);
         var press = State("Press",
+            // The fill starts where the pointer pressed, then grows: a ripple from the touch point.
+            new UIAnimTrack { target = fill.rectTransform, property = UIAnimProperty.AnchoredPosition, start = UIAnimStart.Pointer, keys = { new UIAnimKey() } },
             FromTo(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, new Vector4(1, 0), 0.15f),
             FromTo(fill.rectTransform, UIAnimProperty.Scale, Vector3.zero, Vector3.one, 0.15f));
-        press.actions.Add(new UIAnimAction { type = UIAnimActionType.MoveToPointer, target = fill.rectTransform });
         anim.States(
             State("Hover", To(hover, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), 0.15f, Ease.OutSine)),
             State("Unhover", To(hover, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.15f, Ease.OutSine)),
@@ -512,16 +513,25 @@ static class SampleContentBuilder
                            To(window, UIAnimProperty.Scale, Vector3.one * 0.6f, 0.4f, Ease.InBack),
                            Relative(window, UIAnimProperty.AnchoredPosition, new Vector4(0, -192), 0.4f, Ease.InCubic)));
         // An animation event carrying custom struct data; the sample logs both, so the marker can be checked in Play mode.
-        anim.states[0].events.Add(new UIAnimEventMarker
+        anim.states[0].AddEvent(new UIAnimEventMarker
         {
             time = 0.2f, name = "Shown",
             dataType = UIAnimEventMarker.TypeKey(typeof(PopupSoundEvent)),
             dataJson = JsonUtility.ToJson(new PopupSoundEvent { clip = "popup_open", volume = 0.8f }),
         });
+        // A sound at the start of Open (generated chirp, 0.4s): the timeline bar shows how long it plays.
+        var openClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/PopupOpen.wav");
+        if (openClip != null) anim.states[0].AddSound(new UIAnimSound { time = 0f, clip = openClip, volume = 0.8f });
         // Child calls: the nested common button flashes once when the popup has opened.
         var closeAnim = close.GetComponent<UIAnimation>();
         anim.states[0].childCalls.Add(new UIAnimChildCall { time = 0.3f, child = closeAnim, state = "Hover" });
         anim.states[0].childCalls.Add(new UIAnimChildCall { time = 0.6f, child = closeAnim, state = "Unhover" });
+        // Current-prefab override: inside this popup only, the common button hovers twice as fast.
+        // Button1.prefab itself is never changed (the copy lives on this prefab).
+        var fastHover = closeAnim.states.Find(s => s.name == "Hover").Clone();
+        foreach (var track in fastHover.tracks)
+        foreach (var key in track.keys) key.time *= 0.5f;   // 0 stays the start key
+        anim.overrides.Add(new UIAnimOverride { child = closeAnim, state = "Hover", replacement = fastHover });
         return root.gameObject;
     }
 
@@ -587,6 +597,10 @@ static class SampleContentBuilder
     static void States(this UIAnimation anim, params UIAnimState[] states)
     {
         anim.states = new List<UIAnimState>(states);
+        // Every track starts with a key at 0, as the editor makes them (same playback, see EnsureStartKey).
+        foreach (var state in states)
+        foreach (var track in state.tracks)
+            SeoBYP.TimelineAnimation.Editor.UIAnimationEditorWindow.EnsureStartKey(track);
     }
 
     // current value → value

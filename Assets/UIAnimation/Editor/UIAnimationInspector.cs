@@ -12,10 +12,10 @@ namespace SeoBYP.TimelineAnimation.Editor
             var root = new VisualElement();
             root.Add(new Button(() => UIAnimationEditorWindow.Open((UIAnimation)target))
             {
-                text = "UI Animation Editor 열기",
+                text = "Open UI Animation Editor",
                 style = { height = 26, marginBottom = 6 },
             });
-            var raw = new Foldout { text = "원본 데이터", value = false };
+            var raw = new Foldout { text = "Raw Data", value = false };
             InspectorElement.FillDefaultInspector(raw, serializedObject, this);
             root.Add(raw);
             return root;

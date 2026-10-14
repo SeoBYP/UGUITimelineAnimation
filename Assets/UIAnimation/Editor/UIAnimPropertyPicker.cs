@@ -10,16 +10,22 @@ using Graphic = UnityEngine.UI.Graphic;
 
 namespace SeoBYP.TimelineAnimation.Editor
 {
+    internal enum UIAnimPickKind { Property, Event, Sound }
+
     /// <summary>
-    /// Dropdown for choosing what a track animates: the animated object's hierarchy on the left,
-    /// the properties of the selected object as cards on the right (with their current value).
+    /// Dropdown for choosing tracks: the animated object's hierarchy on the left, what the selected object can get as cards
+    /// on the right (properties with their current value, animation events on the root, sounds on objects with an AudioSource).
+    /// Adding: click cards to pick several (across objects), then "Add N"; double-click adds right away.
+    /// Retargeting an existing track (<c>current</c> set): one click picks.
     /// </summary>
     internal sealed class UIAnimPropertyPicker : EditorWindow
     {
         UIAnimation _root;
         HashSet<(Component, UIAnimProperty)> _used;
         (Component, UIAnimProperty)? _current;
-        Action<Component, UIAnimProperty> _onPick;
+        Action<List<(UIAnimPickKind kind, Component component, UIAnimProperty property)>> _onPick;
+        readonly List<(UIAnimPickKind kind, Component component, UIAnimProperty property)> _picked = new();
+        Button _addButton;
 
         Transform _selected;
         string _search = "";
@@ -27,7 +33,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         Label _path;
 
         public static void Show(EditorWindow owner, Rect activatorWorldBound, UIAnimation root,
-            HashSet<(Component, UIAnimProperty)> used, (Component, UIAnimProperty)? current, Action<Component, UIAnimProperty> onPick)
+            HashSet<(Component, UIAnimProperty)> used, (Component, UIAnimProperty)? current,
+            Action<List<(UIAnimPickKind kind, Component component, UIAnimProperty property)>> onPick)
         {
             var picker = CreateInstance<UIAnimPropertyPicker>();
             picker._root = root;
@@ -37,7 +44,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             picker._selected = current?.Item1 != null ? current.Value.Item1.transform : root.transform;
 
             var screen = new Rect(owner.position.position + activatorWorldBound.position, activatorWorldBound.size);
-            picker.ShowAsDropDown(screen, new Vector2(560, 380));
+            picker.ShowAsDropDown(screen, new Vector2(560, 420));
         }
 
         /// <summary>Properties an object can animate, with the component each one drives.</summary>
@@ -83,7 +90,7 @@ namespace SeoBYP.TimelineAnimation.Editor
 
             var header = new VisualElement();
             header.AddToClassList("uia-picker-header");
-            header.Add(new Label("애니메이션할 속성 선택") { name = "title" });
+            header.Add(new Label(_current.HasValue ? "Change Track Target" : "Add Tracks (multi-select)") { name = "title" });
             var search = new TextField { value = _search };
             search.AddToClassList("uia-picker-search");
             search.RegisterValueChangedCallback(e => { _search = e.newValue; Refresh(); });
@@ -105,6 +112,19 @@ namespace SeoBYP.TimelineAnimation.Editor
             right.Add(_cards);
             body.Add(right);
             root.Add(body);
+
+            if (!_current.HasValue)
+            {
+                var footer = new VisualElement();
+                footer.AddToClassList("uia-picker-footer");
+                footer.Add(new Label("Click: select · Double-click: add now") { style = { flexGrow = 1 } });
+                footer.Add(new Button(Close) { text = "Cancel" });
+                _addButton = new Button(Commit);
+                _addButton.AddToClassList("uia-picker-add");
+                footer.Add(_addButton);
+                root.Add(footer);
+                UpdateAddButton();
+            }
 
             Refresh();
             search.schedule.Execute(() => search.Focus());
@@ -130,7 +150,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 icon.AddToClassList("uia-picker-icon");
                 row.Add(icon);
                 row.Add(new Label(tr.name) { style = { flexGrow = 1 } });
-                var count = Properties(tr).Count(p => !_used.Contains(p));
+                var count = Properties(tr).Count(p => !_used.Contains(p)) + Specials(tr).Count();
                 var badge = new Label(count.ToString());
                 badge.AddToClassList("uia-picker-badge");
                 row.Add(badge);
@@ -175,20 +195,74 @@ namespace SeoBYP.TimelineAnimation.Editor
 
                 if (taken)
                 {
-                    var tag = new Label("추가됨");
+                    var tag = new Label("Added");
                     tag.AddToClassList("uia-picker-tag");
                     card.Add(tag);
                 }
-                else
-                {
-                    card.RegisterCallback<PointerDownEvent>(_ =>
-                    {
-                        _onPick?.Invoke(component, property);
-                        Close();
-                    });
-                }
+                else Pickable(card, (UIAnimPickKind.Property, component, property));
                 _cards.Add(card);
             }
+
+            if (_current.HasValue) return;
+            foreach (var (kind, component) in Specials(_selected))
+            {
+                var card = new VisualElement();
+                card.AddToClassList("uia-picker-card");
+                var stripe = new VisualElement { style = { backgroundColor = kind == UIAnimPickKind.Event ? UIAnimTimelineView.EventColor : UIAnimTimelineView.SoundColor } };
+                stripe.AddToClassList("uia-picker-card-stripe");
+                card.Add(stripe);
+                var text = new VisualElement { style = { flexGrow = 1 } };
+                text.Add(new Label(kind == UIAnimPickKind.Event ? "Animation Events" : "Sound") { name = "prop" });
+                text.Add(new Label(kind == UIAnimPickKind.Event ? "Named points in time · [UIAnimEvent] data"
+                    : component is AudioSource ? $"AudioSource ({component.name})" : "2D, no AudioSource needed") { name = "type" });
+                card.Add(text);
+                Pickable(card, (kind, component, default));
+                _cards.Add(card);
+            }
+        }
+
+        // Event tracks on the root; sound tracks on the root (UIAnimation's source) and on every object with its own AudioSource.
+        IEnumerable<(UIAnimPickKind kind, Component component)> Specials(Transform tr)
+        {
+            if (tr == _root.transform)
+            {
+                yield return (UIAnimPickKind.Event, _root);
+                yield return (UIAnimPickKind.Sound, _root);
+            }
+            var source = tr.GetComponent<AudioSource>();
+            if (source != null && source != _root.audioSource) yield return (UIAnimPickKind.Sound, source);
+        }
+
+        void Pickable(VisualElement card, (UIAnimPickKind, Component, UIAnimProperty) pick)
+        {
+            card.EnableInClassList("uia-picker-card--picked", _picked.Contains(pick));
+            card.RegisterCallback<PointerDownEvent>(e =>
+            {
+                if (_current.HasValue || e.clickCount == 2)
+                {
+                    if (!_picked.Contains(pick)) _picked.Add(pick);
+                    Commit();
+                    return;
+                }
+                if (!_picked.Remove(pick)) _picked.Add(pick);
+                card.EnableInClassList("uia-picker-card--picked", _picked.Contains(pick));
+                UpdateAddButton();
+            });
+        }
+
+        void UpdateAddButton()
+        {
+            if (_addButton == null) return;
+            _addButton.text = _picked.Count > 0 ? $"Add {_picked.Count}" : "Add";
+            _addButton.SetEnabled(_picked.Count > 0);
+        }
+
+        void Commit()
+        {
+            if (_picked.Count == 0) return;
+            var picks = new List<(UIAnimPickKind, Component, UIAnimProperty)>(_picked);
+            Close();
+            _onPick?.Invoke(picks);
         }
 
         static VisualElement ValuePreview(Component component, UIAnimProperty property)

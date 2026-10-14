@@ -340,16 +340,45 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Hover
-    actions: []
     tracks:
     - target: {fileID: 228658192950302231}
       property: 4
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 0, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.15
         value: {x: 1, y: 0, z: 0, w: 0}
         curveType: 0
@@ -380,17 +409,51 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
+    eventTracks: []
+    soundTracks: []
+    childCalls: []
+    events: []
+    sounds: []
   - name: Unhover
-    actions: []
     tracks:
     - target: {fileID: 228658192950302231}
       property: 4
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 0, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.15
         value: {x: 0, y: 0, z: 0, w: 0}
         curveType: 0
@@ -421,14 +484,84 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
+    eventTracks: []
+    soundTracks: []
+    childCalls: []
+    events: []
+    sounds: []
   - name: Press
-    actions:
-    - type: 0
-      target: {fileID: 6928398999664350611}
     tracks:
+    - target: {fileID: 6928398999664350611}
+      property: 2
+      start: 2
+      relativeToRest: 0
+      stagger: 0
+      durationPerChar: 0
+      scramble: 0
+      keys:
+      - time: 0
+        value: {x: 0, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
+      - time: 0.03
+        value: {x: 0, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
     - target: {fileID: 115909862006358026}
       property: 4
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
@@ -496,7 +629,7 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 6928398999664350611}
       property: 0
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
@@ -562,17 +695,51 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
+    eventTracks: []
+    soundTracks: []
+    childCalls: []
+    events: []
+    sounds: []
   - name: Release
-    actions: []
     tracks:
     - target: {fileID: 115909862006358026}
       property: 4
-      startFromCurrent: 1
+      start: 1
       relativeToRest: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
       keys:
+      - time: 0
+        value: {x: 1, y: 0, z: 0, w: 0}
+        curveType: 0
+        ease: 2
+        curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: 0
+            outSlope: 1
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 1
+            value: 1
+            inSlope: 1
+            outSlope: 0
+            tangentMode: 0
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        frequency: 10
+        damping: 1
       - time: 0.25
         value: {x: 0, y: 0, z: 0, w: 0}
         curveType: 0
@@ -603,6 +770,13 @@ MonoBehaviour:
           m_RotationOrder: 4
         frequency: 10
         damping: 1
+    eventTracks: []
+    soundTracks: []
+    childCalls: []
+    events: []
+    sounds: []
+  audioSource: {fileID: 0}
+  overrides: []
 --- !u!114 &4289108101286140851
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -790,7 +964,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
