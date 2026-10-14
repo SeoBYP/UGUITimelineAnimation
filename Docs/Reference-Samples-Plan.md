@@ -1,6 +1,6 @@
 # 참고 샘플 재현 계획 — UnityScreenNavigator · Unity-AnimationUI
 
-> 작성: 2026-10-15 · 상태: **A·B 완료(`feature/aui-demo`), C·D1·D2 완료(`feature/usn-demo`), D3부터 남음** · 기준 `main` 487631c (PR #12 머지 시점)
+> 작성: 2026-10-15 · 상태: **A·B 완료(`feature/aui-demo`), C·D 완료(`feature/usn-demo`), E부터 남음** · 기준 `main` 487631c (PR #12 머지 시점)
 > 설계 문서: [`UIAnimation-Design.md`](UIAnimation-Design.md)
 
 ## 1. 목적
@@ -170,7 +170,7 @@ USN은 화면 전환 프레임워크입니다.
 |---|---|---|
 | A + B | ✅ `feature/aui-demo` | 트랙 7종(`CanvasGroupAlpha`, `AnchorMin`, `AnchorMax`, `Pivot`, `CameraBackground`, `CameraOrthoSize`, `Active`), `PlayReversed`, OutBack 이징 4종. AnimationUI 데모는 **원본 씬을 그대로 가져와** 원본 스크립트만 떼고 UIAnimation으로 교체(빌더 `AnimationUISampleBuilder`). 연출 수치는 원본 씬 YAML에서 자동 추출(단계 108개, 버튼 23개, 클릭 연결 21개). 효과음 4개는 직접 합성. EditMode 128/128, PlayMode 24/24 |
 | C + D (D1·D2) | ✅ `feature/usn-demo` | Page·Modal·Sheet 컨테이너(패키지, `Awaitable`), Size Relative 트랙 옵션, 시트 방향별 상태. ScreenNavigator 데모는 **원본 Prefab 8개를 GUID 그대로** 가져와 원본 스크립트·Timeline 오브젝트를 떼고 UIAnimScreen·상태로 교체(빌더 `ScreenNavigatorSampleBuilder`). 전환 수치는 원본 Timeline(UnityUIPlayables 클립)·SimpleTransition 파일에서 추출(이징 번호 2 = OutQuad, UnityUIPlayables 소스로 확인). 그림 43장은 같은 크기·같은 GUID의 대체 그림. EditMode 129/129, PlayMode 33/33 |
-| D3 (모달 4종 + 공유 요소 전환) | ⬜ | Settings·Confirmation·UnitTypeInformation·PortraitViewer, C4의 공유 요소 전환 |
+| D3 (모달 4종 + 공유 요소 전환) | ✅ `feature/usn-demo` | 원본 모달 Prefab 8개 추가(GUID 유지). Settings(VOICE·BGM·SE, 바뀐 값만 닫을 때 PlayerPrefs 저장, LOCKED → Confirmation 쌓기), UnitTypeInformation(랭크 썸네일 = 탭, 초상화 시트 3장 기본 페이드), PortraitViewer(공유 요소 전환: 원본 UnitPortraitModalTransitionAnimation 0.3초 QuarticEaseOut). 공유 요소는 패키지 기능 대신 **`Enter`/`Exit` 상태 + 상대 쪽 키 값만 코드로 채움**(샘플 `UsnPortraitViewerModal`). 샘플 폴더는 `Assets/UIAnimation/Samples/`로 이동. EditMode 129/129, PlayMode 35/35 |
 
 **권장 순서**: A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → C3 → C4 → D1 → D2 → D3 → E1 → E2 → F1 → F2 → F3 → G1.
 E1·F1·F2는 다른 작업과 겹치지 않아서 언제든 끼워 넣을 수 있습니다.
@@ -181,4 +181,3 @@ E1·F1·F2는 다른 작업과 겹치지 않아서 언제든 끼워 넣을 수 �
 - **에셋**: 그림과 소리는 대체합니다. 레이아웃·크기·색·시간은 원본 수치를 따릅니다.
 - **USN 미사용 데이터**: 원본의 연결 안 된 Home 트랙과 쓰이지 않는 Shop 등장 Timeline은 재현하지 않습니다. 실제 동작(기본 슬라이드)을 따릅니다.
 - **확인함**: USN Timeline 연출의 이징 번호 2는 UnityUIPlayables `EaseType`의 QuadraticEaseOut(= `OutQuad`)입니다.
-- **USN 데모의 Settings 버튼**: D3 전까지는 로그만 남깁니다.

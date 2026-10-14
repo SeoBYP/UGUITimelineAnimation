@@ -385,7 +385,7 @@ UnityScreenNavigator와 같은 역할을 패키지 안에서 합니다. 전환 �
 
 - 들어오는 화면과 나가는 화면이 **동시에** 움직입니다. 들어오는 화면은 컨테이너를 꽉 채웁니다.
 - `stack: false`로 넣은 페이지는 다음 페이지가 들어오면 기록에서 빠집니다(로딩 화면). `renderingOrder`가 높은 화면이 위에 그려집니다.
-- 생명주기: 화면 루트의 아무 컴포넌트가 `IUIAnimScreenLifecycle`을 구현하면 `WillEnter`/`WillExit`(await, 애니메이션 전), `DidEnter`/`DidExit`(애니메이션 후)가 불립니다. `UIAnimTransition`에 종류(Push/Pop/Show/Hide), 상대 화면(`Partner`), 방향(`Backward`)이 들어 있습니다.
+- 생명주기: 화면 루트의 아무 컴포넌트가 `IUIAnimScreenLifecycle`을 구현하면 `WillEnter`/`WillExit`(await, 애니메이션 전), `DidEnter`/`DidExit`(애니메이션 후)가 불립니다. `UIAnimTransition`에 종류(Push/Pop/Show/Hide), 상대 화면(`Partner`), 방향(`Backward`)이 들어 있습니다. 기다릴 게 없는 `Will*`은 `UIAnimScreen.Completed()`를 돌려줍니다.
 - 전환 중에는 **모든 컨테이너의 입력이 잠깁니다**(`AnyInTransition`). 중복 터치로 전환이 겹치지 않습니다.
 - 전부 `Awaitable`이라 서드파티 없이 `await pages.Push(home)`로 기다릴 수 있습니다.
 
@@ -520,8 +520,8 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | | Toggle2 | On/Off(손잡이 이동 + 채우기) | `4_Toggle` Toggle_2 |
 | `Text` | TextDemo | Typewriter, Scramble, Flip, PopUp, Punch, Shake | `3_Text` Animation1~6 |
 | `Scroll` | 페이지 18장(`Prefabs/Scroll/Pages`), 아이템 13종(`Prefabs/Scroll/Items`) | 스크롤 형태 18가지를 한 장씩 넘겨 봄(한 장씩 넘기기 + 점 + Prev/Next, 페이지 위 세로 리스트에서 가로로 밀어도 넘어감). 위쪽 도구 막대: 현재 페이지의 아이템 수 슬라이더(0~200), Add / Remove, **Edit Animation**(그 페이지의 상태를 UI Animation Editor로 엶, Play 모드에서도 됨). 아래 표 참고 | — |
-| `ReferenceSamples/AnimationUI/Scenes/Home`, `Level1` | 원본 씬 그대로 + UIAnimation | [Unity-AnimationUI](https://github.com/DhafinFawwaz/Unity-AnimationUI) 데모 재현: 메뉴 → Settings/Upgrade(Back = 역재생), Start(카메라 줌·줄무늬·씬 전환), Level1(박스 등장·Win/Lose). 원본 연출 수치는 원본 씬 YAML에서 추출(`Data/AnimationUI-Demo.json`), 빌더 `AnimationUISampleBuilder` | Unity-AnimationUI Demo |
-| `ReferenceSamples/ScreenNavigator/Scenes/ScreenNavigatorDemo` | 원본 Prefab 8개 그대로(GUID 유지) + UIAnimScreen | [UnityScreenNavigator](https://github.com/Haruma-K/UnityScreenNavigator) 데모 재현(D1·D2): Top → Loading(기록 안 남음) → Home(1초 준비) → Shop(탭 3개 시트 슬라이드, 구매 → Connecting) → 뒤로. 전환은 원본 Timeline·SimpleTransition 수치(원본 파일에서 추출). 일러스트·GUI 그림은 같은 크기·같은 GUID의 **대체 그림**. 모달 화면(D3)은 아직 | UnityScreenNavigator Demo |
+| `Samples/AnimationUI/Scenes/Home`, `Level1` | 원본 씬 그대로 + UIAnimation | [Unity-AnimationUI](https://github.com/DhafinFawwaz/Unity-AnimationUI) 데모 재현: 메뉴 → Settings/Upgrade(Back = 역재생), Start(카메라 줌·줄무늬·씬 전환), Level1(박스 등장·Win/Lose). 원본 연출 수치는 원본 씬 YAML에서 추출(`Data/AnimationUI-Demo.json`), 빌더 `AnimationUISampleBuilder` | Unity-AnimationUI Demo |
+| `Samples/ScreenNavigator/Scenes/ScreenNavigatorDemo` | 원본 Prefab 8개 그대로(GUID 유지) + UIAnimScreen | [UnityScreenNavigator](https://github.com/Haruma-K/UnityScreenNavigator) 데모 재현(D1·D2): Top → Loading(기록 안 남음) → Home(1초 준비) → Shop(탭 3개 시트 슬라이드, 구매 → Connecting) → 뒤로. 전환은 원본 Timeline·SimpleTransition 수치(원본 파일에서 추출). 일러스트·GUI 그림은 같은 크기·같은 GUID의 **대체 그림**. 모달(D3): Settings(값 저장)·Confirmation·유닛 정보(랭크 탭 시트)·초상화 뷰어(**공유 요소 전환**: 유닛 정보의 초상화 영역 위치·크기 ↔ 뷰어 자리, `Enter`/`Exit` 상태의 상대 쪽 키만 실행 중 채움) | UnityScreenNavigator Demo |
 | `Popup` | Popup1 (+ 공용 Button1 중첩) | Open(이벤트 `Shown`, 사운드, 닫기 버튼 Hover·Unhover 호출, Hover 2배 빠르게 오버라이드)/Close. `PopupSample`이 코드로 Open/Close 후 Destroy | — |
 
 Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일 때 데이터를 채움):
@@ -573,10 +573,10 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 | `PerformanceTests.cs` | 4 | 성능 측정(버튼 100개, 텍스트 10개 상태별, 무거운 스크롤 형태)과 측정 도구 검증. 결과는 테스트 로그, 할당 없어야 하는 경로는 검사 |
 | `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
-### 11.2 PlayMode 테스트 (33개, UniTask 없으면 32개, `Tests/PlayMode`)
+### 11.2 PlayMode 테스트 (35개, UniTask 없으면 34개, `Tests/PlayMode`)
 **`ScreenContainerPlayModeTests`** (7개): 페이지 Push/Pop(화면 폭 슬라이드·입력 잠금·파괴), `stack: false`, `renderingOrder`, 생명주기 순서와 Will 대기(측정: Push 0.60초 = Will 0.3 + 전환 0.3), 화면 상태가 기본을 대신함, 모달+배경, 시트 Enter/EnterBackward.
 
-**`ScreenNavigatorSamplePlayModeTests`** (2개): ScreenNavigator 데모 재현 흐름 전체(Top 바·글자, Loading, Home 원근 회전 11°↔58.9°·아이콘, Shop 슬라이드·탭 방향·구매, 뒤로 두 번)와 잠긴 메뉴 표시.
+**`ScreenNavigatorSamplePlayModeTests`** (4개): ScreenNavigator 데모 재현 흐름 전체(Top 바·글자, Loading, Home 원근 회전 11°↔58.9°·아이콘, Shop 슬라이드·탭 방향·구매, 뒤로 두 번), 잠긴 메뉴 표시, 설정 모달(기본 확대 진입·확인 모달 쌓기·닫을 때 저장), 공유 요소 전환(뷰어 초상화가 유닛 정보 초상화 영역에서 시작해 810×1080으로, 닫으면 같은 위치·크기로 돌아가고 원래 자리 다시 표시).
 
 **`AnimationUISamplePlayModeTests`** (5개): Unity-AnimationUI 데모 재현을 원본 수치로 확인. 시작 페이드·입력 막힘, Settings 왕복(앵커·카메라 배경·Home 끄기·효과음 8번), Upgrade 왕복, Start(카메라 0.5·줄무늬·Level1 전환), Level1(박스 등장·Lose·Win·Home 복귀), 버튼 hover.
 
@@ -585,7 +585,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 **`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 129개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 33개).
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 129개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 35개).
 
 ### 11.3 CI
 - GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 **EditMode → PlayMode** 순서로 실행합니다. 둘 다 통과해야 합니다. 실행 요약에 두 표가 나옵니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
@@ -634,12 +634,12 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 | ✅ | 서드파티 의존성 0 | LitMotion 제거(PR #11), UniTask 선택화(PR #12) |
 | ✅ | A. 엔진 보강 | A1 새 트랙 7종 · A2 역재생 `PlayReversed` · A3 AUI OutBack 이징 (`feature/aui-demo`) |
 | ✅ | B. Unity-AnimationUI 데모 재현 | 두 씬·연출 8개·버튼 23개를 원본 수치로 재현, PlayMode 테스트 5개 (`feature/aui-demo`) |
-| ✅ | C. 화면 전환 컨테이너 | Page·Modal·Sheet, Size Relative, 방향별 상태(EnterBackward), 생명주기·입력 잠금 (§7.4). 공유 요소 전환(상대 화면 위치·크기로 이동)은 D3와 함께 (`feature/usn-demo`) |
-| 🟡 | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home ✅ · D2 Shop 탭 ✅ (`feature/usn-demo`) · D3 모달 4종 ⬜ |
+| ✅ | C. 화면 전환 컨테이너 | Page·Modal·Sheet, Size Relative, 방향별 상태(EnterBackward), 생명주기·입력 잠금 (§7.4). 공유 요소 전환은 상태 + 실행 중 키 값으로 D3 샘플에서 (`feature/usn-demo`) |
+| ✅ | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home · D2 Shop 탭 · D3 모달 4종 + 공유 요소 전환 (`feature/usn-demo`) |
 | ⬜ | E. 성능 비교 | E1 `Benchmarks/` 프로젝트·측정 도구 · E2 5가지 방식 비교 측정 |
 | ⬜ | F. 연동 샘플 | F1 UniTask · F2 R3 · F3 UIEffect |
 | ⬜ | G. 제작 편의 비교 | G1 도구별 제작 절차 비교 문서 |
-| ⬜ | 배포 `0.1.0` | A~G 이후. 샘플을 패키지의 `Samples~`로 넣을지 결정, 태그, Git URL 설치 확인 |
+| ⬜ | 배포 `0.1.0` | A~G 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
 | ⬜ | 글자 효과 최적화 (선택) | 텍스트당 약 0.2ms/프레임. 한 화면에 수십 개를 동시에 돌릴 때만 필요 |
 
 ### 13.1 알려진 제한

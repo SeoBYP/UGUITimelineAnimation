@@ -63,7 +63,8 @@ namespace SeoBYP.TimelineAnimation
         public CanvasGroup Group => _group != null ? _group : _group = GetComponent<CanvasGroup>();
         public RectTransform Rect => (RectTransform)transform;
 
-        internal static Awaitable Completed()
+        /// <summary>An already finished Awaitable, for lifecycle calls that have nothing to wait for.</summary>
+        public static Awaitable Completed()
         {
             var source = new AwaitableCompletionSource();
             source.SetResult();

@@ -10,12 +10,13 @@ using UnityEngine.UI;
 namespace SeoBYP.TimelineAnimation.Tests
 {
     /// <summary>
-    /// The UnityScreenNavigator demo rebuilt with UI Animation (Assets/ReferenceSamples/ScreenNavigator), in Play mode:
-    /// Top → Loading → Home → Shop (tabs, buy) → back to Home → back to Top, with the original transition values.
+    /// The UnityScreenNavigator demo rebuilt with UI Animation (Assets/UIAnimation/Samples/ScreenNavigator), in Play mode:
+    /// Top → Loading → Home → Shop (tabs, buy) → back to Home → back to Top, with the original transition values;
+    /// the modals (Settings, Confirmation, unit information, portrait viewer with its shared element transition).
     /// </summary>
     public sealed class ScreenNavigatorSamplePlayModeTests
     {
-        const string ScenePath = "Assets/ReferenceSamples/ScreenNavigator/Scenes/ScreenNavigatorDemo.unity";
+        const string ScenePath = "Assets/UIAnimation/Samples/ScreenNavigator/Scenes/ScreenNavigatorDemo.unity";
         UIAnimPageContainer _pages;
 
         IEnumerator Load()
@@ -137,6 +138,114 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.IsTrue(Menu("SettingsButton").Find("Unlocked").gameObject.activeSelf);
             foreach (var locked in new[] { "MainQuestButton", "EventQuestButton", "MissionButton" })
                 Assert.IsTrue(Menu(locked).Find("Locked").gameObject.activeSelf, locked);
+        }
+
+        IEnumerator ToHome()
+        {
+            yield return Load();
+            Child(Page("prefab_top_page"), "Button").GetComponent<Button>().onClick.Invoke();
+            yield return WaitUntilIdle();
+            yield return WaitUntilIdle();
+        }
+
+        static Button Named(Component root, string name) => root.GetComponentsInChildren<Button>(true).First(b => b.name == name);
+
+        [UnityTest]
+        public IEnumerator 설정_모달은_커지며_열리고_바꾼_값을_닫을_때_저장하며_잠긴_항목은_확인_모달을_쌓는다()
+        {
+            PlayerPrefs.DeleteKey("Demo_BgmVolume");
+            yield return ToHome();
+            var modals = Object.FindAnyObjectByType<UIAnimModalContainer>();
+            Named(Page("prefab_home_page"), "SettingsButton").onClick.Invoke();
+            yield return null;
+            var settings = modals.Current;
+            Assert.IsTrue(settings.name.StartsWith("prefab_settings_modal"));
+            Assert.Less(settings.Rect.localScale.x, 0.9f, "기본 모달 진입: 0.3배에서 커짐");
+            yield return WaitUntilIdle();
+            Assert.AreEqual(1f, settings.Rect.localScale.x, 0.001f);
+            Assert.AreEqual(1f, settings.Group.alpha, 0.001f);
+            Assert.AreEqual(0.749f, modals.transform.GetChild(0).GetComponent<Image>().color.a, 0.01f, "배경 막 (원본 backdrop)");
+
+            // LOCKED: a confirmation on top, the settings stay.
+            Named(settings, "LockedButton").onClick.Invoke();
+            yield return WaitUntilIdle();
+            Assert.AreEqual(2, modals.Modals.Count);
+            Assert.AreEqual("This feature is locked.", modals.Current.transform.Find("Background/Contents/Text (TMP)").GetComponent<TMP_Text>().text);
+            Assert.AreEqual(1f, settings.Rect.localScale.x, 0.001f, "아래 모달은 그대로");
+            Named(modals.Current, "CloseButton").onClick.Invoke();
+            yield return WaitUntilIdle();
+            Assert.AreEqual(1, modals.Modals.Count);
+
+            // Change BGM, close: saved.
+            settings.transform.Find("Background/Contents/SoundSettings/BGM/Slider").GetComponent<Slider>().value = 0.25f;
+            Named(settings, "CloseButton").onClick.Invoke();
+            yield return null;
+            Assert.Less(settings.Rect.localScale.x, 1f, "닫힐 때 작아짐");
+            yield return WaitUntilIdle();
+            Assert.AreEqual(0, modals.Modals.Count);
+            Assert.IsTrue(settings == null, "닫힌 모달 파괴");
+            Assert.AreEqual(0.25f, PlayerPrefs.GetFloat("Demo_BgmVolume", 1f), 0.001f, "닫을 때 저장");
+            Assert.IsTrue(Page("prefab_home_page").gameObject.activeSelf, "페이지는 그대로");
+            PlayerPrefs.DeleteKey("Demo_BgmVolume");
+        }
+
+        [UnityTest]
+        public IEnumerator 유닛_정보의_초상화가_뷰어의_위치와_크기로_이어지고_닫으면_돌아간다()
+        {
+            yield return ToHome();
+            Named(Page("prefab_home_page"), "UnitShopButton").onClick.Invoke();
+            yield return WaitUntilIdle();
+            var shop = Page("prefab_unit_shop_page");
+            var modals = Object.FindAnyObjectByType<UIAnimModalContainer>();
+
+            // The shop item's thumbnail opens the unit information (REGULAR sells 003, Unknown Dragon).
+            var sheet = shop.GetComponentInChildren<UIAnimSheetContainer>().Active;
+            sheet.transform.Find("prefab_shop_item/Unlocked/prefab_unit_thumbnail").GetComponent<Button>().onClick.Invoke();
+            yield return WaitUntilIdle();
+            var info = modals.Current;
+            Assert.AreEqual("Unknown Dragon", info.transform.Find("Background/TitleBar/Text (TMP)").GetComponent<TMP_Text>().text);
+            var description = info.transform.Find("Background/Contents/TabGroup/RightPanel/Description/Text (TMP) (1)").GetComponent<TMP_Text>();
+            StringAssert.EndsWith("rank of 1.", description.text);
+
+            // Rank tabs: the thumbnails.
+            var portraits = info.GetComponentInChildren<UIAnimSheetContainer>();
+            info.transform.Find("Background/Contents/TabGroup/RightPanel/Thumbnails/prefab_unit_thumbnail (2)").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+            Assert.Less(portraits.Active.Group.alpha, 1f, "시트 기본 페이드");
+            yield return WaitUntilIdle();
+            Assert.AreEqual(2, portraits.ActiveIndex);
+            StringAssert.EndsWith("rank of 3.", description.text);
+
+            // Expand: the viewer's portrait starts on the information modal's portrait area and grows into its own place.
+            var area = (RectTransform)portraits.transform;
+            var areaCenter = area.TransformPoint(area.rect.center);
+            Named(info, "ExpandButton").onClick.Invoke();
+            yield return null;
+            var viewer = modals.Current;
+            var portrait = (RectTransform)viewer.transform.Find("prefab_unit_portrait");
+            Assert.AreSame(portraits.Active.GetComponentInChildren<Image>().sprite, portrait.GetComponent<Image>().sprite, "같은 랭크의 초상화");
+            Assert.IsFalse(area.gameObject.activeSelf, "공유 요소는 원래 자리에서 사라짐");
+            Assert.Less(portrait.rect.width, 800f, "처음엔 정보 모달의 초상화 영역 크기 근처");
+            yield return WaitUntilIdle();
+            Assert.Less(Vector2.Distance(new Vector2(810, 1080), portrait.sizeDelta), 0.01f, "뷰어 자리 크기");
+            Assert.Less(portrait.anchoredPosition.magnitude, 0.01f, "뷰어 가운데");
+            Assert.AreEqual(1f, viewer.Rect.localScale.x, 0.001f, "뷰어는 모달 기본 확대 없이 초상화만 움직임");
+
+            // Close: back to the portrait area (checked just before the end, when the viewer is destroyed), which shows again.
+            Named(viewer, "Button").onClick.Invoke();
+            yield return new WaitForSeconds(0.27f);   // OutQuart: 99.99 % of the way
+            Assert.AreEqual(area.rect.width, portrait.rect.width, 1f, "정보 모달의 영역 크기로");
+            Assert.AreEqual(area.rect.height, portrait.rect.height, 1f);
+            Assert.AreEqual(areaCenter.x, portrait.position.x, 0.01f, "같은 자리로");
+            Assert.AreEqual(areaCenter.y, portrait.position.y, 0.01f);
+            yield return WaitUntilIdle();
+            Assert.IsTrue(area.gameObject.activeSelf, "원래 자리에 다시 보임");
+            Assert.AreSame(info, modals.Current);
+
+            Named(info, "CloseButton").onClick.Invoke();
+            yield return WaitUntilIdle();
+            Assert.AreEqual(0, modals.Modals.Count);
+            Assert.AreSame(shop, Page("prefab_unit_shop_page"), "Back은 모달부터 닫음");
         }
     }
 }

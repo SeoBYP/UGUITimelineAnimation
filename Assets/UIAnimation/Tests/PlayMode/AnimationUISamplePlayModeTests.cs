@@ -11,12 +11,12 @@ using UnityEngine.UI;
 namespace SeoBYP.TimelineAnimation.Tests
 {
     /// <summary>
-    /// The Unity-AnimationUI demo rebuilt with UI Animation (Assets/ReferenceSamples/AnimationUI), in real Play mode.
+    /// The Unity-AnimationUI demo rebuilt with UI Animation (Assets/UIAnimation/Samples/AnimationUI), in real Play mode.
     /// Expected values are the original's (Data/AnimationUI-Demo.json, read from the original scenes).
     /// </summary>
     public sealed class AnimationUISamplePlayModeTests
     {
-        const string Folder = "Assets/ReferenceSamples/AnimationUI/Scenes/";
+        const string Folder = "Assets/UIAnimation/Samples/AnimationUI/Scenes/";
         static readonly Color Red = new(0.9490196f, 0.43529412f, 0.40392157f, 1f);
         static readonly Color Green = new(0.5137255f, 0.91764706f, 0.5764706f, 1f);
         readonly List<string> _sounds = new();
