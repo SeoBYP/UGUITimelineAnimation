@@ -52,10 +52,20 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             yield return (tr, UIAnimProperty.Scale);
             yield return (tr, UIAnimProperty.Rotation);
+            yield return (tr, UIAnimProperty.Active);
             if (tr is RectTransform)
             {
                 yield return (tr, UIAnimProperty.SizeDelta);
                 yield return (tr, UIAnimProperty.AnchoredPosition);
+                yield return (tr, UIAnimProperty.AnchorMin);
+                yield return (tr, UIAnimProperty.AnchorMax);
+                yield return (tr, UIAnimProperty.Pivot);
+            }
+            if (tr.GetComponent<CanvasGroup>() is { } group) yield return (group, UIAnimProperty.CanvasGroupAlpha);
+            if (tr.GetComponent<Camera>() is { } camera)
+            {
+                yield return (camera, UIAnimProperty.CameraBackground);
+                yield return (camera, UIAnimProperty.CameraOrthoSize);
             }
             var graphic = tr.GetComponent<Graphic>();
             if (graphic != null)

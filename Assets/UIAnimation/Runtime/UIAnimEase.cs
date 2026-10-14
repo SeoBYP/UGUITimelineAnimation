@@ -40,6 +40,12 @@ namespace SeoBYP.TimelineAnimation
         OutBounce,
         InOutBounce,
         CustomAnimationCurve,
+        // appended (saved as ints, so new members go last): Unity-AnimationUI's "OutBack" family, a polynomial whose
+        // overshoot grows with the power, f(x) = -(x-1)^4 + p(x-1)^3 + p(x-1)^2 + 1 with p = 2, 3, 4, 5
+        OutBackQuad,
+        OutBackCubic,
+        OutBackQuart,
+        OutBackQuint,
     }
 
     /// <summary>Characters a Text Reveal track shows where text is not revealed yet. Same values as LitMotion's ScrambleMode.</summary>
@@ -89,11 +95,22 @@ namespace SeoBYP.TimelineAnimation
                 UIAnimEase.InBounce => InBounce(t),
                 UIAnimEase.OutBounce => OutBounce(t),
                 UIAnimEase.InOutBounce => InOutBounce(t),
+                UIAnimEase.OutBackQuad => OutPowBack(t, 2f),
+                UIAnimEase.OutBackCubic => OutPowBack(t, 3f),
+                UIAnimEase.OutBackQuart => OutPowBack(t, 4f),
+                UIAnimEase.OutBackQuint => OutPowBack(t, 5f),
                 _ => t,
             };
         }
 
         public static float Linear(float x) => x;
+
+        /// <summary>Unity-AnimationUI's OutBack family: overshoots then settles, more with a larger <paramref name="p"/>.</summary>
+        public static float OutPowBack(float x, float p)
+        {
+            var y = x - 1f;
+            return -y * y * y * y + p * y * y * y + p * y * y + 1f;
+        }
 
         public static float InSine(float x) => 1 - Mathf.Cos(x * Mathf.PI / 2);
 

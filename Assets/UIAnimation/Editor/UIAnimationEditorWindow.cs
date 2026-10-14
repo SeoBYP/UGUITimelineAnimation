@@ -1285,12 +1285,16 @@ namespace SeoBYP.TimelineAnimation.Editor
                 }
                 case UIAnimProperty.SizeDelta:
                 case UIAnimProperty.AnchoredPosition:
+                case UIAnimProperty.AnchorMin:
+                case UIAnimProperty.AnchorMax:
+                case UIAnimProperty.Pivot:
                 {
                     var f = new Vector2Field(label) { value = v };
                     f.RegisterValueChangedCallback(e => Set(e.newValue));
                     return f;
                 }
                 case UIAnimProperty.GraphicColor when !relative:
+                case UIAnimProperty.CameraBackground when !relative:
                 {
                     var f = new ColorField(label) { value = v };
                     f.RegisterValueChangedCallback(e => Set(e.newValue));
@@ -1302,7 +1306,14 @@ namespace SeoBYP.TimelineAnimation.Editor
                     f.RegisterValueChangedCallback(e => Set(e.newValue));
                     return f;
                 }
+                case UIAnimProperty.Active:
+                {
+                    var f = new Toggle(label) { value = v.x >= 0.5f };
+                    f.RegisterValueChangedCallback(e => Set(new Vector4(e.newValue ? 1f : 0f, 0, 0, 0)));
+                    return f;
+                }
                 case UIAnimProperty.FillAmount when !relative:
+                case UIAnimProperty.CanvasGroupAlpha when !relative:
                 case UIAnimProperty.GraphicAlpha when !relative:
                 {
                     var f = new Slider(label, 0f, 1f) { value = v.x, showInputField = true };

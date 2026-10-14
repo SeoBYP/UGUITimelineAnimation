@@ -1,6 +1,6 @@
 # UGUI Animation System — 설계 문서
 
-> 기준: `main` 66d0537 (PR #9) + 성능 측정·CI 보강(`feature/perf-ci`) · 2026-10-15
+> 기준: `main` 487631c (PR #12 머지 시점) · 2026-10-15
 > 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · **서드파티 의존성 없음** (LitMotion 대신 자체 타이머·이징, 대기는 Unity `Awaitable`) · UniTask는 **선택**(설치돼 있으면 연동이 켜짐)
 > 방식: **완전 커스텀**. 데이터, 런타임, 에디터 창을 모두 직접 만듭니다. Animator와 Timeline은 사용하지 않습니다.
 > 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 아직 안 함
@@ -114,7 +114,10 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 
 | 대상 | 속성 |
 |---|---|
-| Transform / RectTransform | `Scale`, `Rotation`(오일러 각, 읽을 때 -180~180), `SizeDelta`, `AnchoredPosition` |
+| Transform / RectTransform | `Scale`, `Rotation`(오일러 각, 읽을 때 -180~180), `SizeDelta`, `AnchoredPosition`, `AnchorMin`, `AnchorMax`, `Pivot` |
+| GameObject | `Active`(켜기·끄기. 키 사이 보간 없이 키 시간에 바뀜) |
+| CanvasGroup | `CanvasGroupAlpha` (화면·팝업 전체 페이드) |
+| Camera | `CameraBackground`, `CameraOrthoSize` |
 | Graphic (Image, TMP 등) | `GraphicColor`, `GraphicAlpha` |
 | Image (Filled) | `FillAmount` |
 | TMP_Text | `FontSize`, `CharacterSpacing`, `TextReveal` (타자기, 0~1) |
@@ -330,13 +333,19 @@ public sealed class UIAnimation : MonoBehaviour
                      PointerEventData pointer = null);
     public Awaitable PlayAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
                                CancellationToken cancellationToken = default);   // Unity 내장, 한 번만 await
-    public void Complete(string stateName);   // 재생 중인 상태를 끝으로 건너뛰기
+    public void PlayReversed(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel);
+    public Awaitable PlayReversedAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+                                       CancellationToken cancellationToken = default);
+    public void PlayStateReversed(string stateName);   // UnityEvent 연결용 (Back 버튼)
+    public void Complete(string stateName);   // 재생 중인 상태를 끝으로 건너뛰기 (역재생이면 시작 모습)
     public bool IsPlaying(string stateName);
     public void PlayState(string stateName);  // UnityEvent 연결용
     public void Sample(string stateName, float time);   // 재생하지 않고 그 시간의 모습만 (이벤트·사운드 없음)
     public float Duration(string stateName);
 }
 ```
+
+**역재생** — 값은 끝에서 시작으로, 이벤트·사운드·자식 호출도 거꾸로 한 번씩 발생합니다(자식 상태도 역재생). 시작 값이 "현재 값"인 트랙은 마지막 정방향 재생이 잡은 값을 다시 써서, Back이 Open을 시작한 자리로 정확히 돌아갑니다. 이징 곡선은 시간을 거꾸로 따라가므로 뒤집힌 모양이 됩니다.
 
 **팝업 닫기** — 닫히는 도중 다시 열리면 Destroy하지 않습니다.
 ```csharp
@@ -487,6 +496,7 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | | Toggle2 | On/Off(손잡이 이동 + 채우기) | `4_Toggle` Toggle_2 |
 | `Text` | TextDemo | Typewriter, Scramble, Flip, PopUp, Punch, Shake | `3_Text` Animation1~6 |
 | `Scroll` | 페이지 18장(`Prefabs/Scroll/Pages`), 아이템 13종(`Prefabs/Scroll/Items`) | 스크롤 형태 18가지를 한 장씩 넘겨 봄(한 장씩 넘기기 + 점 + Prev/Next, 페이지 위 세로 리스트에서 가로로 밀어도 넘어감). 위쪽 도구 막대: 현재 페이지의 아이템 수 슬라이더(0~200), Add / Remove, **Edit Animation**(그 페이지의 상태를 UI Animation Editor로 엶, Play 모드에서도 됨). 아래 표 참고 | — |
+| `ReferenceSamples/AnimationUI/Scenes/Home`, `Level1` | 원본 씬 그대로 + UIAnimation | [Unity-AnimationUI](https://github.com/DhafinFawwaz/Unity-AnimationUI) 데모 재현: 메뉴 → Settings/Upgrade(Back = 역재생), Start(카메라 줌·줄무늬·씬 전환), Level1(박스 등장·Win/Lose). 원본 연출 수치는 원본 씬 YAML에서 추출(`Data/AnimationUI-Demo.json`), 빌더 `AnimationUISampleBuilder` | Unity-AnimationUI Demo |
 | `Popup` | Popup1 (+ 공용 Button1 중첩) | Open(이벤트 `Shown`, 사운드, 닫기 버튼 Hover·Unhover 호출, Hover 2배 빠르게 오버라이드)/Close. `PopupSample`이 코드로 Open/Close 후 Destroy | — |
 
 Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일 때 데이터를 채움):
@@ -521,7 +531,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 
 ## 11. 테스트와 CI
 
-### 11.1 EditMode 테스트 (120개, 메서드 이름은 한국어)
+### 11.1 EditMode 테스트 (128개, 메서드 이름은 한국어)
 | 파일 | 개수 | 다루는 것 |
 |---|---|---|
 | `UIAnimationTests.cs` | 43 | 키 보간, 시작 값(현재 값·지연·누른 위치), 원래 값 기준, 속성 인계, 완료 대기·취소, 이벤트·struct 데이터, 사운드, 자식 호출, 오버라이드 해석, 예전 데이터 변환 |
@@ -532,17 +542,20 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 | `EditorLayoutMeasureTests.cs` | 3 | 에디터 레이아웃 실측(줄 높이, 키 위치·폭, 투명도, 글자색), 바깥 Prefab 단계, ↺ 범위 |
 | `UIAnimScrollListTests.cs` | 17 | 정렬(세로·가로·그리드·가운데·반대·자식 크기), 재사용, 바인딩·해제, 데이터 목록, 개수 변경, ScrollTo·가장 가까운 아이템, 화면 좌표로 찾기, 진입·등장·스크럽, `Sample`, **성능 측정 2종** |
 | `UIAnimScrollFormsTests.cs` | 15 | 가변 크기, 여러 Prefab, 측정, 메이슨리, 루프, 한 장씩 넘기기, 크기 변경, 끝에 붙기, 섹션 헤더, 중첩 드래그, `Rotation`, Page Indicator, Scroll Scrub, Pull To Refresh, 에디터 미리보기 |
+| `UIAnimEngineAdditionsTests.cs` | 8 | 새 트랙(CanvasGroup·Anchor·Pivot·카메라·Active) 읽기·쓰기, Active는 키 시간에 바뀜, 역재생(값·이벤트 순서·현재 값 재사용·Complete·자식 호출), AnimationUI OutBack 이징 |
 | `UIAnimEaseTests.cs` | 3 | 이징 30종의 시작·끝 값, 알려진 값, 저장 번호가 LitMotion과 같은지 |
 | `PerformanceTests.cs` | 4 | 성능 측정(버튼 100개, 텍스트 10개 상태별, 무거운 스크롤 형태)과 측정 도구 검증. 결과는 테스트 로그, 할당 없어야 하는 경로는 검사 |
 | `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
-### 11.2 PlayMode 테스트 (19개, UniTask 없으면 18개, `Tests/PlayMode`)
+### 11.2 PlayMode 테스트 (24개, UniTask 없으면 23개, `Tests/PlayMode`)
+**`AnimationUISamplePlayModeTests`** (5개): Unity-AnimationUI 데모 재현을 원본 수치로 확인. 시작 페이드·입력 막힘, Settings 왕복(앵커·카메라 배경·Home 끄기·효과음 8번), Upgrade 왕복, Start(카메라 0.5·줄무늬·Level1 전환), Level1(박스 등장·Lose·Win·Home 복귀), 버튼 hover.
+
 **`PlayAsyncPlayModeTests`** (6개 + UniTask 설치 시 연동 1개): 실제 플레이어 루프에서 `PlayAsync`가 상태 길이만큼 기다린 뒤 끝 값으로 끝나는지(측정 0.300초 / 길이 0.3초), `Complete`·`Complete` 인터럽트는 완료, 같은 상태 재생·속성 빼앗김·비활성화·토큰 취소는 취소되는지(§4.3 표 전체), `WaitEventAsync`. 연동 테스트는 `UniTask.WhenAll(PlayUniTaskAsync, WaitEventUniTaskAsync)`와 취소 전달.
 
 **`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 120개 전부 실행, `-nographics`: 102개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 19개, `-nographics`: 18개 실행·1개 건너뜀).
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 128개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 24개).
 
 ### 11.3 CI
 - GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 **EditMode → PlayMode** 순서로 실행합니다. 둘 다 통과해야 합니다. 실행 요약에 두 표가 나옵니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
@@ -581,15 +594,22 @@ Docs/                                       ← 문서 (배포 안 됨)
 
 ## 13. 남은 일
 
+A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실무 연출·성능·제작 편의·연동을 증명하는 작업입니다. 작업 하나가 브랜치·PR 하나이고, ID별 선행 작업·크기·완료 기준은 [`Reference-Samples-Plan.md`](Reference-Samples-Plan.md) §6에 있습니다.
+
 | 상태 | 항목 | 내용 |
 |---|---|---|
-| ✅ | 스크롤 직접 확인 | 사용자가 Scroll 씬을 직접 검수하고 나온 문제(튐, 깜빡임, 새로고침 위치·번호, 도구 막대)를 모두 고침 |
-| ✅ | 성능 측정 (R3) | §4.7. 측정 도구 오류(항상 0)를 발견해 고쳤고, 측정 리스트 1개 추가 42ms → 0.6ms |
-| ✅ | CI 보강 | CI가 PlayMode까지 실행. 러너에 xvfb 설치함(2026-10-15, `xvfb 2:21.1.12-1ubuntu1.8`): 에디터 창 테스트도 CI에서 실행 |
-| ✅ | `PlayAsync` PlayMode 테스트 | 완료·취소 경로 6개 |
-| ⬜ | 외부 라이브러리 샘플 분석 → 샘플 제작 | 다른 UI 애니메이션 라이브러리의 샘플을 분석해 같은 연출을 UI Animation Editor로 만들기 |
-| ✅ | 의존성 0 | LitMotion 제거(PR #11), UniTask 선택화(`feature/unitask-optional`) |
-| ⬜ | 배포 `0.1.0` | 샘플을 패키지의 `Samples~`로 넣을지 결정, 태그. Git URL로 다른 프로젝트에 설치해 동작 확인 |
+| ✅ | 스크롤 직접 확인 | 사용자 검수 완료 (나온 문제는 모두 고침) |
+| ✅ | 성능 측정 (R3) | §4.7 |
+| ✅ | CI 보강 | CI가 EditMode·PlayMode 실행, 러너에 xvfb 설치 → 에디터 창 테스트도 실행 |
+| ✅ | 서드파티 의존성 0 | LitMotion 제거(PR #11), UniTask 선택화(PR #12) |
+| ✅ | A. 엔진 보강 | A1 새 트랙 7종 · A2 역재생 `PlayReversed` · A3 AUI OutBack 이징 (`feature/aui-demo`) |
+| ✅ | B. Unity-AnimationUI 데모 재현 | 두 씬·연출 8개·버튼 23개를 원본 수치로 재현, PlayMode 테스트 5개 (`feature/aui-demo`) |
+| ⬜ | C. 화면 전환 컨테이너 | C1 Page · C2 Modal · C3 Sheet + 화면 크기 기준 값 · C4 상대 화면 기준 연출 |
+| ⬜ | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home · D2 Shop 탭 · D3 모달 4종 |
+| ⬜ | E. 성능 비교 | E1 `Benchmarks/` 프로젝트·측정 도구 · E2 5가지 방식 비교 측정 |
+| ⬜ | F. 연동 샘플 | F1 UniTask · F2 R3 · F3 UIEffect |
+| ⬜ | G. 제작 편의 비교 | G1 도구별 제작 절차 비교 문서 |
+| ⬜ | 배포 `0.1.0` | A~G 이후. 샘플을 패키지의 `Samples~`로 넣을지 결정, 태그, Git URL 설치 확인 |
 | ⬜ | 글자 효과 최적화 (선택) | 텍스트당 약 0.2ms/프레임. 한 화면에 수십 개를 동시에 돌릴 때만 필요 |
 
 ### 13.1 알려진 제한

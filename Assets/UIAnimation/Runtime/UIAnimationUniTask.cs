@@ -15,6 +15,11 @@ namespace SeoBYP.TimelineAnimation
             UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel, CancellationToken cancellationToken = default) =>
             animation.PlayAsync(stateName, interrupt, cancellationToken).AsUniTask();
 
+        /// <summary><see cref="UIAnimation.PlayReversedAsync"/> as a UniTask.</summary>
+        public static UniTask PlayReversedUniTaskAsync(this UIAnimation animation, string stateName,
+            UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel, CancellationToken cancellationToken = default) =>
+            animation.PlayReversedAsync(stateName, interrupt, cancellationToken).AsUniTask();
+
         /// <summary><see cref="UIAnimation.WaitEventAsync"/> as a UniTask.</summary>
         public static UniTask<UIAnimEventInfo> WaitEventUniTaskAsync(this UIAnimation animation, string eventName,
             CancellationToken cancellationToken = default) =>
