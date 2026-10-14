@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using LitMotion;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -42,7 +41,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             return state;
         }
 
-        static UIAnimKey Key(float time, Vector4 value) => new() { time = time, value = value, ease = Ease.Linear };
+        static UIAnimKey Key(float time, Vector4 value) => new() { time = time, value = value, ease = UIAnimEase.Linear };
 
         [Test]
         public void 공개_비율만큼_글자가_보인다()
@@ -82,7 +81,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         public void Punch_키는_흔들린_뒤_이전_값으로_돌아온다()
         {
             var track = new UIAnimTrack { keys = { Key(0f, Vector3.one),
-                new UIAnimKey { time = 1f, value = Vector3.one * 0.5f, curveType = UIAnimCurveType.Punch, ease = Ease.Linear, frequency = 5f, damping = 1f } } };
+                new UIAnimKey { time = 1f, value = Vector3.one * 0.5f, curveType = UIAnimCurveType.Punch, ease = UIAnimEase.Linear, frequency = 5f, damping = 1f } } };
             track.keys[0].resolved = Vector3.one;
             track.keys[1].resolved = Vector3.one;   // vibration keys hold the previous value
 
@@ -97,7 +96,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         public void 스크램블은_글자_수를_유지하고_끝나면_원문이_된다()
         {
             var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
-            reveal.tracks[0].scramble = ScrambleMode.Lowercase;
+            reveal.tracks[0].scramble = UIAnimScramble.Lowercase;
             UIAnimation.Resolve(reveal);
 
             UIAnimation.Evaluate(reveal, 0.5f);
@@ -111,7 +110,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         public void 스크램블은_공백을_유지해서_줄바꿈이_바뀌지_않는다()
         {
             var sb = new System.Text.StringBuilder();
-            var result = UIAnimVibration.Scramble("<b>ab</b> cd ef", 0.25f, ScrambleMode.Lowercase, 0u, 1.0, sb);
+            var result = UIAnimVibration.Scramble("<b>ab</b> cd ef", 0.25f, UIAnimScramble.Lowercase, 0u, 1.0, sb);
             Assert.AreEqual(8, result.Length - "<b></b>".Length, "Same visible length.");
             StringAssert.StartsWith("<b>ab</b>", result);
             Assert.AreEqual(' ', result[9]);
@@ -158,7 +157,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         public void 스크램블_텍스트를_바꾸고_다시_재생하면_새_텍스트로_공개된다()
         {
             var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
-            reveal.tracks[0].scramble = ScrambleMode.Lowercase;
+            reveal.tracks[0].scramble = UIAnimScramble.Lowercase;
             _anim.Prepare(reveal.name, UIAnimInterrupt.Cancel, null);
             UIAnimation.Evaluate(reveal, 1f);
             Assert.AreEqual("ABCD", _text.text);
@@ -175,7 +174,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         public void 스크램블_재생_중에_텍스트를_바꾸면_새_텍스트를_덮어쓰지_않는다()
         {
             var reveal = Add(UIAnimProperty.TextReveal, 0f, Key(0f, Vector4.zero), Key(1f, new Vector4(1, 0)));
-            reveal.tracks[0].scramble = ScrambleMode.Lowercase;
+            reveal.tracks[0].scramble = UIAnimScramble.Lowercase;
             _anim.Prepare(reveal.name, UIAnimInterrupt.Cancel, null);
             UIAnimation.Evaluate(reveal, 0.5f);
 

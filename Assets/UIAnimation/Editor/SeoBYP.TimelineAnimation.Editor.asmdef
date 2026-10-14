@@ -5,7 +5,6 @@
         "SeoBYP.TimelineAnimation",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
-        "LitMotion",
         "UniTask"
     ],
     "includePlatforms": [ "Editor" ]

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
-using LitMotion;
 using TMPro;
 using UnityEngine;
 
@@ -94,7 +93,7 @@ namespace SeoBYP.TimelineAnimation
         }
 
         /// <summary>Shows the first `reveal` share of the text and random characters for the rest (LitMotion scramble).</summary>
-        public void Scramble(float reveal, ScrambleMode mode, float time)
+        public void Scramble(float reveal, UIAnimScramble mode, float time)
         {
             CaptureSource();   // text replaced mid-reveal (e.g. next dialogue line) becomes the new source
             // ponytail: builds a new string per frame while scrambling (TMP needs a string); fine for short reveals

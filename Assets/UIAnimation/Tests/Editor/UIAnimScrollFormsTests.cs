@@ -304,7 +304,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             if (anim == null) anim = go.AddComponent<UIAnimation>();
             var track = new UIAnimTrack { target = go.transform, property = UIAnimProperty.Scale, start = UIAnimStart.KeyValue };
             track.keys.Add(new UIAnimKey { time = 0f, value = from });
-            track.keys.Add(new UIAnimKey { time = 1f, value = to, ease = LitMotion.Ease.Linear });
+            track.keys.Add(new UIAnimKey { time = 1f, value = to, ease = UIAnimEase.Linear });
             anim.states.Add(new UIAnimState { name = state, tracks = { track } });
             return anim;
         }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using LitMotion;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -40,7 +39,7 @@ namespace SeoBYP.TimelineAnimation
 
     public enum UIAnimCurveType
     {
-        Ease,       // LitMotion ease preset
+        Ease,       // an ease preset (UIAnimEase)
         Curve,      // AnimationCurve over the segment: 0 = previous key's value, 1 = this key's value
         Punch,      // LMotion.Punch: oscillates around the previous value with this key's value as strength, ends back there
         Shake,      // LMotion.Shake: like Punch but each component jitters randomly every frame
@@ -61,7 +60,7 @@ namespace SeoBYP.TimelineAnimation
         public float time;
         public Vector4 value;
         public UIAnimCurveType curveType = UIAnimCurveType.Ease;
-        public Ease ease = Ease.OutSine;
+        public UIAnimEase ease = UIAnimEase.OutSine;
         public AnimationCurve curve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         [Tooltip("Punch/Shake: oscillations per second. The count over the segment is (int)(length x this), like LitMotion's frequency.")]
         public float frequency = 10f;
@@ -89,8 +88,8 @@ namespace SeoBYP.TimelineAnimation
         public float Weight(float t01) => curveType switch
         {
             UIAnimCurveType.Curve when curve != null => curve.Evaluate(t01),
-            UIAnimCurveType.Punch or UIAnimCurveType.Shake => UIAnimVibration.Envelope(Oscillations(1f), damping, EaseUtility.Evaluate(t01, ease)),
-            _ => EaseUtility.Evaluate(t01, ease),
+            UIAnimCurveType.Punch or UIAnimCurveType.Shake => UIAnimVibration.Envelope(Oscillations(1f), damping, UIAnimEasing.Evaluate(t01, ease)),
+            _ => UIAnimEasing.Evaluate(t01, ease),
         };
     }
 
@@ -116,7 +115,7 @@ namespace SeoBYP.TimelineAnimation
         [Tooltip("Per-character tracks only: when above 0, character i plays the keys over i x this many seconds (character 0 stays still).")]
         public float durationPerChar;
         [Tooltip("Text Reveal only: characters not yet revealed are shown as random characters (LitMotion WithScrambleChars).")]
-        public ScrambleMode scramble = ScrambleMode.None;
+        public UIAnimScramble scramble = UIAnimScramble.None;
         public List<UIAnimKey> keys = new();      // sorted by time
 
         internal UIAnimTrack Clone()
@@ -176,7 +175,7 @@ namespace SeoBYP.TimelineAnimation
             if (!key.IsVibration) return Vector4.LerpUnclamped(from, key.resolved, key.Weight(p));
 
             // Punch/Shake: key.value is the strength; the motion oscillates around `from` and ends back on it.
-            var envelope = UIAnimVibration.Envelope(key.Oscillations(span), key.damping, EaseUtility.Evaluate(p, key.ease));
+            var envelope = UIAnimVibration.Envelope(key.Oscillations(span), key.damping, UIAnimEasing.Evaluate(p, key.ease));
             var strength = key.value * envelope;
             if (key.curveType == UIAnimCurveType.Shake)
                 strength = Vector4.Scale(strength, UIAnimVibration.RandomSigned(0u, local, Dimensions(property)));
@@ -455,11 +454,10 @@ namespace SeoBYP.TimelineAnimation
         {
             public readonly UIAnimation owner;
             public readonly UIAnimState state;
-            public MotionHandle handle;
+            public UIAnimTimerHandle handle;
             public bool active;
             public bool resolved;                                 // key values resolved at least once (Sample reuses them)
             public float lastTime;                                // events in (lastTime, t] are raised on the next step
-            public readonly Action onComplete;
             public AutoResetUniTaskCompletionSource completion;   // only while someone awaits PlayAsync
             public CancellationTokenRegistration cancelRegistration;
 
@@ -467,7 +465,6 @@ namespace SeoBYP.TimelineAnimation
             {
                 this.owner = owner;
                 this.state = state;
-                onComplete = () => Finish(this);
             }
         }
 
@@ -699,10 +696,9 @@ namespace SeoBYP.TimelineAnimation
                 return;
             }
 
-            playback.handle = LMotion.Create(0f, duration, duration)
-                .WithScheduler(MotionScheduler.UpdateIgnoreTimeScale)
-                .WithOnComplete(playback.onComplete)
-                .Bind(playback, static (t, p) => Step(p, t));
+            playback.handle = UIAnimTimer.Start(duration, playback,
+                static (p, t) => Step((Playback)p, t),
+                static p => Finish((Playback)p));
         }
 
         /// <summary>One frame of a playback: values, then the child calls and animation events passed since the last frame. Internal so tests can drive time.</summary>
@@ -750,7 +746,7 @@ namespace SeoBYP.TimelineAnimation
         }
 
         // Reached the end: the state stays on its last values.
-        static void Finish(Playback p)
+        internal static void Finish(Playback p)
         {
             // Skipped to the end: the remaining calls and events still happen, in order; skipped sounds stay silent.
             RaiseEvents(p, float.MaxValue, playSounds: false);
@@ -863,7 +859,7 @@ namespace SeoBYP.TimelineAnimation
                     HoldThroughVibrations(track);
                     continue;
                 }
-                if (track.property == UIAnimProperty.TextReveal && track.scramble != ScrambleMode.None)
+                if (track.property == UIAnimProperty.TextReveal && track.scramble != UIAnimScramble.None)
                     UIAnimTextChars.For((TMP_Text)track.target).CaptureSource();
                 track.startValue = track.start == UIAnimStart.Pointer && PointerPosition(track, pointer, out var pressed)
                     ? pressed : Read(track.target, track.property);
@@ -910,7 +906,7 @@ namespace SeoBYP.TimelineAnimation
             {
                 if (track.released || track.target == null || track.keys.Count == 0) continue;
                 if (UIAnimTextChars.IsCharProperty(track.property)) UIAnimTextChars.For((TMP_Text)track.target).Accumulate(track, t);
-                else if (track.property == UIAnimProperty.TextReveal && track.scramble != ScrambleMode.None)
+                else if (track.property == UIAnimProperty.TextReveal && track.scramble != UIAnimScramble.None)
                     UIAnimTextChars.For((TMP_Text)track.target).Scramble(track.Sample(t).x, track.scramble, t);
                 else Write(track.target, track.property, track.Sample(t));
             }

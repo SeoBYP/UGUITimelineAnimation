@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using LitMotion;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -39,7 +38,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         {
             var track = new UIAnimTrack { target = _go.transform, property = UIAnimProperty.Scale, start = UIAnimStart.KeyValue };
             track.keys.Add(new UIAnimKey { time = 0f, value = from });
-            track.keys.Add(new UIAnimKey { time = Length, value = to, ease = Ease.Linear });
+            track.keys.Add(new UIAnimKey { time = Length, value = to, ease = UIAnimEase.Linear });
             return new UIAnimState { name = name, tracks = { track } };
         }
 

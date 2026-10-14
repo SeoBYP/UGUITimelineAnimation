@@ -1,7 +1,7 @@
 # UGUI Animation System — 설계 문서
 
 > 기준: `main` 66d0537 (PR #9) + 성능 측정·CI 보강(`feature/perf-ci`) · 2026-10-15
-> 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · LitMotion 2.0.2 · UniTask 2.5.11
+> 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · UniTask 2.5.11 · **LitMotion 의존 없음**(재생 타이머·이징 자체 구현, `feature/remove-litmotion`)
 > 방식: **완전 커스텀**. 데이터, 런타임, 에디터 창을 모두 직접 만듭니다. Animator와 Timeline은 사용하지 않습니다.
 > 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 아직 안 함
 > 도식 원본(HTML)은 [`diagrams/`](diagrams/)에 있습니다. 브라우저로 열면 벡터로 볼 수 있습니다.
@@ -61,6 +61,8 @@
 | `Runtime/UIAnimPullToRefresh.cs` | 당긴 거리로 Pull 상태, 놓으면 On Refresh + Refreshing 반복, `EndRefresh()` |
 | `Runtime/UIAnimTextChars.cs` | TMP 글자별 효과 누적과 메시 반영, 스크램블 텍스트 |
 | `Runtime/UIAnimVibration.cs` | LitMotion과 같은 Punch/Shake 공식, 시드 랜덤, 스크램블 문자열 생성 |
+| `Runtime/UIAnimTimer.cs` | 모든 재생·스크롤 움직임을 진행시키는 시계 하나 (실시간, Update 단계, 에디터에서는 EditorApplication.update) |
+| `Runtime/UIAnimEase.cs` | `UIAnimEase`(이징 30종, LitMotion `Ease`와 같은 번호·공식), `UIAnimScramble`, `UIAnimEasing` |
 | `Editor/UIAnimationEditorWindow.cs` | UI Animation Editor 창 (상단 바, 상태 탭, 인스펙터, 편집 명령) |
 | `Editor/UIAnimTimelineView.cs` | 타임라인: 눈금자, 계층형 트랙 줄, 키·마커, 선택·드래그, 확대·이동, 우클릭 메뉴 |
 | `Editor/UIAnimPropertyPicker.cs` | 트랙 추가 창 (오브젝트 트리 + 트랙 카드, 다중 선택) |
@@ -122,7 +124,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 - Unity Animation 창처럼 트랙마다 키(시간, 값)를 찍습니다. 1 → 1.2 → 1은 키 3개입니다.
 - **모든 트랙은 0초 키를 가집니다.** 새 트랙은 0초 키와 끝 키로 만들어지고, 0초 키가 없는 트랙에 키를 추가하면 0초 키가 먼저 생깁니다. 0초 키도 다른 키처럼 옮기고 편집할 수 있습니다.
 - 키의 도착 방식은 **이전 키에서 이 키로 오는 방식**입니다.
-  - `Ease`: LitMotion Ease 프리셋
+  - `Ease`: `UIAnimEase` 프리셋 30종 (LitMotion `Ease`와 같은 번호·공식이라 예전에 저장한 Prefab을 그대로 읽음)
   - `Curve`: AnimationCurve. 0 = 이전 키 값, 1 = 이 키 값
   - `Punch`: 이전 값을 중심으로 흔들리다 이전 값으로 돌아옵니다. 키 값은 목적지가 아니라 **세기**입니다.
   - `Shake`: Punch와 같지만 축마다 매 프레임 무작위로 흔들립니다.
@@ -137,7 +139,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 
 ### 3.4 텍스트 트랙
 - `TextReveal`: `maxVisibleCharacters`를 0~1 비율로 지정합니다. 리치 텍스트 태그는 글자 수에 포함하지 않습니다.
-  - `Scramble`: 아직 안 나온 글자를 무작위 문자로 채웁니다(LitMotion `ScrambleMode`). 원문의 공백은 유지해서 줄바꿈이 튀지 않습니다.
+  - `Scramble`: 아직 안 나온 글자를 무작위 문자로 채웁니다(`UIAnimScramble`, LitMotion `ScrambleMode`와 같은 번호). 원문의 공백은 유지해서 줄바꿈이 튀지 않습니다.
 - 글자별 트랙(`Char*`)
   - 키는 **글자 하나의 움직임**입니다.
   - `Stagger`(글자 간격): i번째 글자가 i × stagger초 늦게 시작합니다. 트랙 끝 = 마지막 키 + (글자 수 − 1) × stagger
@@ -159,7 +161,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 
 ### 4.1 재생 흐름
 1. `Prepare`: 같은 상태가 재생 중이면 멈추고, 다른 상태와 겹치는 속성을 인계받고(§4.2), 키 값을 확정(`Resolve`)한 뒤 **0초 값을 바로 씁니다.**
-2. LitMotion으로 0 → 길이 모션을 하나 만들고, 매 프레임 `Step(t)`를 호출합니다. 상태 객체를 넘기는 static 바인딩이라 클로저 할당이 없습니다. 스케줄러는 `UpdateIgnoreTimeScale`입니다.
+2. `UIAnimTimer`에 상태 길이만큼의 타이머를 하나 걸고, 매 프레임 `Step(t)`를 호출합니다. 콜백은 상태 객체를 넘기는 static 함수라 할당이 없습니다. 시간은 실시간(Time Scale 무시)이고, Play 모드에서는 플레이어 루프의 Update 단계, 에디터에서는 `EditorApplication.update`로 돌아갑니다.
 3. `Step(t)` = 값 계산(`Evaluate`) + 이번 프레임에 지난 `(이전 t, t]` 구간의 사운드·자식 호출·이벤트 실행
 4. 끝에 도달하면 완료 처리합니다.
 
@@ -210,7 +212,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 **구조**
 | 항목 | 내용 |
 |---|---|
-| 대기 중 | 재생 중이 아닌 상태는 비용 0 (LitMotion 모션이 없음) |
+| 대기 중 | 재생 중이 아닌 상태는 비용 0 (타이머가 없음) |
 | 재생 대기 | `PlayAsync`는 UniTask 풀링 소스(`AutoResetUniTaskCompletionSource`). `Play`는 대기 소스를 만들지 않음 |
 | 오버라이드 | 오버라이드가 있는 상태는 합친 상태를 만듭니다. 재생 준비 때 한 번, 자식 호출 길이 계산 때 재생마다 한 번 할당 |
 | 글자 효과 | 텍스트당 프레임마다 메시 재생성 1회(`ForceMeshUpdate`) |
@@ -221,7 +223,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 
 | 대상 | 시간 | GC 할당 |
 |---|---|---|
-| Button1 100개 `Play(Hover/Unhover)` 시작 | 약 0.4ms / 100개 | 0.46회 / 100개 (LitMotion 저장소가 가끔 커질 때) |
+| Button1 100개 `Play(Hover/Unhover)` 시작 | 약 0.26ms / 100개 (LitMotion 때 0.37~0.45ms) | **0회** (LitMotion 때 0.46회) |
 | Button1 100개 Hover 진행 | 약 0.13~0.16ms / 프레임 | **0회** |
 | TextDemo 10개 Typewriter | 약 0.01ms / 프레임 | **0회** |
 | TextDemo 10개 Scramble | 약 0.06ms / 프레임 | 10회 / 프레임 (텍스트당 문자열 1개) |
@@ -510,7 +512,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 
 ## 11. 테스트와 CI
 
-### 11.1 EditMode 테스트 (117개, 메서드 이름은 한국어)
+### 11.1 EditMode 테스트 (120개, 메서드 이름은 한국어)
 | 파일 | 개수 | 다루는 것 |
 |---|---|---|
 | `UIAnimationTests.cs` | 43 | 키 보간, 시작 값(현재 값·지연·누른 위치), 원래 값 기준, 속성 인계, 완료 대기·취소, 이벤트·struct 데이터, 사운드, 자식 호출, 오버라이드 해석, 예전 데이터 변환 |
@@ -521,6 +523,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 | `EditorLayoutMeasureTests.cs` | 3 | 에디터 레이아웃 실측(줄 높이, 키 위치·폭, 투명도, 글자색), 바깥 Prefab 단계, ↺ 범위 |
 | `UIAnimScrollListTests.cs` | 17 | 정렬(세로·가로·그리드·가운데·반대·자식 크기), 재사용, 바인딩·해제, 데이터 목록, 개수 변경, ScrollTo·가장 가까운 아이템, 화면 좌표로 찾기, 진입·등장·스크럽, `Sample`, **성능 측정 2종** |
 | `UIAnimScrollFormsTests.cs` | 15 | 가변 크기, 여러 Prefab, 측정, 메이슨리, 루프, 한 장씩 넘기기, 크기 변경, 끝에 붙기, 섹션 헤더, 중첩 드래그, `Rotation`, Page Indicator, Scroll Scrub, Pull To Refresh, 에디터 미리보기 |
+| `UIAnimEaseTests.cs` | 3 | 이징 30종의 시작·끝 값, 알려진 값, 저장 번호가 LitMotion과 같은지 |
 | `PerformanceTests.cs` | 4 | 성능 측정(버튼 100개, 텍스트 10개 상태별, 무거운 스크롤 형태)과 측정 도구 검증. 결과는 테스트 로그, 할당 없어야 하는 경로는 검사 |
 | `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
@@ -530,7 +533,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 **`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 117개 전부 실행, `-nographics`: 99개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 18개, `-nographics`: 17개 실행·1개 건너뜀).
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 120개 전부 실행, `-nographics`: 102개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 18개, `-nographics`: 17개 실행·1개 건너뜀).
 
 ### 11.3 CI
 - GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 **EditMode → PlayMode** 순서로 실행합니다. 둘 다 통과해야 합니다. 실행 요약에 두 표가 나옵니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
@@ -558,7 +561,7 @@ Docs/                                       ← 문서 (배포 안 됨)
 ```
 
 - **배포 경계**: `Assets/UIAnimation`의 런타임·에디터 코드는 샘플을 참조하지 않습니다(asmdef로 분리). 테스트 일부(`SampleButton2Tests`, 샘플 Prefab을 쓰는 테스트)는 샘플이 없으면 건너뜁니다.
-- **의존성**: LitMotion·UniTask는 Unity 공식 레지스트리에 없어서, 설치하는 쪽이 Git URL이나 OpenUPM으로 추가해야 합니다.
+- **의존성**: 서드파티는 UniTask 하나(다음 단계에서 선택 사항으로 바꿀 예정). LitMotion은 없음. `com.unity.mathematics`(Unity 공식, 내장)만 씁니다(Shake 난수).
 - **배포 절차 (예정)**: 직접 써 본 뒤 `0.1.0`으로 올리고 태그를 붙입니다.
   ```
   https://github.com/SeoBYP/UGUITimelineAnimation.git?path=Assets/UIAnimation#v0.1.0
@@ -575,7 +578,7 @@ Docs/                                       ← 문서 (배포 안 됨)
 | ✅ | CI 보강 | CI가 PlayMode까지 실행. 러너에 xvfb 설치함(2026-10-15, `xvfb 2:21.1.12-1ubuntu1.8`): 에디터 창 테스트도 CI에서 실행 |
 | ✅ | `PlayAsync` PlayMode 테스트 | 완료·취소 경로 6개 |
 | ⬜ | 외부 라이브러리 샘플 분석 → 샘플 제작 | 다른 UI 애니메이션 라이브러리의 샘플을 분석해 같은 연출을 UI Animation Editor로 만들기 |
-| ⬜ | 배포 `0.1.0` | 샘플을 패키지의 `Samples~`로 넣을지 결정, LitMotion·UniTask 설치 안내, 태그. Git URL로 다른 프로젝트에 설치해 동작 확인 |
+| ⬜ | 배포 `0.1.0` | 샘플을 패키지의 `Samples~`로 넣을지 결정, UniTask(선택) 연동 안내, 태그. Git URL로 다른 프로젝트에 설치해 동작 확인 |
 | ⬜ | 글자 효과 최적화 (선택) | 텍스트당 약 0.2ms/프레임. 한 화면에 수십 개를 동시에 돌릴 때만 필요 |
 
 ### 13.1 알려진 제한

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using LitMotion;
 using SeoBYP.TimelineAnimation;
 using TMPro;
 using TMPro.EditorUtilities;
@@ -91,14 +90,14 @@ static class SampleContentBuilder
 
         var anim = AddComponents<Button>(root.gameObject);
         anim.States(
-            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.2f, Ease.OutSine),
-                           To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, Ease.OutSine)),
-            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine),
-                             BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine)),
-            State("Press", Relative(root, UIAnimProperty.SizeDelta, new Vector4(-34, -17), 0.07f, Ease.OutQuad),
-                           Relative(label, UIAnimProperty.FontSize, new Vector4(-2.4f, 0), 0.07f, Ease.OutQuad)),
-            State("Release", BackToRest(root, UIAnimProperty.SizeDelta, 0.07f, Ease.OutQuad),
-                             BackToRest(label, UIAnimProperty.FontSize, 0.07f, Ease.OutQuad)));
+            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.2f, UIAnimEase.OutSine),
+                           To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, UIAnimEase.OutSine)),
+            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.2f, UIAnimEase.OutSine),
+                             BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, UIAnimEase.OutSine)),
+            State("Press", Relative(root, UIAnimProperty.SizeDelta, new Vector4(-34, -17), 0.07f, UIAnimEase.OutQuad),
+                           Relative(label, UIAnimProperty.FontSize, new Vector4(-2.4f, 0), 0.07f, UIAnimEase.OutQuad)),
+            State("Release", BackToRest(root, UIAnimProperty.SizeDelta, 0.07f, UIAnimEase.OutQuad),
+                             BackToRest(label, UIAnimProperty.FontSize, 0.07f, UIAnimEase.OutQuad)));
         BindButton(root.gameObject, UIAnimInterrupt.Cancel, UIAnimInterrupt.Cancel);
         return root.gameObject;
     }
@@ -126,10 +125,10 @@ static class SampleContentBuilder
             FromTo(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, new Vector4(1, 0), 0.15f),
             FromTo(fill.rectTransform, UIAnimProperty.Scale, Vector3.zero, Vector3.one, 0.15f));
         anim.States(
-            State("Hover", To(hover, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), 0.15f, Ease.OutSine)),
-            State("Unhover", To(hover, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.15f, Ease.OutSine)),
+            State("Hover", To(hover, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), 0.15f, UIAnimEase.OutSine)),
+            State("Unhover", To(hover, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.15f, UIAnimEase.OutSine)),
             press,
-            State("Release", To(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.25f, Ease.OutSine)));
+            State("Release", To(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.25f, UIAnimEase.OutSine)));
         // The sample completes the running press/release before starting the next one.
         BindButton(root.gameObject, UIAnimInterrupt.Complete, UIAnimInterrupt.Complete);
         return root.gameObject;
@@ -183,10 +182,10 @@ static class SampleContentBuilder
 
         var anim = AddComponents<Toggle>(root.gameObject);
         anim.States(
-            State("On", To(check.rectTransform, UIAnimProperty.Scale, Vector3.one, duration, Ease.OutSine),
+            State("On", To(check.rectTransform, UIAnimProperty.Scale, Vector3.one, duration, UIAnimEase.OutSine),
                         Delayed(fill, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), delay, duration)),
             State("Off", Delayed(check.rectTransform, UIAnimProperty.Scale, new Vector3(0, 0, 1), delay, duration),
-                         To(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, duration, Ease.OutSine)));
+                         To(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, duration, UIAnimEase.OutSine)));
         BindToggle(root.gameObject);
         return root.gameObject;
     }
@@ -207,10 +206,10 @@ static class SampleContentBuilder
 
         var anim = AddComponents<Toggle>(root.gameObject);
         anim.States(
-            State("On", Relative(handle.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(96, 0), duration, Ease.OutSine),
-                        To(fill, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), duration, Ease.OutSine)),
-            State("Off", BackToRest(handle.rectTransform, UIAnimProperty.AnchoredPosition, duration, Ease.OutSine),
-                         To(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, duration, Ease.OutSine)));
+            State("On", Relative(handle.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(96, 0), duration, UIAnimEase.OutSine),
+                        To(fill, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), duration, UIAnimEase.OutSine)),
+            State("Off", BackToRest(handle.rectTransform, UIAnimProperty.AnchoredPosition, duration, UIAnimEase.OutSine),
+                         To(fill, UIAnimProperty.GraphicAlpha, Vector4.zero, duration, UIAnimEase.OutSine)));
         BindToggle(root.gameObject);
         return root.gameObject;
     }
@@ -259,25 +258,25 @@ static class SampleContentBuilder
         var anim = root.gameObject.AddComponent<UIAnimation>();
         anim.States(
             // Animation1: typewriter, 0.05s per character, rich text kept
-            State("Typewriter", Keys(text, UIAnimProperty.TextReveal, 0f, (0f, Vector4.zero, Ease.Linear), (SampleTextLength * 0.05f, new Vector4(1, 0), Ease.Linear))),
+            State("Typewriter", Keys(text, UIAnimProperty.TextReveal, 0f, (0f, Vector4.zero, UIAnimEase.Linear), (SampleTextLength * 0.05f, new Vector4(1, 0), UIAnimEase.Linear))),
             // Animation2: same typewriter, unrevealed characters shown as random lowercase letters
-            State("Scramble", Scrambled(Keys(text, UIAnimProperty.TextReveal, 0f, (0f, Vector4.zero, Ease.Linear), (SampleTextLength * 0.05f, new Vector4(1, 0), Ease.Linear)), ScrambleMode.Lowercase)),
+            State("Scramble", Scrambled(Keys(text, UIAnimProperty.TextReveal, 0f, (0f, Vector4.zero, UIAnimEase.Linear), (SampleTextLength * 0.05f, new Vector4(1, 0), UIAnimEase.Linear)), UIAnimScramble.Lowercase)),
             // Animation3: each character flips in around Y (-90 -> 0, OutBack 0.25s), 0.05s apart
-            State("Flip", Keys(text, UIAnimProperty.CharRotation, 0.05f, (0f, new Vector3(0, -90, 0), Ease.Linear), (0.25f, Vector3.zero, Ease.OutBack))),
+            State("Flip", Keys(text, UIAnimProperty.CharRotation, 0.05f, (0f, new Vector3(0, -90, 0), UIAnimEase.Linear), (0.25f, Vector3.zero, UIAnimEase.OutBack))),
             // Animation4: scale 0 -> 1 and rise 120px (0.2s; the sample's 50 on its 800 canvas), then turn red 0.3s later; 0.05s apart
             State("PopUp",
-                Keys(text, UIAnimProperty.CharScale, 0.05f, (0f, Vector3.zero, Ease.Linear), (0.2f, Vector3.one, Ease.OutSine)),
-                Keys(text, UIAnimProperty.CharOffset, 0.05f, (0f, new Vector3(0, -120, 0), Ease.Linear), (0.2f, Vector3.zero, Ease.OutSine)),
-                Keys(text, UIAnimProperty.CharColor, 0.05f, (0.3f, Color.white, Ease.Linear), (0.5f, Red, Ease.OutSine))),
+                Keys(text, UIAnimProperty.CharScale, 0.05f, (0f, Vector3.zero, UIAnimEase.Linear), (0.2f, Vector3.one, UIAnimEase.OutSine)),
+                Keys(text, UIAnimProperty.CharOffset, 0.05f, (0f, new Vector3(0, -120, 0), UIAnimEase.Linear), (0.2f, Vector3.zero, UIAnimEase.OutSine)),
+                Keys(text, UIAnimProperty.CharColor, 0.05f, (0.3f, Color.white, UIAnimEase.Linear), (0.5f, Red, UIAnimEase.OutSine))),
             // Animation5: LMotion.Punch(1, 0.7, 1.4s).WithEase(OutQuad).WithFrequency(7), 0.025s apart (7 over 1.4s = 5 per second)
-            State("Punch", Vibrate(Keys(text, UIAnimProperty.CharScale, 0.025f, (0f, Vector3.one, Ease.Linear)),
-                UIAnimCurveType.Punch, 1.4f, Vector3.one * 0.7f, Ease.OutQuad, 5f)),
+            State("Punch", Vibrate(Keys(text, UIAnimProperty.CharScale, 0.025f, (0f, Vector3.one, UIAnimEase.Linear)),
+                UIAnimCurveType.Punch, 1.4f, Vector3.one * 0.7f, UIAnimEase.OutQuad, 5f)),
             // Animation6: flash red -> white (0.07s, 0.025s apart) and LMotion.Shake(0, 72, 1.4 x i x 0.025s) (the sample's 30 on its 800 canvas) with
             // frequency (int)(duration / 0.2) = 5 per second, damping 1: every character starts at once and shakes longer the later it is
             State("Shake",
-                Keys(text, UIAnimProperty.CharColor, 0.025f, (0f, Red, Ease.Linear), (0.07f, Color.white, Ease.OutSine)),
-                PerCharDuration(Vibrate(Keys(text, UIAnimProperty.CharOffset, 0f, (0f, Vector4.zero, Ease.Linear)),
-                    UIAnimCurveType.Shake, 1f, new Vector3(72, 72, 72), Ease.Linear, 5f), 1.4f * 0.025f)));
+                Keys(text, UIAnimProperty.CharColor, 0.025f, (0f, Red, UIAnimEase.Linear), (0.07f, Color.white, UIAnimEase.OutSine)),
+                PerCharDuration(Vibrate(Keys(text, UIAnimProperty.CharOffset, 0f, (0f, Vector4.zero, UIAnimEase.Linear)),
+                    UIAnimCurveType.Shake, 1f, new Vector3(72, 72, 72), UIAnimEase.Linear, 5f), 1.4f * 0.025f)));
         return root.gameObject;
     }
 
@@ -376,8 +375,8 @@ static class SampleContentBuilder
         var label = Label("Label", root, font, "Hover 1", Red, 58);
         HoverFrame(root, 4.17f);
         BindHover(root.gameObject, UIAnimInterrupt.Cancel,
-            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.2f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, Ease.OutSine)),
-            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine)));
+            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.2f, UIAnimEase.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, UIAnimEase.OutSine)),
+            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.2f, UIAnimEase.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, UIAnimEase.OutSine)));
         return root.gameObject;
     }
 
@@ -393,8 +392,8 @@ static class SampleContentBuilder
         var label = Label("Label", root, font, "Hover 2", Red, 58);
         HoverFrame(root, 3.33f);
         BindHover(root.gameObject, UIAnimInterrupt.Cancel,
-            State("Hover", To(fill, UIAnimProperty.FillAmount, new Vector4(1, 0), 0.2f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, Ease.OutSine)),
-            State("Unhover", To(fill, UIAnimProperty.FillAmount, Vector4.zero, 0.2f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine)));
+            State("Hover", To(fill, UIAnimProperty.FillAmount, new Vector4(1, 0), 0.2f, UIAnimEase.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, UIAnimEase.OutSine)),
+            State("Unhover", To(fill, UIAnimProperty.FillAmount, Vector4.zero, 0.2f, UIAnimEase.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, UIAnimEase.OutSine)));
         return root.gameObject;
     }
 
@@ -410,8 +409,8 @@ static class SampleContentBuilder
         var label = Label("Label", root, font, "Hover 3", Red, 58);
         HoverFrame(root, 3.33f);
         BindHover(root.gameObject, UIAnimInterrupt.Cancel,
-            State("Hover", To(fill.rectTransform, UIAnimProperty.Scale, Vector3.one, 0.2f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, Ease.OutSine)),
-            State("Unhover", To(fill.rectTransform, UIAnimProperty.Scale, Vector3.zero, 0.2f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, Ease.OutSine)));
+            State("Hover", To(fill.rectTransform, UIAnimProperty.Scale, Vector3.one, 0.2f, UIAnimEase.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.2f, UIAnimEase.OutSine)),
+            State("Unhover", To(fill.rectTransform, UIAnimProperty.Scale, Vector3.zero, 0.2f, UIAnimEase.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.2f, UIAnimEase.OutSine)));
         return root.gameObject;
     }
 
@@ -429,10 +428,10 @@ static class SampleContentBuilder
         hover.rectTransform.anchoredPosition = new Vector2(-480, 0);
         HoverFrame(root, 3.33f);
         BindHover(root.gameObject, UIAnimInterrupt.Cancel,
-            State("Hover", To(normal.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(480, 0), 0.2f, Ease.OutSine),
-                           To(hover.rectTransform, UIAnimProperty.AnchoredPosition, Vector4.zero, 0.2f, Ease.OutSine)),
-            State("Unhover", To(normal.rectTransform, UIAnimProperty.AnchoredPosition, Vector4.zero, 0.2f, Ease.OutSine),
-                             To(hover.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(-480, 0), 0.2f, Ease.OutSine)));
+            State("Hover", To(normal.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(480, 0), 0.2f, UIAnimEase.OutSine),
+                           To(hover.rectTransform, UIAnimProperty.AnchoredPosition, Vector4.zero, 0.2f, UIAnimEase.OutSine)),
+            State("Unhover", To(normal.rectTransform, UIAnimProperty.AnchoredPosition, Vector4.zero, 0.2f, UIAnimEase.OutSine),
+                             To(hover.rectTransform, UIAnimProperty.AnchoredPosition, new Vector4(-480, 0), 0.2f, UIAnimEase.OutSine)));
         return root.gameObject;
     }
 
@@ -444,10 +443,10 @@ static class SampleContentBuilder
         var label = CenterLabel("Label", root, font, "Hover 5", Red);
         HoverFrame(root, 3.33f);
         BindHover(root.gameObject, UIAnimInterrupt.Cancel,
-            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.25f, Ease.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.25f, Ease.OutSine),
-                           To(label, UIAnimProperty.CharacterSpacing, new Vector4(12, 0), 0.25f, Ease.OutSine)),
-            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.25f, Ease.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.25f, Ease.OutSine),
-                             To(label, UIAnimProperty.CharacterSpacing, Vector4.zero, 0.25f, Ease.OutSine)));
+            State("Hover", To(fill, UIAnimProperty.GraphicColor, Red, 0.25f, UIAnimEase.OutSine), To(label, UIAnimProperty.GraphicColor, Color.white, 0.25f, UIAnimEase.OutSine),
+                           To(label, UIAnimProperty.CharacterSpacing, new Vector4(12, 0), 0.25f, UIAnimEase.OutSine)),
+            State("Unhover", BackToRest(fill, UIAnimProperty.GraphicColor, 0.25f, UIAnimEase.OutSine), BackToRest(label, UIAnimProperty.GraphicColor, 0.25f, UIAnimEase.OutSine),
+                             To(label, UIAnimProperty.CharacterSpacing, Vector4.zero, 0.25f, UIAnimEase.OutSine)));
         return root.gameObject;
     }
 
@@ -463,12 +462,12 @@ static class SampleContentBuilder
         var grow = new UIAnimTrack
         {
             target = pulse.rectTransform, property = UIAnimProperty.SizeDelta, startFromCurrent = false, relativeToRest = true,
-            keys = { new UIAnimKey { time = 0f }, new UIAnimKey { time = 0.35f, value = new Vector4(144, 144), ease = Ease.OutSine } },
+            keys = { new UIAnimKey { time = 0f }, new UIAnimKey { time = 0.35f, value = new Vector4(144, 144), ease = UIAnimEase.OutSine } },
         };
         BindHover(root.gameObject, UIAnimInterrupt.Complete,
             State("Hover", grow, FromTo(pulse, UIAnimProperty.GraphicAlpha, new Vector4(1, 0), Vector4.zero, 0.35f),
-                           To(label, UIAnimProperty.GraphicColor, Color.white, 0.35f, Ease.OutSine)),
-            State("Unhover", BackToRest(label, UIAnimProperty.GraphicColor, 0.35f, Ease.OutSine)));
+                           To(label, UIAnimProperty.GraphicColor, Color.white, 0.35f, UIAnimEase.OutSine)),
+            State("Unhover", BackToRest(label, UIAnimProperty.GraphicColor, 0.35f, UIAnimEase.OutSine)));
         return root.gameObject;
     }
 
@@ -510,12 +509,12 @@ static class SampleContentBuilder
 
         var anim = root.gameObject.AddComponent<UIAnimation>();
         anim.States(
-            State("Open", To(dim, UIAnimProperty.GraphicAlpha, new Vector4(0.6f, 0), 0.25f, Ease.OutQuad),
-                          To(window, UIAnimProperty.Scale, Vector3.one, 0.35f, Ease.OutBack),
-                          BackToRest(window, UIAnimProperty.AnchoredPosition, 0.35f, Ease.OutCubic)),
-            State("Close", To(dim, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.4f, Ease.OutQuad),
-                           To(window, UIAnimProperty.Scale, Vector3.one * 0.6f, 0.4f, Ease.InBack),
-                           Relative(window, UIAnimProperty.AnchoredPosition, new Vector4(0, -192), 0.4f, Ease.InCubic)));
+            State("Open", To(dim, UIAnimProperty.GraphicAlpha, new Vector4(0.6f, 0), 0.25f, UIAnimEase.OutQuad),
+                          To(window, UIAnimProperty.Scale, Vector3.one, 0.35f, UIAnimEase.OutBack),
+                          BackToRest(window, UIAnimProperty.AnchoredPosition, 0.35f, UIAnimEase.OutCubic)),
+            State("Close", To(dim, UIAnimProperty.GraphicAlpha, Vector4.zero, 0.4f, UIAnimEase.OutQuad),
+                           To(window, UIAnimProperty.Scale, Vector3.one * 0.6f, 0.4f, UIAnimEase.InBack),
+                           Relative(window, UIAnimProperty.AnchoredPosition, new Vector4(0, -192), 0.4f, UIAnimEase.InCubic)));
         // An animation event carrying custom struct data; the sample logs both, so the marker can be checked in Play mode.
         anim.states[0].AddEvent(new UIAnimEventMarker
         {
@@ -627,8 +626,8 @@ static class SampleContentBuilder
     {
         var track = new UIAnimTrack { target = target, property = property, start = UIAnimStart.KeyValue };
         track.keys.Add(new UIAnimKey { time = 0f, value = start });
-        track.keys.Add(new UIAnimKey { time = 0.5f, value = center, ease = Ease.InOutSine });
-        track.keys.Add(new UIAnimKey { time = 1f, value = end, ease = Ease.InOutSine });
+        track.keys.Add(new UIAnimKey { time = 0.5f, value = center, ease = UIAnimEase.InOutSine });
+        track.keys.Add(new UIAnimKey { time = 1f, value = end, ease = UIAnimEase.InOutSine });
         return track;
     }
 
@@ -788,10 +787,10 @@ static class SampleContentBuilder
         view.title = title;
 
         root.gameObject.AddComponent<UIAnimation>().States(
-            State("Open", To(plus.rectTransform, UIAnimProperty.Rotation, new Vector3(0, 0, 45), 0.3f, Ease.OutCubic),
-                          To(body, UIAnimProperty.GraphicAlpha, Alpha(1), 0.3f, Ease.OutSine)),
-            State("Close", To(plus.rectTransform, UIAnimProperty.Rotation, Vector3.zero, 0.3f, Ease.OutCubic),
-                           To(body, UIAnimProperty.GraphicAlpha, Alpha(0), 0.2f, Ease.OutSine)));
+            State("Open", To(plus.rectTransform, UIAnimProperty.Rotation, new Vector3(0, 0, 45), 0.3f, UIAnimEase.OutCubic),
+                          To(body, UIAnimProperty.GraphicAlpha, Alpha(1), 0.3f, UIAnimEase.OutSine)),
+            State("Close", To(plus.rectTransform, UIAnimProperty.Rotation, Vector3.zero, 0.3f, UIAnimEase.OutCubic),
+                           To(body, UIAnimProperty.GraphicAlpha, Alpha(0), 0.2f, UIAnimEase.OutSine)));
         return root.gameObject;
     }
 
@@ -815,8 +814,8 @@ static class SampleContentBuilder
     {
         var anim = go.AddComponent<UIAnimation>();
         anim.States(
-            State("On", To(scaled, UIAnimProperty.Scale, onScale, 0.25f, Ease.OutBack), To(graphic, UIAnimProperty.GraphicColor, on, 0.2f, Ease.OutSine)),
-            State("Off", To(scaled, UIAnimProperty.Scale, offScale, 0.25f, Ease.OutSine), To(graphic, UIAnimProperty.GraphicColor, off, 0.2f, Ease.OutSine)));
+            State("On", To(scaled, UIAnimProperty.Scale, onScale, 0.25f, UIAnimEase.OutBack), To(graphic, UIAnimProperty.GraphicColor, on, 0.2f, UIAnimEase.OutSine)),
+            State("Off", To(scaled, UIAnimProperty.Scale, offScale, 0.25f, UIAnimEase.OutSine), To(graphic, UIAnimProperty.GraphicColor, off, 0.2f, UIAnimEase.OutSine)));
         return anim;
     }
 
@@ -1110,7 +1109,7 @@ static class SampleContentBuilder
                     FromTo(header, UIAnimProperty.SizeDelta, new Vector2(840, 300), new Vector2(840, 110), 1f),
                     FromTo(name, UIAnimProperty.FontSize, Alpha(80), Alpha(44), 1f),
                     FromTo(background, UIAnimProperty.GraphicColor, Red, Navy, 1f)));
-                foreach (var track in anim.states[0].tracks) track.keys[^1].ease = Ease.Linear;   // the scroll distance is the time
+                foreach (var track in anim.states[0].tracks) track.keys[^1].ease = UIAnimEase.Linear;   // the scroll distance is the time
                 var scrub = header.gameObject.AddComponent<UIAnimScrollScrub>();
                 scrub.list = list;
                 scrub.target = anim;
@@ -1132,13 +1131,13 @@ static class SampleContentBuilder
                 var anim = spinner.gameObject.AddComponent<UIAnimation>();
                 var spin = new UIAnimTrack { target = spinner, property = UIAnimProperty.Rotation, start = UIAnimStart.KeyValue };
                 spin.keys.Add(new UIAnimKey { time = 0f, value = new Vector3(0, 0, -270) });
-                spin.keys.Add(new UIAnimKey { time = 0.8f, value = new Vector3(0, 0, -630), ease = Ease.Linear });   // ≡ -270: repeats seamlessly
+                spin.keys.Add(new UIAnimKey { time = 0.8f, value = new Vector3(0, 0, -630), ease = UIAnimEase.Linear });   // ≡ -270: repeats seamlessly
                 anim.States(
                     State("Pull", FromTo(ring, UIAnimProperty.FillAmount, Alpha(0), Alpha(0.75f), 1f),
                                   FromTo(spinner, UIAnimProperty.Rotation, Vector3.zero, new Vector3(0, 0, -270), 1f),
                                   FromTo(ring, UIAnimProperty.GraphicAlpha, Alpha(0.2f), Alpha(1), 1f)),
                     State("Refreshing", spin));
-                foreach (var track in anim.states[0].tracks) track.keys[^1].ease = Ease.Linear;
+                foreach (var track in anim.states[0].tracks) track.keys[^1].ease = UIAnimEase.Linear;
 
                 var list = Rows(items.row, 840, 600, -40);   // drawn over the spinner, which shows when the list is pulled down
                 var pull = list.gameObject.AddComponent<UIAnimPullToRefresh>();
@@ -1220,21 +1219,21 @@ static class SampleContentBuilder
     }
 
     // Keys at absolute values (text tracks never start from the live value).
-    static UIAnimTrack Keys(Component target, UIAnimProperty property, float stagger, params (float time, Vector4 value, Ease ease)[] keys)
+    static UIAnimTrack Keys(Component target, UIAnimProperty property, float stagger, params (float time, Vector4 value, UIAnimEase ease)[] keys)
     {
         var track = new UIAnimTrack { target = target, property = property, startFromCurrent = false, stagger = stagger };
         foreach (var (time, value, ease) in keys) track.keys.Add(new UIAnimKey { time = time, value = value, ease = ease });
         return track;
     }
 
-    static UIAnimTrack Scrambled(UIAnimTrack reveal, ScrambleMode mode)
+    static UIAnimTrack Scrambled(UIAnimTrack reveal, UIAnimScramble mode)
     {
         reveal.scramble = mode;
         return reveal;
     }
 
     // Adds a Punch/Shake key: the track oscillates around its previous value with this strength and ends back on it.
-    static UIAnimTrack Vibrate(UIAnimTrack track, UIAnimCurveType type, float time, Vector4 strength, Ease ease, float perSecond)
+    static UIAnimTrack Vibrate(UIAnimTrack track, UIAnimCurveType type, float time, Vector4 strength, UIAnimEase ease, float perSecond)
     {
         track.keys.Add(new UIAnimKey { time = time, value = strength, curveType = type, ease = ease, frequency = perSecond, damping = 1f });
         return track;
@@ -1260,7 +1259,7 @@ static class SampleContentBuilder
     }
 
     // current value → value
-    static UIAnimTrack To(Component target, UIAnimProperty property, Vector4 value, float time, Ease ease) =>
+    static UIAnimTrack To(Component target, UIAnimProperty property, Vector4 value, float time, UIAnimEase ease) =>
         new() { target = target, property = property, startFromCurrent = true, keys = { new UIAnimKey { time = time, value = value, ease = ease } } };
 
     // hold the current value for `delay`, then go to value: the first key becomes the live value.
@@ -1268,14 +1267,14 @@ static class SampleContentBuilder
         new()
         {
             target = target, property = property, startFromCurrent = true,
-            keys = { new UIAnimKey { time = delay }, new UIAnimKey { time = delay + duration, value = value, ease = Ease.OutSine } },
+            keys = { new UIAnimKey { time = delay }, new UIAnimKey { time = delay + duration, value = value, ease = UIAnimEase.OutSine } },
         };
 
     // current value → rest value + offset
-    static UIAnimTrack Relative(Component target, UIAnimProperty property, Vector4 offset, float time, Ease ease) =>
+    static UIAnimTrack Relative(Component target, UIAnimProperty property, Vector4 offset, float time, UIAnimEase ease) =>
         new() { target = target, property = property, startFromCurrent = true, relativeToRest = true, keys = { new UIAnimKey { time = time, value = offset, ease = ease } } };
 
-    static UIAnimTrack BackToRest(Component target, UIAnimProperty property, float time, Ease ease) =>
+    static UIAnimTrack BackToRest(Component target, UIAnimProperty property, float time, UIAnimEase ease) =>
         Relative(target, property, Vector4.zero, time, ease);
 
     // from → to, regardless of the current value
@@ -1283,7 +1282,7 @@ static class SampleContentBuilder
         new()
         {
             target = target, property = property, startFromCurrent = false,
-            keys = { new UIAnimKey { time = 0f, value = from }, new UIAnimKey { time = time, value = to, ease = Ease.OutSine } },
+            keys = { new UIAnimKey { time = 0f, value = from }, new UIAnimKey { time = time, value = to, ease = UIAnimEase.OutSine } },
         };
 
     // ---------- object helpers ----------
