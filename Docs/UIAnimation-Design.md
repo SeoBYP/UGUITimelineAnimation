@@ -1,7 +1,7 @@
 # UGUI Animation System — 설계 문서
 
 > 기준: `main` 66d0537 (PR #9) + 성능 측정·CI 보강(`feature/perf-ci`) · 2026-10-15
-> 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · UniTask 2.5.11 · **LitMotion 의존 없음**(재생 타이머·이징 자체 구현, `feature/remove-litmotion`)
+> 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · **서드파티 의존성 없음** (LitMotion 대신 자체 타이머·이징, 대기는 Unity `Awaitable`) · UniTask는 **선택**(설치돼 있으면 연동이 켜짐)
 > 방식: **완전 커스텀**. 데이터, 런타임, 에디터 창을 모두 직접 만듭니다. Animator와 Timeline은 사용하지 않습니다.
 > 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 아직 안 함
 > 도식 원본(HTML)은 [`diagrams/`](diagrams/)에 있습니다. 브라우저로 열면 벡터로 볼 수 있습니다.
@@ -20,7 +20,7 @@
 | R6 | 상위에서 하위 오버라이드 (현재 Prefab에서만) | ✅ | **트랙 단위** 오버라이드. 바꾼 트랙만 저장하고 나머지는 원본을 따라감. Unity 중첩 Prefab 규칙과 같음 (§8) |
 | R7 | Scroll 리스트와 애니메이션 | ✅ | `UIAnimScrollList` 하나로 스크롤 18가지 형태(리스트·그리드·메이슨리·캐러셀·무한 루프·페이지·배너·휠 피커·섹션 헤더·가변 크기·채팅·아코디언·중첩·탭·접히는 헤더·당겨서 새로고침). 모든 연출은 UI Animation Editor의 상태로 만듦 (§9) |
 | R8 | Play 모드 없이 즉시 미리보기 | ✅ | 씬과 Prefab 모드 모두 지원. 정지·저장·Play 진입 시 원래 값으로 복원 (§6.6) |
-| R9 | 클라이언트가 타이밍을 원활하게 호출 | ✅ | `PlayAsync`(UniTask)로 끝날 때까지 대기, `Complete`로 건너뛰기, 애니메이션 이벤트 수신 (§7) |
+| R9 | 클라이언트가 타이밍을 원활하게 호출 | ✅ | `PlayAsync`(Unity `Awaitable`, UniTask가 있으면 `PlayUniTaskAsync`)로 끝날 때까지 대기, `Complete`로 건너뛰기, 애니메이션 이벤트 수신 (§7) |
 
 ---
 
@@ -198,7 +198,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 - 서로 호출하는 순환은 깊이 8에서 끊습니다.
 
 ### 4.5 애니메이션 이벤트와 사운드
-- **이벤트**: 이벤트 트랙의 시점마다 `EventRaised`가 발생합니다. 이름만 있는 이벤트와 `[UIAnimEvent]` struct 데이터를 가진 이벤트가 같은 형식입니다(§7.2).
+- **이벤트**: 이벤트 트랙의 시점마다 `EventRaised`가 발생합니다. 이름만 있는 이벤트와 `[UIAnimEvent]` struct 데이터를 가진 이벤트가 같은 형식입니다(§7.3).
 - **사운드**: 사운드 트랙의 시점마다 `PlayOneShot`으로 재생합니다.
   - 소스 우선순위: 트랙의 AudioSource → UIAnimation의 `audioSource` → **공용 2D AudioSource**(숨김 오브젝트 하나). 그래서 UI 오브젝트에 AudioSource를 붙일 필요가 없습니다. 믹서 그룹이나 3D 사운드가 필요할 때만 지정합니다.
   - 상태 길이에 사운드 끝까지 포함됩니다. 그래서 Close 후 Destroy해도 소리가 끊기지 않습니다.
@@ -213,7 +213,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 | 항목 | 내용 |
 |---|---|
 | 대기 중 | 재생 중이 아닌 상태는 비용 0 (타이머가 없음) |
-| 재생 대기 | `PlayAsync`는 UniTask 풀링 소스(`AutoResetUniTaskCompletionSource`). `Play`는 대기 소스를 만들지 않음 |
+| 재생 대기 | `PlayAsync`는 Unity `AwaitableCompletionSource`를 상태마다 하나 만들어 재사용(`Reset`). `Play`는 대기 소스를 만들지 않음 |
 | 오버라이드 | 오버라이드가 있는 상태는 합친 상태를 만듭니다. 재생 준비 때 한 번, 자식 호출 길이 계산 때 재생마다 한 번 할당 |
 | 글자 효과 | 텍스트당 프레임마다 메시 재생성 1회(`ForceMeshUpdate`) |
 | 스크램블 | 공개 중에는 프레임마다 문자열 1개 생성 (TMP가 string을 요구) |
@@ -328,8 +328,8 @@ public sealed class UIAnimation : MonoBehaviour
 {
     public void Play(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
                      PointerEventData pointer = null);
-    public UniTask PlayAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
-                             CancellationToken cancellationToken = default);
+    public Awaitable PlayAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+                               CancellationToken cancellationToken = default);   // Unity 내장, 한 번만 await
     public void Complete(string stateName);   // 재생 중인 상태를 끝으로 건너뛰기
     public bool IsPlaying(string stateName);
     public void PlayState(string stateName);  // UnityEvent 연결용
@@ -340,9 +340,8 @@ public sealed class UIAnimation : MonoBehaviour
 
 **팝업 닫기** — 닫히는 도중 다시 열리면 Destroy하지 않습니다.
 ```csharp
-var canceled = await popup.PlayAsync("Close", cancellationToken: popup.destroyCancellationToken)
-    .SuppressCancellationThrow();
-if (canceled) return;          // Open이 Close를 가져감 → 팝업 유지
+try { await popup.PlayAsync("Close", cancellationToken: popup.destroyCancellationToken); }
+catch (OperationCanceledException) { return; }   // Open이 Close를 가져감 → 팝업 유지
 Destroy(popup.gameObject);
 ```
 
@@ -354,7 +353,16 @@ var typing = anim.PlayAsync("Typewriter");
 await typing;
 ```
 
-### 7.2 애니메이션 이벤트
+### 7.2 UniTask 연동 (선택)
+UniTask(`com.cysharp.unitask`)가 설치돼 있으면 asmdef `versionDefines`가 `UIANIM_UNITASK`를 켜서 확장 메서드가 생깁니다. 설치하지 않아도 패키지는 그대로 컴파일·동작합니다(VContainer·LitMotion의 UniTask 연동과 같은 방식).
+```csharp
+await UniTask.WhenAll(popup.PlayUniTaskAsync("Open"), dim.PlayUniTaskAsync("Show"));
+var info = await anim.WaitEventUniTaskAsync("Shown");
+var canceled = await popup.PlayUniTaskAsync("Close").SuppressCancellationThrow();
+```
+- 완료·취소 규칙은 `PlayAsync`와 같습니다(내부적으로 `Awaitable`을 `AsUniTask()`로 바꿈).
+
+### 7.3 애니메이션 이벤트
 ```csharp
 [UIAnimEvent("Popup Sound")]                 // 에디터의 이벤트 형식 목록에 나옴
 public struct PopupSoundEvent { public string clip; public float volume; }
@@ -363,12 +371,13 @@ anim.EventRaised += (in UIAnimEventInfo e) => Debug.Log($"{e.State}:{e.Name} @ {
 using var sub = anim.AddListener<PopupSoundEvent>((in UIAnimEventInfo e, in PopupSoundEvent data) => Play(data.clip));
 var info = await anim.WaitEventAsync("Shown");
 ```
+- `WaitEventAsync`는 `Awaitable<UIAnimEventInfo>`입니다.
 - `UIAnimEventInfo`(readonly struct, `in`으로 전달): `Animation`, `State`, `Name`, `Time`, `TryGetData<T>()`
 - 코드 없이 받기: `UI Anim Event Listener` 컴포넌트에 이벤트 이름 → UnityEvent를 연결합니다.
 - 이벤트 형식 목록에는 플레이어 빌드에 포함되는 struct만 나옵니다(테스트 어셈블리 제외).
 
 **정책**
-- 끝나지 않은 재생은 **취소(OperationCanceledException)**로 끝납니다. "끝나야만 다음 동작"이 기본이 되도록 하기 위해서입니다. 예외 없이 받으려면 `SuppressCancellationThrow()`를 씁니다.
+- 끝나지 않은 재생은 **취소(OperationCanceledException)**로 끝납니다. "끝나야만 다음 동작"이 기본이 되도록 하기 위해서입니다. UniTask를 쓰면 `PlayUniTaskAsync(...).SuppressCancellationThrow()`로 예외 없이 받을 수 있습니다.
 - 상태는 문자열 이름으로 지정합니다. 없는 이름은 경고 로그를 남기고 무시합니다.
 
 ---
@@ -527,13 +536,13 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 | `PerformanceTests.cs` | 4 | 성능 측정(버튼 100개, 텍스트 10개 상태별, 무거운 스크롤 형태)과 측정 도구 검증. 결과는 테스트 로그, 할당 없어야 하는 경로는 검사 |
 | `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
-### 11.2 PlayMode 테스트 (18개, `Tests/PlayMode`)
-**`PlayAsyncPlayModeTests`** (6개): 실제 플레이어 루프에서 `PlayAsync`가 상태 길이만큼 기다린 뒤 끝 값으로 끝나는지(측정 0.300초 / 길이 0.3초), `Complete`·`Complete` 인터럽트는 완료, 같은 상태 재생·속성 빼앗김·비활성화·토큰 취소는 취소되는지(§4.3 표 전체), `WaitEventAsync`.
+### 11.2 PlayMode 테스트 (19개, UniTask 없으면 18개, `Tests/PlayMode`)
+**`PlayAsyncPlayModeTests`** (6개 + UniTask 설치 시 연동 1개): 실제 플레이어 루프에서 `PlayAsync`가 상태 길이만큼 기다린 뒤 끝 값으로 끝나는지(측정 0.300초 / 길이 0.3초), `Complete`·`Complete` 인터럽트는 완료, 같은 상태 재생·속성 빼앗김·비활성화·토큰 취소는 취소되는지(§4.3 표 전체), `WaitEventAsync`. 연동 테스트는 `UniTask.WhenAll(PlayUniTaskAsync, WaitEventUniTaskAsync)`와 취소 전달.
 
 **`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 120개 전부 실행, `-nographics`: 102개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 18개, `-nographics`: 17개 실행·1개 건너뜀).
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 120개 전부 실행, `-nographics`: 102개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 19개, `-nographics`: 18개 실행·1개 건너뜀).
 
 ### 11.3 CI
 - GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 **EditMode → PlayMode** 순서로 실행합니다. 둘 다 통과해야 합니다. 실행 요약에 두 표가 나옵니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
@@ -561,7 +570,8 @@ Docs/                                       ← 문서 (배포 안 됨)
 ```
 
 - **배포 경계**: `Assets/UIAnimation`의 런타임·에디터 코드는 샘플을 참조하지 않습니다(asmdef로 분리). 테스트 일부(`SampleButton2Tests`, 샘플 Prefab을 쓰는 테스트)는 샘플이 없으면 건너뜁니다.
-- **의존성**: 서드파티는 UniTask 하나(다음 단계에서 선택 사항으로 바꿀 예정). LitMotion은 없음. `com.unity.mathematics`(Unity 공식, 내장)만 씁니다(Shake 난수).
+- **의존성**: 서드파티 **없음**. `package.json`에는 Unity 공식 패키지 `com.unity.ugui`, `com.unity.mathematics`(Shake 난수)만 있습니다. UniTask는 선택(§7.2). 개발 프로젝트에는 연동 테스트를 위해 UniTask가 설치돼 있습니다.
+- **UniTask 없는 상태 검증**: 테스트용 프로젝트 복사본에서 UniTask를 빼고 실행해 EditMode 120/120, PlayMode 18/18(연동 테스트 1개는 컴파일에서 빠짐)을 확인했습니다.
 - **배포 절차 (예정)**: 직접 써 본 뒤 `0.1.0`으로 올리고 태그를 붙입니다.
   ```
   https://github.com/SeoBYP/UGUITimelineAnimation.git?path=Assets/UIAnimation#v0.1.0
@@ -578,7 +588,8 @@ Docs/                                       ← 문서 (배포 안 됨)
 | ✅ | CI 보강 | CI가 PlayMode까지 실행. 러너에 xvfb 설치함(2026-10-15, `xvfb 2:21.1.12-1ubuntu1.8`): 에디터 창 테스트도 CI에서 실행 |
 | ✅ | `PlayAsync` PlayMode 테스트 | 완료·취소 경로 6개 |
 | ⬜ | 외부 라이브러리 샘플 분석 → 샘플 제작 | 다른 UI 애니메이션 라이브러리의 샘플을 분석해 같은 연출을 UI Animation Editor로 만들기 |
-| ⬜ | 배포 `0.1.0` | 샘플을 패키지의 `Samples~`로 넣을지 결정, UniTask(선택) 연동 안내, 태그. Git URL로 다른 프로젝트에 설치해 동작 확인 |
+| ✅ | 의존성 0 | LitMotion 제거(PR #11), UniTask 선택화(`feature/unitask-optional`) |
+| ⬜ | 배포 `0.1.0` | 샘플을 패키지의 `Samples~`로 넣을지 결정, 태그. Git URL로 다른 프로젝트에 설치해 동작 확인 |
 | ⬜ | 글자 효과 최적화 (선택) | 텍스트당 약 0.2ms/프레임. 한 화면에 수십 개를 동시에 돌릴 때만 필요 |
 
 ### 13.1 알려진 제한

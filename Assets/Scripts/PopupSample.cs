@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
 using SeoBYP.TimelineAnimation;
 using TMPro;
 using UnityEngine;
@@ -44,16 +43,17 @@ public sealed class PopupSample : MonoBehaviour
         Log("Open");
     }
 
-    public void Close() => CloseAsync().Forget();
-
-    async UniTaskVoid CloseAsync()
+    // async void: a button handler that awaits (exceptions go to the console). No UniTask needed: PlayAsync is an Awaitable.
+    public async void Close()
     {
         var popup = _popup;
         if (popup == null) return;
         Log("Close started");
-        var canceled = await popup.PlayAsync("Close", cancellationToken: popup.destroyCancellationToken)
-            .SuppressCancellationThrow();
-        if (canceled)
+        try
+        {
+            await popup.PlayAsync("Close", cancellationToken: popup.destroyCancellationToken);
+        }
+        catch (System.OperationCanceledException)
         {
             Log("Close canceled -> popup kept");
             return;
@@ -64,13 +64,11 @@ public sealed class PopupSample : MonoBehaviour
     }
 
     /// <summary>Closes, then reopens 0.15s later: the Close await is canceled mid-animation.</summary>
-    public void CloseThenOpen() => CloseThenOpenAsync().Forget();
-
-    async UniTaskVoid CloseThenOpenAsync()
+    public async void CloseThenOpen()
     {
         if (_popup == null) return;
         Close();
-        await UniTask.Delay(150, ignoreTimeScale: true);
+        await Awaitable.WaitForSecondsAsync(0.15f);
         Open();
         if (pauseOnReopen) Debug.Break();
     }

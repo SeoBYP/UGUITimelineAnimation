@@ -7,5 +7,12 @@
         "UniTask",
         "Unity.Mathematics"
     ],
-    "autoReferenced": true
+    "autoReferenced": true,
+    "versionDefines": [
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "2.0.0",
+            "define": "UIANIM_UNITASK"
+        }
+    ]
 }
