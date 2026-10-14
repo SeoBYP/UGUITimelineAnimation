@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -206,12 +205,28 @@ namespace SeoBYP.TimelineAnimation.Tests
 
         // ---------- 완료 대기 (PlayAsync) ----------
 
-        UIAnimation.Playback PlayAwaitable(string name, out UniTask task, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+        UIAnimation.Playback PlayAwaitable(string name, out Awaitable task, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
             CancellationToken ct = default)
         {
             var playback = _anim.Prepare(name, interrupt, null);
             task = UIAnimation.Await(playback, ct);
             return playback;
+        }
+
+        // Unity's Awaitable has no status: completed or not, and whether getting the result throws (canceled).
+        // Get the result only once per awaitable (it goes back to Unity's pool after that).
+        static string Status(Awaitable a)
+        {
+            if (!a.GetAwaiter().IsCompleted) return "Pending";
+            try { a.GetAwaiter().GetResult(); return "Succeeded"; }
+            catch (System.OperationCanceledException) { return "Canceled"; }
+        }
+
+        static string Status<T>(Awaitable<T> a)
+        {
+            if (!a.GetAwaiter().IsCompleted) return "Pending";
+            try { a.GetAwaiter().GetResult(); return "Succeeded"; }
+            catch (System.OperationCanceledException) { return "Canceled"; }
         }
 
         UIAnimState Fade(string name, float to) =>
@@ -222,10 +237,10 @@ namespace SeoBYP.TimelineAnimation.Tests
         {
             _anim.states.Add(Fade("Close", 0f));
             var playback = PlayAwaitable("Close", out var task);
-            Assert.AreEqual(UniTaskStatus.Pending, task.Status);
+            Assert.AreEqual("Pending", Status(task));
 
             UIAnimation.Finish(playback);   // 타이머가 끝에 도달했을 때 부르는 것
-            Assert.AreEqual(UniTaskStatus.Succeeded, task.Status);
+            Assert.AreEqual("Succeeded", Status(task));
             Assert.IsFalse(_anim.IsPlaying("Close"));
         }
 
@@ -238,7 +253,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             PlayAwaitable("Close", out var task);
 
             _anim.Prepare("Open", UIAnimInterrupt.Cancel, null);
-            Assert.AreEqual(UniTaskStatus.Canceled, task.Status);
+            Assert.AreEqual("Canceled", Status(task));
         }
 
         [Test]
@@ -248,8 +263,8 @@ namespace SeoBYP.TimelineAnimation.Tests
             PlayAwaitable("Close", out var first);
             PlayAwaitable("Close", out var second);
 
-            Assert.AreEqual(UniTaskStatus.Canceled, first.Status);
-            Assert.AreEqual(UniTaskStatus.Pending, second.Status);
+            Assert.AreEqual("Canceled", Status(first));
+            Assert.AreEqual("Pending", Status(second));
         }
 
         [Test]
@@ -260,7 +275,7 @@ namespace SeoBYP.TimelineAnimation.Tests
 
             _anim.Complete("Show");
             Assert.AreEqual(1f, _image.color.a, 1e-4f);
-            Assert.AreEqual(UniTaskStatus.Succeeded, task.Status);
+            Assert.AreEqual("Succeeded", Status(task));
             Assert.IsFalse(_anim.IsPlaying("Show"));
         }
 
@@ -272,7 +287,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             PlayAwaitable("Show", out var task);
 
             _anim.Prepare("Hide", UIAnimInterrupt.Complete, null);
-            Assert.AreEqual(UniTaskStatus.Succeeded, task.Status);
+            Assert.AreEqual("Succeeded", Status(task));
         }
 
         [Test]
@@ -283,7 +298,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             PlayAwaitable("Close", out var task, ct: cts.Token);
 
             cts.Cancel();
-            Assert.AreEqual(UniTaskStatus.Canceled, task.Status);
+            Assert.AreEqual("Canceled", Status(task));
             Assert.IsFalse(_anim.IsPlaying("Close"));
         }
 
@@ -292,7 +307,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         {
             _anim.states.Add(Fade("Close", 0f));
             var task = _anim.PlayAsync("Close", cancellationToken: new CancellationToken(true));
-            Assert.AreEqual(UniTaskStatus.Canceled, task.Status);
+            Assert.AreEqual("Canceled", Status(task));
             Assert.IsFalse(_anim.IsPlaying("Close"));
         }
 
@@ -386,9 +401,9 @@ namespace SeoBYP.TimelineAnimation.Tests
             var wait = _anim.WaitEventAsync("Impact");
 
             UIAnimation.Step(playback, 0.4f);
-            Assert.AreEqual(UniTaskStatus.Pending, wait.Status, "다른 이벤트(A)로는 끝나지 않는다");
+            Assert.AreEqual("Pending", Status(wait), "다른 이벤트(A)로는 끝나지 않는다");
             UIAnimation.Step(playback, 0.7f);
-            Assert.AreEqual(UniTaskStatus.Succeeded, wait.Status);
+            Assert.AreEqual("Succeeded", Status(wait));
         }
 
         // ---------- 자식 상태 호출 ----------

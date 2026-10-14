@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -11,7 +10,7 @@ using Object = UnityEngine.Object;
 namespace SeoBYP.TimelineAnimation.Tests
 {
     /// <summary>
-    /// PlayAsync on the real player loop: LitMotion drives the state and the await ends when it finishes or is canceled
+    /// PlayAsync on the real player loop: the animation timer drives the state and the await ends when it finishes or is canceled
     /// (design doc §4.3 — every stop goes through "finished" or "canceled", so no await is left hanging).
     /// </summary>
     public sealed class PlayAsyncPlayModeTests
@@ -47,7 +46,15 @@ namespace SeoBYP.TimelineAnimation.Tests
 
         float Scale => _go.transform.localScale.x;
 
-        static async UniTask<bool> Canceled(UniTask task)
+        // A test body written with async/await, run as a coroutine (no UniTask needed).
+        static IEnumerator Run(Func<Awaitable> body)
+        {
+            var task = body();
+            while (!task.IsCompleted) yield return null;
+            task.GetAwaiter().GetResult();   // rethrows assertion failures
+        }
+
+        static async Awaitable<bool> Canceled(Awaitable task)
         {
             try
             {
@@ -61,7 +68,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [UnityTest]
-        public IEnumerator 끝까지_가면_길이만큼_기다린_뒤_끝_값으로_끝난다() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 끝까지_가면_길이만큼_기다린_뒤_끝_값으로_끝난다() => Run(async () =>
         {
             var events = new List<string>();
             _anim.EventRaised += (in UIAnimEventInfo e) => events.Add($"{e.Name}@{Time.realtimeSinceStartup:0.000}");
@@ -76,20 +83,20 @@ namespace SeoBYP.TimelineAnimation.Tests
         });
 
         [UnityTest]
-        public IEnumerator Complete를_부르면_바로_끝_값으로_완료된다() => UniTask.ToCoroutine(async () =>
+        public IEnumerator Complete를_부르면_바로_끝_값으로_완료된다() => Run(async () =>
         {
             var task = _anim.PlayAsync("Grow");
-            await UniTask.Yield();
+            await Awaitable.NextFrameAsync();
             _anim.Complete("Grow");
             Assert.IsFalse(await Canceled(task), "취소가 아니라 완료");
             Assert.AreEqual(1f, Scale, 1e-4f);
         });
 
         [UnityTest]
-        public IEnumerator 같은_상태를_다시_재생하면_앞의_대기는_취소되고_뒤의_것이_끝난다() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 같은_상태를_다시_재생하면_앞의_대기는_취소되고_뒤의_것이_끝난다() => Run(async () =>
         {
             var first = _anim.PlayAsync("Grow");
-            await UniTask.Yield();
+            await Awaitable.NextFrameAsync();
             var second = _anim.PlayAsync("Grow");
             Assert.IsTrue(await Canceled(first), "앞의 대기 취소");
             Assert.IsFalse(await Canceled(second), "뒤의 것은 완료");
@@ -97,46 +104,67 @@ namespace SeoBYP.TimelineAnimation.Tests
         });
 
         [UnityTest]
-        public IEnumerator 다른_상태가_속성을_가져가면_취소_Complete_인터럽트면_완료() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 다른_상태가_속성을_가져가면_취소_Complete_인터럽트면_완료() => Run(async () =>
         {
             var grow = _anim.PlayAsync("Grow");
-            await UniTask.Yield();
+            await Awaitable.NextFrameAsync();
             _anim.Play("Shrink");   // Cancel: takes Scale, Grow stops where it is
             Assert.IsTrue(await Canceled(grow), "속성을 모두 빼앗기면 취소");
 
             grow = _anim.PlayAsync("Grow");
-            await UniTask.Yield();
+            await Awaitable.NextFrameAsync();
             _anim.Play("Shrink", UIAnimInterrupt.Complete);   // Complete: Grow jumps to its end first
             Assert.IsFalse(await Canceled(grow), "Complete 인터럽트면 완료");
         });
 
         [UnityTest]
-        public IEnumerator 비활성화와_토큰_취소는_대기를_취소한다() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 비활성화와_토큰_취소는_대기를_취소한다() => Run(async () =>
         {
             var grow = _anim.PlayAsync("Grow");
-            await UniTask.Yield();
+            await Awaitable.NextFrameAsync();
             _go.SetActive(false);
             Assert.IsTrue(await Canceled(grow), "OnDisable");
             _go.SetActive(true);
 
             using var cts = new CancellationTokenSource();
             grow = _anim.PlayAsync("Grow", cancellationToken: cts.Token);
-            await UniTask.Yield();
+            await Awaitable.NextFrameAsync();
             var stoppedAt = Scale;
             cts.Cancel();
             Assert.IsTrue(await Canceled(grow), "토큰 취소");
-            await UniTask.Delay(TimeSpan.FromSeconds(Length), ignoreTimeScale: true);
+            await Awaitable.WaitForSecondsAsync(Length);
             Assert.AreEqual(stoppedAt, Scale, 0.05f, "취소된 자리에서 멈춤");
             Assert.IsFalse(_anim.IsPlaying("Grow"));
         });
 
         [UnityTest]
-        public IEnumerator 이벤트를_기다릴_수_있다() => UniTask.ToCoroutine(async () =>
+        public IEnumerator 이벤트를_기다릴_수_있다() => Run(async () =>
         {
             _anim.Play("Grow");
             var info = await _anim.WaitEventAsync("Half");
             Assert.AreEqual("Half", info.Name);
             Assert.That(Scale, Is.InRange(0.3f, 0.7f), "이벤트 시간(0.15s) 무렵의 값");
         });
-    }
+    
+#if UIANIM_UNITASK
+        // ---------- UniTask integration (compiled only when UniTask is installed) ----------
+
+        [UnityTest]
+        public IEnumerator UniTask_연동_PlayUniTaskAsync는_WhenAll로_묶을_수_있다() => Cysharp.Threading.Tasks.UniTask.ToCoroutine(async () =>
+        {
+            var start = Time.realtimeSinceStartup;
+            await Cysharp.Threading.Tasks.UniTask.WhenAll(_anim.PlayUniTaskAsync("Grow"), _anim.WaitEventUniTaskAsync("Half").AsUniTask());
+            TestContext.WriteLine($"UniTask.WhenAll(PlayUniTaskAsync, WaitEventUniTaskAsync): {Time.realtimeSinceStartup - start:0.000}s");
+            Assert.AreEqual(1f, Scale, 1e-4f);
+
+            var canceled = false;
+            var grow = _anim.PlayUniTaskAsync("Grow");
+            await Cysharp.Threading.Tasks.UniTask.Yield();
+            _anim.Play("Shrink");
+            try { await grow; }
+            catch (OperationCanceledException) { canceled = true; }
+            Assert.IsTrue(canceled, "취소도 UniTask 취소로 전달");
+        });
+#endif
+}
 }

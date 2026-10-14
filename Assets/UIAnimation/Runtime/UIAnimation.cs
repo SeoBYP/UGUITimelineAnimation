@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -458,7 +457,8 @@ namespace SeoBYP.TimelineAnimation
             public bool active;
             public bool resolved;                                 // key values resolved at least once (Sample reuses them)
             public float lastTime;                                // events in (lastTime, t] are raised on the next step
-            public AutoResetUniTaskCompletionSource completion;   // only while someone awaits PlayAsync
+            public AwaitableCompletionSource completion;           // made on the first PlayAsync, reused after
+            public bool awaited;                                  // a PlayAsync is waiting on completion
             public CancellationTokenRegistration cancelRegistration;
 
             public Playback(UIAnimation owner, UIAnimState state)
@@ -499,15 +499,16 @@ namespace SeoBYP.TimelineAnimation
         }
 
         /// <summary>Completes with the event the next time any playing state raises <paramref name="eventName"/>.</summary>
-        public async UniTask<UIAnimEventInfo> WaitEventAsync(string eventName, CancellationToken cancellationToken = default)
+        public async Awaitable<UIAnimEventInfo> WaitEventAsync(string eventName, CancellationToken cancellationToken = default)
         {
-            var source = new UniTaskCompletionSource<UIAnimEventInfo>();
+            var source = new AwaitableCompletionSource<UIAnimEventInfo>();
             void OnEvent(in UIAnimEventInfo e)
             {
                 if (e.Name == eventName) source.TrySetResult(e);
             }
             EventRaised += OnEvent;
-            try { return await source.Task.AttachExternalCancellation(cancellationToken); }
+            using var registration = cancellationToken.Register(() => source.TrySetCanceled());
+            try { return await source.Awaitable; }
             finally { EventRaised -= OnEvent; }
         }
 
@@ -640,12 +641,13 @@ namespace SeoBYP.TimelineAnimation
         /// properties, it was played again, the object was disabled, or <paramref name="cancellationToken"/> fired.
         /// e.g. <c>await anim.PlayAsync("Close"); Destroy(gameObject);</c> never destroys a popup that was reopened mid-close.
         /// </summary>
-        public UniTask PlayAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+        /// <remarks>Unity's <see cref="Awaitable"/>: await it once. With UniTask installed, PlayUniTaskAsync returns a UniTask.</remarks>
+        public Awaitable PlayAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
             CancellationToken cancellationToken = default)
         {
-            if (cancellationToken.IsCancellationRequested) return UniTask.FromCanceled(cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return Done(canceled: true);
             var playback = Prepare(stateName, interrupt, null);
-            if (playback == null) return UniTask.CompletedTask;
+            if (playback == null) return Done(canceled: false);
             var task = Await(playback, cancellationToken);
             StartMotion(playback);
             return task;
@@ -736,13 +738,15 @@ namespace SeoBYP.TimelineAnimation
         }
 
         /// <summary>The task for this play; split out so tests can drive time.</summary>
-        internal static UniTask Await(Playback playback, CancellationToken cancellationToken)
+        internal static Awaitable Await(Playback playback, CancellationToken cancellationToken)
         {
-            playback.completion = AutoResetUniTaskCompletionSource.Create();
+            playback.completion ??= new AwaitableCompletionSource();
+            playback.completion.Reset();   // the last one was set (Prepare stopped it), so it can be reused
+            playback.awaited = true;
             if (cancellationToken.CanBeCanceled)
-                playback.cancelRegistration = cancellationToken.RegisterWithoutCaptureExecutionContext(
+                playback.cancelRegistration = cancellationToken.Register(
                     static p => Stop((Playback)p), playback);
-            return playback.completion.Task;
+            return playback.completion.Awaitable;
         }
 
         // Reached the end: the state stays on its last values.
@@ -764,11 +768,20 @@ namespace SeoBYP.TimelineAnimation
             Release(p)?.TrySetCanceled();
         }
 
-        // Hands the completion source out exactly once; the pooled source must not be touched after it is set.
-        static AutoResetUniTaskCompletionSource Release(Playback p)
+        static Awaitable Done(bool canceled)
         {
+            var source = new AwaitableCompletionSource();
+            if (canceled) source.SetCanceled();
+            else source.SetResult();
+            return source.Awaitable;
+        }
+
+        // Hands the completion source out exactly once per PlayAsync (it is set once, then reused by the next one).
+        static AwaitableCompletionSource Release(Playback p)
+        {
+            if (!p.awaited) return null;
+            p.awaited = false;
             var completion = p.completion;
-            p.completion = null;
             p.cancelRegistration.Dispose();
             p.cancelRegistration = default;
             return completion;
