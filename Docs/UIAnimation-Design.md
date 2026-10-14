@@ -1,6 +1,6 @@
 # UGUI Animation System — 설계 문서
 
-> 기준: `main` 4f36ce4 (PR #8 머지 시점) + 스크롤 리스트(`feature/scroll`) · 2026-10-14
+> 기준: `main` 66d0537 (PR #9) + 성능 측정·CI 보강(`feature/perf-ci`) · 2026-10-15
 > 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · LitMotion 2.0.2 · UniTask 2.5.11
 > 방식: **완전 커스텀**. 데이터, 런타임, 에디터 창을 모두 직접 만듭니다. Animator와 Timeline은 사용하지 않습니다.
 > 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 아직 안 함
@@ -14,7 +14,7 @@
 |---|---|---|---|
 | R1 | Prefab 단위로 관리 | ✅ | 애니메이션 데이터가 Prefab 안의 `UIAnimation` 컴포넌트에 직렬화됩니다. 별도 asset이 없습니다 (§3) |
 | R2 | 디자이너가 편하게 편집 | ✅ | UI Toolkit 기반 **UI Animation Editor** 창: 계층형 타임라인, 트랙 추가 창, 키 인스펙터 (§6) |
-| R3 | 성능 | 🟡 | 재생 중인 상태만 LitMotion이 구동하고, 대기는 풀링 소스를 씁니다. 스크롤 리스트만 측정함(GC 0바이트) (§4.7) |
+| R3 | 성능 | ✅ | 버튼·텍스트·스크롤을 측정함. 재생 진행·스크롤은 할당 0회. 개선 후보: 글자 효과 텍스트당 약 0.2ms/프레임, 스크램블 문자열 할당 (§4.7) |
 | R4 | 이벤트별 재생 (Pointer·Select·Toggle·OnEnable·Start) | ✅ | `UIAnimTrigger`, 상태마다 **Play On** 하나 (§5) |
 | R5 | 공용 Prefab 중첩, 부모가 자식 상태 호출 | ✅ | 자식 호출(`UIAnimChildCall`): 부모 시간축의 지정 시간에 자식 상태 재생 (§4.4) |
 | R6 | 상위에서 하위 오버라이드 (현재 Prefab에서만) | ✅ | **트랙 단위** 오버라이드. 바꾼 트랙만 저장하고 나머지는 원본을 따라감. Unity 중첩 Prefab 규칙과 같음 (§8) |
@@ -206,15 +206,35 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 - 스크램블은 text 자체를 바꾸므로 원문을 따로 기억합니다. 재생 중에 외부에서 text가 바뀌면 그것을 새 원문으로 씁니다.
 
 ### 4.7 성능 현황
-| 항목 | 현재 |
+
+**구조**
+| 항목 | 내용 |
 |---|---|
 | 대기 중 | 재생 중이 아닌 상태는 비용 0 (LitMotion 모션이 없음) |
 | 재생 대기 | `PlayAsync`는 UniTask 풀링 소스(`AutoResetUniTaskCompletionSource`). `Play`는 대기 소스를 만들지 않음 |
 | 오버라이드 | 오버라이드가 있는 상태는 합친 상태를 만듭니다. 재생 준비 때 한 번, 자식 호출 길이 계산 때 재생마다 한 번 할당 |
 | 글자 효과 | 텍스트당 프레임마다 메시 재생성 1회(`ForceMeshUpdate`) |
 | 스크램블 | 공개 중에는 프레임마다 문자열 1개 생성 (TMP가 string을 요구) |
-| 스크롤 리스트 (측정) | 100개 리스트에서 점프 스크롤 1000번(한 번에 여러 개 재사용): 바인딩만 37.9µs/회, 위치 스크럽 포함 94.3µs/회, **GC 0바이트** (EditMode, 개발 PC). 아이템 위치는 레이아웃이 바뀔 때 한 번 계산해 두고, 보이는 범위는 이진 탐색(메이슨리만 전체 검사) |
-| 그 외 | 버튼 다수 hover, 텍스트 다수 동시 재생은 **미실측** |
+| 스크롤 리스트 | 아이템 위치는 레이아웃이 바뀔 때 한 번 계산, 보이는 범위는 이진 탐색(메이슨리만 전체 검사). 측정 리스트는 개수가 늘면 새 아이템만 측정 |
+
+**측정** (`PerformanceTests`, `UIAnimScrollListTests`의 성능 테스트 · EditMode · 개발 PC · 샘플 Prefab). 시간은 실행마다 ±30% 정도 흔들립니다.
+
+| 대상 | 시간 | GC 할당 |
+|---|---|---|
+| Button1 100개 `Play(Hover/Unhover)` 시작 | 약 0.4ms / 100개 | 0.46회 / 100개 (LitMotion 저장소가 가끔 커질 때) |
+| Button1 100개 Hover 진행 | 약 0.13~0.16ms / 프레임 | **0회** |
+| TextDemo 10개 Typewriter | 약 0.01ms / 프레임 | **0회** |
+| TextDemo 10개 Scramble | 약 0.06ms / 프레임 | 10회 / 프레임 (텍스트당 문자열 1개) |
+| TextDemo 10개 Flip · PopUp · Punch · Shake (글자 효과) | 약 2.0~2.5ms / 프레임 (텍스트당 약 0.2ms) | **0회** |
+| 스크롤 100개 점프 1000번: 바인딩만 / 위치 스크럽 포함 | 약 35~41µs / 95~121µs (점프당) | **0회** |
+| 섹션 헤더 1000개 점프 | 약 0.2~0.25ms (점프당) | 0.002회 (풀이 새 최대 개수로 커질 때) |
+| 메이슨리 1000개 점프 | 약 0.75~0.8ms (점프당) | 14.8회 (아래 참고) |
+| 측정 리스트(말풍선) 200개 채우기 / 1개 추가 | 약 38ms / 약 0.6ms | 243회 / 13회 |
+
+- **측정 방법 정정**: 처음 스크롤 측정에 쓴 `GC.GetAllocatedBytesForCurrentThread()`는 Unity Mono에서 **항상 0을 돌려줍니다**(1KB 배열을 할당해도 0). 그래서 이전 문서의 "GC 0바이트"는 근거가 없었습니다. 지금은 Unity Test Framework의 할당 검사와 같은 프로파일러 `GC.Alloc` 기록기로 **할당 횟수**를 셉니다. 측정 도구 자체를 검증하는 테스트가 있습니다(할당 없는 코드 0회, 1KB 배열 1번 = 1회).
+- **메이슨리 할당**: 우리 코드가 아니라, 재사용한 아이템의 높이가 바뀔 때 TMP 텍스트가 크기 변경에 반응하며 생깁니다. 높이를 모두 같게 하거나 글자를 끄면 0회입니다.
+- **측정 리스트**: 1개 추가가 전체를 다시 재던 것(200개 기준 약 42ms, 프레임 멈춤)을 새 아이템만 재도록 고쳐 약 0.6ms가 됐습니다. 기존 아이템의 데이터가 바뀌면 `Refresh()`(전체) 또는 `RefreshItem(i)`(하나)를 부릅니다.
+- **개선 후보**: 글자 효과는 텍스트 10개 동시 재생에 프레임당 2ms 남짓이라, 한 화면에 수십 개를 동시에 돌리면 부담이 됩니다. 스크램블은 텍스트당 프레임마다 문자열 1개를 만듭니다.
 
 ---
 
@@ -490,7 +510,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 
 ## 11. 테스트와 CI
 
-### 11.1 EditMode 테스트 (113개, 메서드 이름은 한국어)
+### 11.1 EditMode 테스트 (117개, 메서드 이름은 한국어)
 | 파일 | 개수 | 다루는 것 |
 |---|---|---|
 | `UIAnimationTests.cs` | 43 | 키 보간, 시작 값(현재 값·지연·누른 위치), 원래 값 기준, 속성 인계, 완료 대기·취소, 이벤트·struct 데이터, 사운드, 자식 호출, 오버라이드 해석, 예전 데이터 변환 |
@@ -501,18 +521,21 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 | `EditorLayoutMeasureTests.cs` | 3 | 에디터 레이아웃 실측(줄 높이, 키 위치·폭, 투명도, 글자색), 바깥 Prefab 단계, ↺ 범위 |
 | `UIAnimScrollListTests.cs` | 17 | 정렬(세로·가로·그리드·가운데·반대·자식 크기), 재사용, 바인딩·해제, 데이터 목록, 개수 변경, ScrollTo·가장 가까운 아이템, 화면 좌표로 찾기, 진입·등장·스크럽, `Sample`, **성능 측정 2종** |
 | `UIAnimScrollFormsTests.cs` | 15 | 가변 크기, 여러 Prefab, 측정, 메이슨리, 루프, 한 장씩 넘기기, 크기 변경, 끝에 붙기, 섹션 헤더, 중첩 드래그, `Rotation`, Page Indicator, Scroll Scrub, Pull To Refresh, 에디터 미리보기 |
+| `PerformanceTests.cs` | 4 | 성능 측정(버튼 100개, 텍스트 10개 상태별, 무거운 스크롤 형태)과 측정 도구 검증. 결과는 테스트 로그, 할당 없어야 하는 경로는 검사 |
 | `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
-### 11.2 PlayMode 테스트 (12개, `Tests/PlayMode`)
-Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
+### 11.2 PlayMode 테스트 (18개, `Tests/PlayMode`)
+**`PlayAsyncPlayModeTests`** (6개): 실제 플레이어 루프에서 `PlayAsync`가 상태 길이만큼 기다린 뒤 끝 값으로 끝나는지(측정 0.300초 / 길이 0.3초), `Complete`·`Complete` 인터럽트는 완료, 같은 상태 재생·속성 빼앗김·비활성화·토큰 취소는 취소되는지(§4.3 표 전체), `WaitEventAsync`.
+
+**`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 113개 전부 실행, `-nographics`: 95개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`.
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 117개 전부 실행, `-nographics`: 99개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 18개, `-nographics`: 17개 실행·1개 건너뜀).
 
 ### 11.3 CI
-- GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 EditMode 테스트를 실행합니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
-- 러너에 `xvfb-run`이 있으면 가상 디스플레이로 에디터 창 테스트까지 실행하고, 없으면 `-nographics`로 실행합니다. **현재 러너에는 없어서** CI에서는 에디터 창 테스트 18개가 건너뛰어집니다. CI는 EditMode만 실행합니다.
-- `main` 보호 규칙: "Unity EditMode Tests" 통과 필수(최신 main 기준), 관리자 포함, 강제 push·삭제 금지. 자동 머지 허용, 머지 후 브랜치 자동 삭제.
+- GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 **EditMode → PlayMode** 순서로 실행합니다. 둘 다 통과해야 합니다. 실행 요약에 두 표가 나옵니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
+- 러너에 `xvfb-run`이 있으면 가상 디스플레이로 에디터 창 테스트까지 실행하고, 없으면 `-nographics`로 실행합니다. 러너에 없으면 워크플로가 `sudo -n apt-get install xvfb`로 설치를 시도하고, 비밀번호 없는 sudo 권한이 없으면 경고만 남기고 `-nographics`로 실행합니다(에디터 창 테스트는 건너뜀).
+- `main` 보호 규칙: "Unity EditMode Tests"(잡 이름, 지금은 PlayMode도 포함) 통과 필수(최신 main 기준), 관리자 포함, 강제 push·삭제 금지. 자동 머지 허용, 머지 후 브랜치 자동 삭제.
 
 ---
 
@@ -545,10 +568,22 @@ Docs/                                       ← 문서 (배포 안 됨)
 
 ## 13. 남은 일
 
+| 상태 | 항목 | 내용 |
+|---|---|---|
+| ✅ | 스크롤 직접 확인 | 사용자가 Scroll 씬을 직접 검수하고 나온 문제(튐, 깜빡임, 새로고침 위치·번호, 도구 막대)를 모두 고침 |
+| ✅ | 성능 측정 (R3) | §4.7. 측정 도구 오류(항상 0)를 발견해 고쳤고, 측정 리스트 1개 추가 42ms → 0.6ms |
+| ✅ | CI 보강 | CI가 PlayMode까지 실행. 러너에 xvfb 설치함(2026-10-15, `xvfb 2:21.1.12-1ubuntu1.8`): 에디터 창 테스트도 CI에서 실행 |
+| ✅ | `PlayAsync` PlayMode 테스트 | 완료·취소 경로 6개 |
+| ⬜ | 외부 라이브러리 샘플 분석 → 샘플 제작 | 다른 UI 애니메이션 라이브러리의 샘플을 분석해 같은 연출을 UI Animation Editor로 만들기 |
+| ⬜ | 배포 `0.1.0` | 샘플을 패키지의 `Samples~`로 넣을지 결정, LitMotion·UniTask 설치 안내, 태그. Git URL로 다른 프로젝트에 설치해 동작 확인 |
+| ⬜ | 글자 효과 최적화 (선택) | 텍스트당 약 0.2ms/프레임. 한 화면에 수십 개를 동시에 돌릴 때만 필요 |
+
+### 13.1 알려진 제한
+
 | 항목 | 내용 |
 |---|---|
-| ⬜ 스크롤 손맛 확인 | 실제 마우스·터치 드래그의 스냅·관성 느낌은 사람이 직접 확인해야 함(자동 테스트는 드래그 이벤트를 코드로 보냄) |
-| ⬜ 성능 측정 (R3) | 버튼 다수 hover, 텍스트 다수 동시 재생에서 GC·ms 측정 (스크롤 리스트는 측정함) |
-| ⬜ PlayMode 테스트 확장 | 스크롤은 있음. `PlayAsync`가 실제 LitMotion 완료로 풀리는 경로는 아직 직접 확인만. CI에 PlayMode 실행 추가 |
-| ⬜ CI 에디터 창 테스트 | 러너에 `xvfb` 설치 시 자동으로 실행됨 |
-| ⬜ 배포 | `0.1.0` 태그 |
+| Play 모드에서 편집 | Edit Animation / `OpenState`는 Prefab 원본을 엽니다. Play 모드 중 고친 내용은 이미 화면에 있는 아이템에는 반영되지 않고, 새로 만들어지는 아이템부터 반영됩니다 |
+| 당겨서 새로고침 | 세로 리스트(위에서 아래로 당김)만 지원 |
+| 루프 + 개수 변경 | 루프 리스트는 개수가 바뀌면 보이는 아이템을 모두 다시 만듭니다(인덱스 대응이 바뀌므로). 루프가 아닌 리스트는 남은 아이템을 유지 |
+| 메이슨리 보이는 범위 | 다른 배치는 이진 탐색, 메이슨리는 아이템 전체 검사 (수천 개 이상이면 열별 색인이 필요) |
+| 섹션 헤더 찾기 | 스크롤할 때 헤더를 처음부터 검사 (아주 긴 리스트면 헤더 인덱스 목록이 필요) |

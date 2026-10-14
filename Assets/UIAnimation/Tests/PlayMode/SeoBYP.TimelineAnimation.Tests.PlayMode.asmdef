@@ -4,6 +4,7 @@
     "references": [
         "SeoBYP.TimelineAnimation",
         "LitMotion",
+        "UniTask",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "UnityEngine.TestRunner",

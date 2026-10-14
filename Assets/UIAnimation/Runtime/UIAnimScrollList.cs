@@ -182,7 +182,11 @@ namespace SeoBYP.TimelineAnimation
             where TView : Component =>
             SetCount<TView>(data.Count, (view, i) => bind(view, data[i], i), unbind);
 
-        /// <summary>Changes the item count and binds the visible items again, keeping the scroll position (or the end, with Stick To End).</summary>
+        /// <summary>
+        /// Changes the item count (items were added or removed at the end) and binds the visible items again, keeping the
+        /// scroll position (or the end, with Stick To End). With Measure Items only the new items are measured; when the
+        /// data of existing items changed (e.g. inserted at the top), call <see cref="Refresh"/>.
+        /// </summary>
         public void SetCount(int count, float stickDuration = 0.25f)
         {
             // Still gliding to the end from the last change counts as at the end (messages sent in a row).
@@ -195,7 +199,7 @@ namespace SeoBYP.TimelineAnimation
             foreach (var (slot, item) in _active)
                 if (Looping || item.index >= _count || PrefabOf(item.index) != item.prefab) _release.Add(slot);
             foreach (var slot in _release) Release(slot);
-            Measure();
+            Measure(from: Mathf.Min(oldCount, _count));   // only the new items: the data of the others is the same
             foreach (var item in _active.Values) Rebind(item);
             Relayout();
             if (stickToEnd && wasAtEnd && _count > 0) ScrollToOffset(MaxOffset, stickDuration);
@@ -212,9 +216,14 @@ namespace SeoBYP.TimelineAnimation
             foreach (var item in _active.Values) Rebind(item);
         }
 
-        /// <summary>Binds one item again if it is in view.</summary>
+        /// <summary>Binds one item again if it is in view (and measures it again, with Measure Items).</summary>
         public void RefreshItem(int index)
         {
+            if (measureItems && index >= 0 && index < _count)
+            {
+                Measure(index, index + 1);
+                Relayout();
+            }
             foreach (var item in _active.Values)
                 if (item.index == index) Rebind(item);
         }
@@ -641,12 +650,20 @@ namespace SeoBYP.TimelineAnimation
         }
 
         // With Measure Items: each index bound to a hidden instance of its prefab, its preferred size read once.
-        void Measure()
+        // Indices from `from` to `to` (exclusive) are measured again; sizes outside stay. -1 = up to the count.
+        void Measure(int from = 0, int to = -1)
         {
-            _measured.Clear();
-            if (!measureItems || _count == 0) return;
+            if (!measureItems || _count == 0)
+            {
+                _measured.Clear();
+                return;
+            }
+            if (to < 0) to = _count;
+            if (_measured.Count > _count) _measured.RemoveRange(_count, _measured.Count - _count);
+            while (_measured.Count < _count) _measured.Add(0f);
+            if (from >= to) return;
             var probes = new Dictionary<int, Item>();
-            for (var i = 0; i < _count; i++)
+            for (var i = from; i < to; i++)
             {
                 var type = PrefabOf(i);
                 if (!probes.TryGetValue(type, out var probe))
@@ -660,7 +677,7 @@ namespace SeoBYP.TimelineAnimation
                 probe.rect.sizeDelta = VerticalScroll ? new Vector2(cross, probe.rect.sizeDelta.y) : new Vector2(probe.rect.sizeDelta.x, cross);
                 _bind?.Invoke(probe);
                 LayoutRebuilder.ForceRebuildLayoutImmediate(probe.rect);
-                _measured.Add(LayoutUtility.GetPreferredSize(probe.rect, VerticalScroll ? 1 : 0));
+                _measured[i] = LayoutUtility.GetPreferredSize(probe.rect, VerticalScroll ? 1 : 0);
                 _unbind?.Invoke(probe);
             }
             foreach (var probe in probes.Values)
