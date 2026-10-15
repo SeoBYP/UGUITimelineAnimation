@@ -7,9 +7,9 @@
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
 | EditMode (패키지) | 138 | `Assets/UIAnimation/Tests/Editor` |
-| PlayMode (패키지) | 39 | `Assets/UIAnimation/Tests/PlayMode` |
+| PlayMode (패키지) | 45 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
-| PlayMode (개발용 캡처) | 2 | `Assets/Dev/Tests` |
+| PlayMode (개발용 캡처) | 3 | `Assets/Dev/Tests` |
 
 ## EditMode (패키지) — 138개
 
@@ -227,7 +227,7 @@ UIEffect values as keyframe tracks (compiled only when UIEffect is installed).
 1. UIEffect 값을 키프레임 트랙으로 움직인다
 2. UIEffect가 있는 오브젝트는 트랙 고르기에 14가지가 나온다
 
-## PlayMode (패키지) — 39개
+## PlayMode (패키지) — 45개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.PlayMode` · CI에서 실행
 
@@ -258,6 +258,17 @@ The R3 sample scene (Samples/R3): button streams → states, animation events �
 
 1. Open 연타는 한 번만 재생되고 이벤트와 끝이 로그에 남는다
 
+### `RpgPhase2PlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPhase2PlayModeTests.cs`
+
+The RPG sample's second set of screens (title, loading, upgrade, shop, formation, mail, attendance) in Play mode.
+
+1. 타이틀은 탭하면 로딩을 거쳐 로비로 가고 기록에 남지 않는다
+2. 강화는 골드를 쓰고 레벨이 오르며 장비가 차례로 들어간다
+3. 상점은 구매 팝업을 거쳐 재화가 바뀌고 다 사면 품절이 찍힌다
+4. 편성은 영웅을 넣고 빼면 전투력이 바뀐다
+5. 우편은 모두 받기로 한 통씩 접히고 빈 안내가 뜬다
+6. 출석은 오늘 칸에 도장을 찍고 보상을 준다
+
 ### `RpgPlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPlayModeTests.cs`
 
 The RPG sample (Assets/UIAnimation/Samples/RPG) in Play mode: each screen opens, moves as built, and closes.
@@ -266,7 +277,7 @@ The RPG sample (Assets/UIAnimation/Samples/RPG) in Play mode: each screen opens,
 2. 영웅 초상이 카드에서 상세 자리로 이어지고 뒤로 가면 카드로 돌아간다
 3. 가방은 탭으로 페이지가 넘어가고 아이템 아이콘이 정보 팝업으로 이어진다
 4. 소환 10회는 카드가 떨어지고 모두 앞면으로 뒤집힌다
-5. 모험은 챕터를 고르면 스테이지가 나오고 승리와 패배 결과가 뜬다
+5. 모험은 챕터를 고르고 편성을 거쳐 승리와 패배 결과가 뜬다
 6. 퀘스트 보상을 받으면 도장이 찍히고 그 줄만 접혀 사라진다
 
 ### `ScreenContainerPlayModeTests` (7개) — `Assets/UIAnimation/Tests/PlayMode/ScreenContainerPlayModeTests.cs`
@@ -333,13 +344,14 @@ The UnityScreenNavigator demo rebuilt with UI Animation (Assets/Reference/Screen
 3. 설정 모달은 커지며 열리고 바꾼 값을 닫을 때 저장하며 잠긴 항목은 확인 모달을 쌓는다
 4. 유닛 정보의 초상화가 뷰어의 위치와 크기로 이어지고 닫으면 돌아간다
 
-## PlayMode (개발용 캡처) — 2개
+## PlayMode (개발용 캡처) — 3개
 
 `UIANIM_CAPTURE=<폴더>`가 있을 때만 실행(없으면 건너뜀) · 프레임을 PNG로 저장
 
-### `RpgCapture` (2개) — `Assets/Dev/Tests/RpgCapture.cs`
+### `RpgCapture` (3개) — `Assets/Dev/Tests/RpgCapture.cs`
 
 Dev-only: plays the RPG sample and saves frames as PNG, to look at the motion without opening the editor. Runs only when UIANIM_CAPTURE is set to an output folder (skipped otherwise, e.g. on CI).
 
 1. CaptureDense
 2. Capture
+3. CapturePhase2

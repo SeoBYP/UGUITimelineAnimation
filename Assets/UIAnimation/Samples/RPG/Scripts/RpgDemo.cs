@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using SeoBYP.TimelineAnimation;
 using UnityEngine;
 
 /// <summary>
-/// RPG sample: a lobby and the screens a mobile RPG opens from it (heroes, bag, summon, adventure, quests), each a page
-/// with its own transitions, plus popups (item info, summon results, battle results). All the motion is UIAnimation
+/// RPG sample: a title and loading screen, a lobby and the screens a mobile RPG opens from it (heroes, upgrade, bag,
+/// summon, adventure and formation, quests, shop, mail), each a page with its own transitions, plus popups (item info,
+/// summon results, battle results, purchase, attendance). All the motion is UIAnimation
 /// states on the prefabs; this class only opens and closes screens and holds the player's currencies.
 /// </summary>
 public sealed class RpgDemo : MonoBehaviour
@@ -16,6 +18,8 @@ public sealed class RpgDemo : MonoBehaviour
     public UIAnimModalContainer modals;
     public UIAnimScreen lobby, heroes, heroDetail, bag, summon, adventure, quests;
     public UIAnimScreen itemInfo, summonResult, victory, defeat;
+    public UIAnimScreen title, loading, upgrade, shop, formation, mail;
+    public UIAnimScreen purchase, attendance;
     [Tooltip("Icons, hero portraits … looked up by name.")]
     public Sprite[] sprites;
 
@@ -32,11 +36,32 @@ public sealed class RpgDemo : MonoBehaviour
     public RectTransform SelectedIcon { get; private set; }
     public int SummonCount { get; private set; }
     public (int chapter, int stage) SelectedStage { get; private set; }
+    public RpgData.Offer SelectedOffer { get; private set; }
+
+    // Hero levels change with upgrades (RpgData stays as written).
+    int[] _levels;
+    public int Level(int hero) => (_levels ??= RpgData.Heroes.Select(h => h.level).ToArray())[hero];
+    public static int UpgradeCost(int level) => level * 120;
+    public int AttendanceDay { get; private set; } = 4;   // days 1–4 are claimed, day 5 is today
+    public bool AttendanceClaimed { get; private set; }
+    List<RpgData.Offer> _offers;
+    List<RpgData.Mail> _mails;
+    public List<RpgData.Offer> Offers => _offers ??= RpgData.Offers();   // stock and mail stay as left between visits
+    public List<RpgData.Mail> Mails => _mails ??= RpgData.Mails();
 
     static bool Busy => UIAnimScreenContainer.AnyInTransition;
 
     void Awake() => Instance = this;
-    async void Start() => await pages.Push(lobby);
+    async void Start() => await pages.Push(title, stack: false);
+
+    /// <summary>Title → loading → lobby; neither stays in the history.</summary>
+    public async void ShowLoading()
+    {
+        if (Busy) return;
+        await pages.Push(loading, stack: false);
+    }
+
+    public async void EnterLobby() => await pages.Push(lobby);
 
     public Sprite Sprite(string spriteName) => sprites.FirstOrDefault(s => s.name == spriteName);
 
@@ -104,6 +129,59 @@ public sealed class RpgDemo : MonoBehaviour
         if (won) Add(gold: 250 + chapter * 100);
         Popup(won ? victory : defeat);
         return true;
+    }
+
+    /// <summary>Spends gold on a level. False (and nothing changes) when short of gold.</summary>
+    public bool Upgrade(int hero)
+    {
+        var cost = UpgradeCost(Level(hero));
+        if (Gold < cost) return false;
+        Add(gold: -cost);
+        _levels[hero]++;
+        return true;
+    }
+
+    public void OpenFormation(int chapter, int stage)
+    {
+        if (Busy) return;
+        SelectedStage = (chapter, stage);
+        Open(formation);
+    }
+
+    public void AskPurchase(RpgData.Offer offer)
+    {
+        if (Busy) return;
+        SelectedOffer = offer;
+        Popup(purchase);
+    }
+
+    /// <summary>Pays for the selected offer and hands out what it gives. False when short.</summary>
+    public bool Buy()
+    {
+        var o = SelectedOffer;
+        var gold = o.currency == "gold" ? o.price : 0;
+        var gems = o.currency == "gem" ? o.price : 0;
+        if (Gold < gold || Gems < gems || o.stock == 0) return false;
+        Add(gold: o.gold - gold, gems: o.gems - gems, stamina: o.stamina);
+        if (o.stock > 0) o.stock--;
+        return true;
+    }
+
+    public void ClaimAttendance()
+    {
+        if (AttendanceClaimed) return;
+        AttendanceClaimed = true;
+        var (icon, amount) = RpgData.Attendance[AttendanceDay];
+        Give(icon, amount);
+        AttendanceDay++;
+    }
+
+    public void Give(string icon, int amount) => Add(gold: icon == "gold" ? amount : 0, gems: icon == "gem" ? amount : icon == "chest" ? 500 : 0,
+        stamina: icon == "stamina" ? amount : 0);
+
+    public void OpenAttendance()
+    {
+        if (!Busy) Popup(attendance);
     }
 
     async void Popup(UIAnimScreen modal) => await modals.Push(modal);

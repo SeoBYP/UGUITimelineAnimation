@@ -27,6 +27,17 @@ namespace SeoBYP.TimelineAnimation.Tests
             yield return null;
             _pages = Object.FindAnyObjectByType<UIAnimPageContainer>();
             _modals = Object.FindAnyObjectByType<UIAnimModalContainer>();
+            yield return ToLobby(_pages);
+        }
+
+        // The sample starts on the title: tap, wait through loading, until the lobby is in.
+        internal static IEnumerator ToLobby(UIAnimPageContainer pages)
+        {
+            yield return Idle();
+            Named(pages.Current, "TapButton").onClick.Invoke();
+            var end = Time.realtimeSinceStartup + 10f;
+            while ((pages.Current == null || !pages.Current.name.StartsWith("Lobby") || UIAnimScreenContainer.AnyInTransition) && Time.realtimeSinceStartup < end)
+                yield return null;
             yield return Idle();
         }
 
@@ -165,7 +176,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [UnityTest]
-        public IEnumerator 모험은_챕터를_고르면_스테이지가_나오고_승리와_패배_결과가_뜬다()
+        public IEnumerator 모험은_챕터를_고르고_편성을_거쳐_승리와_패배_결과가_뜬다()
         {
             yield return Load();
             yield return Open("ADVENTURE");
@@ -178,6 +189,10 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.AreEqual(1f, Page.transform.Find("Content/Stage10").localScale.x, 0.001f, "스테이지 등장 끝");
 
             Named(Page, "StartButton").onClick.Invoke();
+            yield return Idle();
+            StringAssert.StartsWith("Formation", Page.name, "START → 편성");
+            Named(Page, "BattleButton").onClick.Invoke();
+            yield return new WaitForSeconds(1.2f);   // the team charges off ("Battle")
             yield return Idle(3f);
             var victory = Modal;
             StringAssert.StartsWith("Victory", victory.name);
@@ -190,11 +205,16 @@ namespace SeoBYP.TimelineAnimation.Tests
             Assert.AreEqual("+450", Text(victory, "Rewards/GoldAmount"));
             Named(victory, "ContinueButton").onClick.Invoke();
             yield return Idle();
+            Named(Page, "BackButton").onClick.Invoke();   // formation → adventure
+            yield return Idle();
 
             chapters.ScrollTo(0, UIAnimScrollList.Alignment.Center, 0f);
             yield return new WaitForSeconds(1f);
             Named(Page, "Stage10").onClick.Invoke();
             Named(Page, "StartButton").onClick.Invoke();
+            yield return Idle();
+            Named(Page, "BattleButton").onClick.Invoke();
+            yield return new WaitForSeconds(1.2f);
             yield return Idle(3.5f);
             var defeat = Modal;
             StringAssert.StartsWith("Defeat", defeat.name);
