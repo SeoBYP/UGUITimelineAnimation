@@ -1,6 +1,6 @@
 # UGUI Animation System — 설계 문서
 
-> 기준: `main` 66d0537 (PR #9) + 성능 측정·CI 보강(`feature/perf-ci`) · 2026-10-15
+> 기준: `main` 487631c (PR #12 머지 시점) · 2026-10-15
 > 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · **서드파티 의존성 없음** (LitMotion 대신 자체 타이머·이징, 대기는 Unity `Awaitable`) · UniTask는 **선택**(설치돼 있으면 연동이 켜짐)
 > 방식: **완전 커스텀**. 데이터, 런타임, 에디터 창을 모두 직접 만듭니다. Animator와 Timeline은 사용하지 않습니다.
 > 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 아직 안 함
@@ -58,6 +58,8 @@
 | `Runtime/UIAnimScrollList.cs` | 가상화 스크롤 리스트: 정렬(세로·가로·그리드·메이슨리), 가변 크기·여러 Prefab, 재사용, 바인딩, 루프, 스냅·한 장씩, 자동 넘김, 섹션 헤더, 끝에 붙기, 크기 애니메이션, 중첩 드래그, 아이템 애니메이션 |
 | `Runtime/UIAnimPageIndicator.cs` | 리스트 아이템마다 점·탭 하나, 현재 것에 On / 떠난 것에 Off 상태, 누르면 그 아이템으로 |
 | `Runtime/UIAnimScrollScrub.cs` | 스크롤한 거리로 상태를 보여줌 (접히는 헤더) |
+| `Runtime/UIAnimScreen.cs` | 화면 전환 컨테이너가 보여 주는 화면(Page·Modal·Sheet). 전환 = 상태 이름 규약, 생명주기 `IUIAnimScreenLifecycle` |
+| `Runtime/UIAnimScreenContainer.cs`, `UIAnimPageContainer.cs`, `UIAnimModalContainer.cs`, `UIAnimSheetContainer.cs`, `UIAnimDefaultTransitions.cs` | 화면 전환 컨테이너와 기본 전환 (§7.4) |
 | `Runtime/UIAnimPullToRefresh.cs` | 당긴 거리로 Pull 상태, 놓으면 On Refresh + Refreshing 반복, `EndRefresh()` |
 | `Runtime/UIAnimTextChars.cs` | TMP 글자별 효과 누적과 메시 반영, 스크램블 텍스트 |
 | `Runtime/UIAnimVibration.cs` | LitMotion과 같은 Punch/Shake 공식, 시드 랜덤, 스크램블 문자열 생성 |
@@ -114,7 +116,10 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 
 | 대상 | 속성 |
 |---|---|
-| Transform / RectTransform | `Scale`, `Rotation`(오일러 각, 읽을 때 -180~180), `SizeDelta`, `AnchoredPosition` |
+| Transform / RectTransform | `Scale`, `Rotation`(오일러 각, 읽을 때 -180~180), `SizeDelta`, `AnchoredPosition`, `AnchorMin`, `AnchorMax`, `Pivot` |
+| GameObject | `Active`(켜기·끄기. 키 사이 보간 없이 키 시간에 바뀜) |
+| CanvasGroup | `CanvasGroupAlpha` (화면·팝업 전체 페이드) |
+| Camera | `CameraBackground`, `CameraOrthoSize` |
 | Graphic (Image, TMP 등) | `GraphicColor`, `GraphicAlpha` |
 | Image (Filled) | `FillAmount` |
 | TMP_Text | `FontSize`, `CharacterSpacing`, `TextReveal` (타자기, 0~1) |
@@ -136,6 +141,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
   - `Current`: 재생을 시작하는 순간의 값. 중간에 끊겨도 값이 튀지 않습니다(호버/언호버, 팝업 Open/Close). 첫 키를 0초 뒤에 두면 그만큼 기다립니다(Toggle1의 지연).
   - `Pointer`: **Position 트랙 전용.** 상태를 재생시킨 포인터를 누른 위치입니다. 뒤 키들은 누른 자리 기준 상대값이라 `(0,0)`은 "그 자리"입니다(Button2의 리플). 포인터 없이 재생하면(코드 호출) 현재 위치를 씁니다.
 - `Relative To Rest` (원래 값 기준): 키 값을 원래 값(Awake 시점, 미리보기는 시작 시점에 캡처)에 더합니다. 예: Button1 누를 때 크기 −(34, 17).
+- `Size Relative` (자기 크기 기준): **Position·Size 트랙 전용.** 키 값이 대상 자기 크기의 배수입니다(x = 1이면 자기 폭만큼). 재생을 시작할 때 크기를 읽어서 해상도가 달라도 같은 비율로 움직입니다. 예: 화면이 x = 1(오른쪽 한 화면)에서 0으로 들어오기. 다른 트랙에서는 보이지만 비활성(이유 표시)입니다.
 
 ### 3.4 텍스트 트랙
 - `TextReveal`: `maxVisibleCharacters`를 0~1 비율로 지정합니다. 리치 텍스트 태그는 글자 수에 포함하지 않습니다.
@@ -198,7 +204,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 - 서로 호출하는 순환은 깊이 8에서 끊습니다.
 
 ### 4.5 애니메이션 이벤트와 사운드
-- **이벤트**: 이벤트 트랙의 시점마다 `EventRaised`가 발생합니다. 이름만 있는 이벤트와 `[UIAnimEvent]` struct 데이터를 가진 이벤트가 같은 형식입니다(§7.3).
+- **이벤트**: 이벤트 트랙의 시점마다 `EventRaised`가 발생합니다. 이름만 있는 이벤트와 `[UIAnimEvent]` struct 데이터를 가진 이벤트가 같은 형식입니다(§7.5).
 - **사운드**: 사운드 트랙의 시점마다 `PlayOneShot`으로 재생합니다.
   - 소스 우선순위: 트랙의 AudioSource → UIAnimation의 `audioSource` → **공용 2D AudioSource**(숨김 오브젝트 하나). 그래서 UI 오브젝트에 AudioSource를 붙일 필요가 없습니다. 믹서 그룹이나 3D 사운드가 필요할 때만 지정합니다.
   - 상태 길이에 사운드 끝까지 포함됩니다. 그래서 Close 후 Destroy해도 소리가 끊기지 않습니다.
@@ -330,13 +336,22 @@ public sealed class UIAnimation : MonoBehaviour
                      PointerEventData pointer = null);
     public Awaitable PlayAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
                                CancellationToken cancellationToken = default);   // Unity 내장, 한 번만 await
-    public void Complete(string stateName);   // 재생 중인 상태를 끝으로 건너뛰기
+    public void PlayReversed(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel);
+    public Awaitable PlayReversedAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+                                       CancellationToken cancellationToken = default);
+    public void PlayStateReversed(string stateName);   // UnityEvent 연결용 (Back 버튼)
+    public void Complete(string stateName);   // 재생 중인 상태를 끝으로 건너뛰기 (역재생이면 시작 모습)
+    public void Stop(string stateName);       // 그 자리에서 멈춤 (반복 상태를 끌 때). 기다리던 PlayAsync는 취소
     public bool IsPlaying(string stateName);
     public void PlayState(string stateName);  // UnityEvent 연결용
     public void Sample(string stateName, float time);   // 재생하지 않고 그 시간의 모습만 (이벤트·사운드 없음)
     public float Duration(string stateName);
 }
 ```
+
+**역재생** — 값은 끝에서 시작으로, 이벤트·사운드·자식 호출도 거꾸로 한 번씩 발생합니다(자식 상태도 역재생). 시작 값이 "현재 값"인 트랙은 마지막 정방향 재생이 잡은 값을 다시 써서, Back이 Open을 시작한 자리로 정확히 돌아갑니다. 이징 곡선은 시간을 거꾸로 따라가므로 뒤집힌 모양이 됩니다.
+
+**반복 (상태의 Loop)** — Animator 클립의 Loop Time과 같은 개념입니다. 상태 인스펙터의 **Loop** 토글을 켜면, 끝에 닿았을 때 남은 시간을 넘겨 0초부터 이어서 재생해 이음매가 없습니다. 이벤트·사운드·자식 호출은 바퀴마다 다시 울리고, 역재생 반복도 됩니다. `Stop`이나 다른 상태가 속성을 가져갈 때까지 계속되므로, 반복 상태의 `PlayAsync`는 `Complete`/`Stop` 전에는 끝나지 않습니다. 켜질 때 바로 돌게 하려면 Play On에 On Enable을 고릅니다(코드 불필요). 창의 미리보기도 반복합니다. 예: 로비 영웅 숨쉬기, 소환 마법진 회전, 알림 표시 맥박.
 
 **팝업 닫기** — 닫히는 도중 다시 열리면 Destroy하지 않습니다.
 ```csharp
@@ -362,7 +377,29 @@ var canceled = await popup.PlayUniTaskAsync("Close").SuppressCancellationThrow()
 ```
 - 완료·취소 규칙은 `PlayAsync`와 같습니다(내부적으로 `Awaitable`을 `AsUniTask()`로 바꿈).
 
-### 7.3 애니메이션 이벤트
+### 7.4 화면 전환 (Page · Modal · Sheet 컨테이너)
+UnityScreenNavigator와 같은 역할을 패키지 안에서 합니다. 전환 연출은 **화면의 UIAnimation 상태**이고, 화면에 그 이름의 상태가 없으면 기본 전환을 씁니다.
+
+| 컨테이너 | API | 화면의 상태 이름 | 기본 전환 (USN 기본값과 같음, 0.3초) |
+|---|---|---|---|
+| `UIAnimPageContainer` | `Push(prefab, animated, stack)`, `Pop(animated)`, `Pages`, `Current` | `PushEnter`, `PushExit`, `PopEnter`, `PopExit` | 한 화면 폭 슬라이드(Size Relative), OutQuart |
+| `UIAnimModalContainer` | `Push(prefab, animated)`, `Pop(animated)`, `backdropPrefab` | `Enter`, `Exit` (배경도 `Enter`/`Exit`) | 크기 0.3→1 + 알파, 배경은 검정 75 % 페이드(Linear) |
+| `UIAnimSheetContainer` | `Register(prefab)`, `Show(index, animated)`, `ActiveIndex` | `Enter`, `Exit`, 낮은 번호로 갈 때 `EnterBackward`, `ExitBackward`(없으면 `Enter`/`Exit`) | 알파 페이드(Linear) |
+
+- 들어오는 화면과 나가는 화면이 **동시에** 움직입니다. 들어오는 화면은 컨테이너를 꽉 채웁니다.
+- `stack: false`로 넣은 페이지는 다음 페이지가 들어오면 기록에서 빠집니다(로딩 화면). `renderingOrder`가 높은 화면이 위에 그려집니다.
+- 생명주기: 화면 루트의 아무 컴포넌트가 `IUIAnimScreenLifecycle`을 구현하면 `WillEnter`/`WillExit`(await, 애니메이션 전), `DidEnter`/`DidExit`(애니메이션 후)가 불립니다. `UIAnimTransition`에 종류(Push/Pop/Show/Hide), 상대 화면(`Partner`), 방향(`Backward`)이 들어 있습니다. 기다릴 게 없는 `Will*`은 `UIAnimScreen.Completed()`를 돌려줍니다.
+- **공유 요소 전환** (`UIAnimSharedElement.SetPartnerKeys`): 이미지가 다른 화면의 자리에서 이어져 나오는 연출. 연출 자체는 움직이는 이미지의 AnchoredPosition·SizeDelta 트랙(창에서 편집)이고, 실행 중에만 알 수 있는 상대 쪽 자리(첫 키 또는 마지막 키)만 `Will*`에서 채웁니다. 상대 이미지는 들어갈 때 숨기고 `DidExit`에서 다시 보이게 합니다(Showcase 상점 상세, ScreenNavigator 초상화 뷰어).
+- 전환 중에는 **모든 컨테이너의 입력이 잠깁니다**(`AnyInTransition`). 중복 터치로 전환이 겹치지 않습니다.
+- 전부 `Awaitable`이라 서드파티 없이 `await pages.Push(home)`로 기다릴 수 있습니다.
+
+```csharp
+await pages.Push(loadingPage, stack: false);   // 로딩: 기록에 안 남음
+await pages.Push(homePage);                     // Home의 WillEnter에서 1초 준비하는 동안 로딩이 보임
+await sheets.Show(2);                           // 탭 2 (높은 번호: Enter, 낮은 번호: EnterBackward)
+```
+
+### 7.5 애니메이션 이벤트
 ```csharp
 [UIAnimEvent("Popup Sound")]                 // 에디터의 이벤트 형식 목록에 나옴
 public struct PopupSoundEvent { public string clip; public float volume; }
@@ -449,7 +486,8 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | Auto Scroll (s) | 초마다 다음 아이템으로, 드래그 중엔 멈춤 (배너) |
 | Stick To End | 끝을 보고 있을 때 아이템이 늘면 끝 유지 (채팅) |
 | Sticky Header | 이 Prefab 종류는 섹션 헤더. 지나간 헤더가 위에 고정되고 다음 헤더가 밀어 올림 |
-| `ResizeItem(index, size, duration)` | 한 아이템 크기를 애니메이션으로 바꾸고 뒤 아이템이 따라 이동 (아코디언) |
+| `RemoveItem(index)` | 데이터 가운데에서 하나를 지운 뒤 호출. 그 아이템만 사라지고 아래 아이템은 오브젝트·연출 상태 그대로 한 칸씩 올라감(다시 바인딩·등장 없음). 끝에서 늘고 줄 때는 `SetCount(count)` |
+| `ResizeItem(index, size, duration)` | 한 아이템 크기를 애니메이션으로 바꾸고 뒤 아이템이 따라 이동 (아코디언). 끝나면 완료되는 `Awaitable`을 돌려줌 → `await list.ResizeItem(i, 0)` 뒤에 데이터에서 지우기 (RPG 퀘스트) |
 | 중첩 | 리스트 축과 다른 방향 드래그는 감싼 `ScrollRect`로 넘김 (페이지 안의 세로 리스트, 세로 리스트 안의 가로 줄) |
 | `ItemShown` / `ItemHidden` | 아이템이 보이게 됨 / 사라짐 이벤트 |
 
@@ -457,7 +495,7 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | 항목 | 동작 |
 |---|---|
 | Entry State + Stagger | `PlayEntry()`(또는 처음 채울 때)에 보이는 아이템이 Stagger 간격으로 차례로 재생. 기다리는 아이템은 시작 모습, 끝난 뒤 들어오는 아이템은 끝 모습 |
-| Appear State | 스크롤로 새로 보이게 된 아이템에 재생. 처음 채울 때는 재생하지 않음 |
+| Appear State | 스크롤로 새로 보이게 된 아이템에 재생. 처음 채울 때, 그리고 다른 아이템의 크기 변경·삭제(`ResizeItem`, `RemoveItem`)로 화면에 들어온 아이템은 재생하지 않음 (같은 목록이 올라오는 것일 뿐이라 흔들려 보이지 않게) |
 | Scrub State | 아이템의 뷰포트 안 위치(0 = 시작 가장자리, 0.5 = 가운데, 1 = 끝)를 상태 시간으로 씀(`UIAnimation.Sample`). 캐러셀 확대, 휠 피커 기울기, 페이지 패럴랙스 |
 
 - 재사용되는 오브젝트는 이전 인덱스의 애니메이션 모습이 남아 있을 수 있어서, 보이게 될 때 진입 끝 모습으로 맞춘 뒤 등장 상태를 재생합니다.
@@ -487,6 +525,9 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | | Toggle2 | On/Off(손잡이 이동 + 채우기) | `4_Toggle` Toggle_2 |
 | `Text` | TextDemo | Typewriter, Scramble, Flip, PopUp, Punch, Shake | `3_Text` Animation1~6 |
 | `Scroll` | 페이지 18장(`Prefabs/Scroll/Pages`), 아이템 13종(`Prefabs/Scroll/Items`) | 스크롤 형태 18가지를 한 장씩 넘겨 봄(한 장씩 넘기기 + 점 + Prev/Next, 페이지 위 세로 리스트에서 가로로 밀어도 넘어감). 위쪽 도구 막대: 현재 페이지의 아이템 수 슬라이더(0~200), Add / Remove, **Edit Animation**(그 페이지의 상태를 UI Animation Editor로 엶, Play 모드에서도 됨). 아래 표 참고 | — |
+| `Reference/AnimationUI/Scenes/Home`, `Level1` (참고용) | 원본 씬 그대로 + UIAnimation | [Unity-AnimationUI](https://github.com/DhafinFawwaz/Unity-AnimationUI) 데모 재현: 메뉴 → Settings/Upgrade(Back = 역재생), Start(카메라 줌·줄무늬·씬 전환), Level1(박스 등장·Win/Lose). 원본 연출 수치는 원본 씬 YAML에서 추출(`Data/AnimationUI-Demo.json`), 빌더 `AnimationUISampleBuilder` | Unity-AnimationUI Demo |
+| `Reference/ScreenNavigator/Scenes/ScreenNavigatorDemo` (참고용) | 원본 Prefab 8개 그대로(GUID 유지) + UIAnimScreen | [UnityScreenNavigator](https://github.com/Haruma-K/UnityScreenNavigator) 데모 재현(D1·D2): Top → Loading(기록 안 남음) → Home(1초 준비) → Shop(탭 3개 시트 슬라이드, 구매 → Connecting) → 뒤로. 전환은 원본 Timeline·SimpleTransition 수치(원본 파일에서 추출). 일러스트·GUI 그림은 같은 크기·같은 GUID의 **대체 그림**. 모달(D3): Settings(값 저장)·Confirmation·유닛 정보(랭크 탭 시트)·초상화 뷰어(**공유 요소 전환**: 유닛 정보의 초상화 영역 위치·크기 ↔ 뷰어 자리, `Enter`/`Exit` 상태의 상대 쪽 키만 실행 중 채움) | UnityScreenNavigator Demo |
+| **`UIAnimation/Samples/RPG/Scenes/RPG`** (패키지 샘플) | 판타지 RPG 1차 화면: 로비, 영웅 목록·상세, 가방, 소환, 모험, 퀘스트 + 팝업(아이템 정보, 소환 결과, 승리, 패배). 빌더 `Assets/Dev/Editor/RpgSampleBuilder`, 그림 `Tools/rpg_art.py`(틀·배경·효과는 직접 그림, 아이콘·영웅 얼굴은 game-icons.net CC BY 3.0 → `Art/CREDITS.md`), 폰트 Passion One(OFL) | 로비: 등장(패널·재화·영웅·메뉴 순차), 영웅 숨쉬기·퀘스트 배지 반복(상태 Loop + Play On: On Enable), 이벤트 배너(루프 + 한 장씩 + 자동 넘김 + 점, Parallax). 영웅: 그리드 순차 등장·정렬 재생, 카드 → 상세 **공유 요소**(페이지 PushEnter/PopExit), 상세 목록(줄 등장·능력치 바 채우기), 스크롤하면 제목 영역 접힘(`UIAnimScrollScrub`). 가방: 탭(`UIAnimPageIndicator`) + 한 장씩 넘기는 페이지 안의 그리드(중첩), 슬롯 → 정보 팝업 공유 요소. 소환: 마법진 회전, x1/x10(젬 부족이면 버튼 흔들림), 결과(섬광 → 카드 순차 낙하 → 한 장씩 뒤집기, 4★ 보라 빛, 5★ 흔들림·빛줄기·Punch). 모험: 챕터 캐러셀(Focus), 챕터마다 스테이지 순차 등장·다음 스테이지 맥박, 승리(글자·별 3개·보상·경험치 바)/패배(붉은 화면·해골 흔들림·글자 낙하·팁 타자기). 퀘스트: 섹션 헤더 고정(Sticky), 받기 → 도장·흔들림 → 재화 카운트업 → 그 줄 접힘(`await ResizeItem`) | — (원본 없음) |
 | `Popup` | Popup1 (+ 공용 Button1 중첩) | Open(이벤트 `Shown`, 사운드, 닫기 버튼 Hover·Unhover 호출, Hover 2배 빠르게 오버라이드)/Close. `PopupSample`이 코드로 Open/Close 후 Destroy | — |
 
 Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일 때 데이터를 채움):
@@ -521,7 +562,9 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 
 ## 11. 테스트와 CI
 
-### 11.1 EditMode 테스트 (120개, 메서드 이름은 한국어)
+### 11.1 EditMode 테스트 (133개, 메서드 이름은 한국어)
+
+전체 목록: [`Tests.md`](Tests.md) (`python Tools/list_tests.py`로 테스트 코드에서 생성). `UIAnimLoopTests`(4개): 반복이 끝에서 처음으로 이어짐, 바퀴마다 이벤트, 역재생 반복, Stop.
 | 파일 | 개수 | 다루는 것 |
 |---|---|---|
 | `UIAnimationTests.cs` | 43 | 키 보간, 시작 값(현재 값·지연·누른 위치), 원래 값 기준, 속성 인계, 완료 대기·취소, 이벤트·struct 데이터, 사운드, 자식 호출, 오버라이드 해석, 예전 데이터 변환 |
@@ -532,17 +575,32 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 | `EditorLayoutMeasureTests.cs` | 3 | 에디터 레이아웃 실측(줄 높이, 키 위치·폭, 투명도, 글자색), 바깥 Prefab 단계, ↺ 범위 |
 | `UIAnimScrollListTests.cs` | 17 | 정렬(세로·가로·그리드·가운데·반대·자식 크기), 재사용, 바인딩·해제, 데이터 목록, 개수 변경, ScrollTo·가장 가까운 아이템, 화면 좌표로 찾기, 진입·등장·스크럽, `Sample`, **성능 측정 2종** |
 | `UIAnimScrollFormsTests.cs` | 15 | 가변 크기, 여러 Prefab, 측정, 메이슨리, 루프, 한 장씩 넘기기, 크기 변경, 끝에 붙기, 섹션 헤더, 중첩 드래그, `Rotation`, Page Indicator, Scroll Scrub, Pull To Refresh, 에디터 미리보기 |
+| `UIAnimEngineAdditionsTests.cs` | 8 | 새 트랙(CanvasGroup·Anchor·Pivot·카메라·Active) 읽기·쓰기, Active는 키 시간에 바뀜, 역재생(값·이벤트 순서·현재 값 재사용·Complete·자식 호출), AnimationUI OutBack 이징 |
+| `ComponentScriptTests.cs` | 1 | 패키지의 모든 컴포넌트가 같은 이름의 스크립트 파일에 있는지(아니면 Prefab·씬에 "missing script"로 저장됨) |
 | `UIAnimEaseTests.cs` | 3 | 이징 30종의 시작·끝 값, 알려진 값, 저장 번호가 LitMotion과 같은지 |
 | `PerformanceTests.cs` | 4 | 성능 측정(버튼 100개, 텍스트 10개 상태별, 무거운 스크롤 형태)과 측정 도구 검증. 결과는 테스트 로그, 할당 없어야 하는 경로는 검사 |
 | `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
-### 11.2 PlayMode 테스트 (19개, UniTask 없으면 18개, `Tests/PlayMode`)
+### 11.2 PlayMode 테스트 (패키지 33개 + 참고 데모 9개, UniTask 없으면 1개 적음)
+
+`ScrollRemoveItemPlayModeTests`(1개): 가운데 줄을 `await ResizeItem`으로 접고 `RemoveItem` → 아래 줄은 같은 오브젝트로 한 칸 위, 다시 바인딩·등장 연출 없음, 접힘 크기 기록 안 남음.
+**`ScreenContainerPlayModeTests`** (7개): 페이지 Push/Pop(화면 폭 슬라이드·입력 잠금·파괴), `stack: false`, `renderingOrder`, 생명주기 순서와 Will 대기(측정: Push 0.60초 = Will 0.3 + 전환 0.3), 화면 상태가 기본을 대신함, 모달+배경, 시트 Enter/EnterBackward.
+
+**`RpgPlayModeTests`** (6개): 로비 메뉴 5개 열고 닫기(로비 크기 복귀); 영웅 공유 요소(카드 초상 크기 근처 → 460×598, 제목 영역 240 → 스크롤하면 120, 뒤로 갈 때 마지막 프레임이 카드 자리 8px 이내); 가방 탭 3 → 첫 슬롯 Royal Seal, 아이콘 280, 닫으면 슬롯 아이콘 복귀; 소환 x10 카드 10장 모두 앞면·4★ 이상 보장·젬 3,800 → 800; 모험 챕터 3 선택(다음 스테이지 7, 8 잠김), 승리(별·띠 1100·+450), 보스 패배(스태미나 48/60), 로비로; 퀘스트 받기 → 그 줄만 빠짐(다음 줄 유지), 골드 12,950.
+
+참고 데모 테스트는 `Assets/Reference/Tests`(asmdef `Reference.Tests.PlayMode`, 패키지 밖)에 있습니다.
+
+**`ScreenNavigatorSamplePlayModeTests`** (4개): ScreenNavigator 데모 재현 흐름 전체(Top 바·글자, Loading, Home 원근 회전 11°↔58.9°·아이콘, Shop 슬라이드·탭 방향·구매, 뒤로 두 번), 잠긴 메뉴 표시, 설정 모달(기본 확대 진입·확인 모달 쌓기·닫을 때 저장), 공유 요소 전환(뷰어 초상화가 유닛 정보 초상화 영역에서 시작해 810×1080으로, 닫으면 같은 위치·크기로 돌아가고 원래 자리 다시 표시).
+
+**`AnimationUISamplePlayModeTests`** (5개): Unity-AnimationUI 데모 재현을 원본 수치로 확인. 시작 페이드·입력 막힘, Settings 왕복(앵커·카메라 배경·Home 끄기·효과음 8번), Upgrade 왕복, Start(카메라 0.5·줄무늬·Level1 전환), Level1(박스 등장·Lose·Win·Home 복귀), 버튼 hover.
+
 **`PlayAsyncPlayModeTests`** (6개 + UniTask 설치 시 연동 1개): 실제 플레이어 루프에서 `PlayAsync`가 상태 길이만큼 기다린 뒤 끝 값으로 끝나는지(측정 0.300초 / 길이 0.3초), `Complete`·`Complete` 인터럽트는 완료, 같은 상태 재생·속성 빼앗김·비활성화·토큰 취소는 취소되는지(§4.3 표 전체), `WaitEventAsync`. 연동 테스트는 `UniTask.WhenAll(PlayUniTaskAsync, WaitEventUniTaskAsync)`와 취소 전달.
 
 **`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 120개 전부 실행, `-nographics`: 102개 실행·18개 건너뜀). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 19개, `-nographics`: 18개 실행·1개 건너뜀).
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 133개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 42개 + 개발용 캡처 2개 건너뜀).
+- 연출 눈으로 확인(개발용): `UIANIM_CAPTURE=<폴더>`를 주고 PlayMode `RpgCapture`를 돌리면 RPG 샘플 각 화면의 프레임을 PNG로 저장합니다(`Assets/Dev/Tests`, 환경 변수 없으면 건너뜀).
 
 ### 11.3 CI
 - GitHub Actions + **self-hosted Linux 러너**(`self-hosted, linux, unity`)에서 Unity CLI로 **EditMode → PlayMode** 순서로 실행합니다. 둘 다 통과해야 합니다. 실행 요약에 두 표가 나옵니다. 설정 방법은 [`CI-SelfHostedRunner.md`](CI-SelfHostedRunner.md).
@@ -562,6 +620,10 @@ Assets/
     Editor/       (asmdef SeoBYP.TimelineAnimation.Editor)
     Tests/Editor/   (asmdef SeoBYP.TimelineAnimation.Tests.Editor)
     Tests/PlayMode/ (asmdef SeoBYP.TimelineAnimation.Tests.PlayMode)
+    Samples/RPG/                              ← 패키지 샘플 (배포 시 Samples~)
+  Reference/{AnimationUI,ScreenNavigator,Tests}/  ← 원본 데모 재현 (참고·비교용, 배포 안 됨)
+  Dev/Editor/RpgSampleBuilder.cs            ← RPG 샘플 생성기 (개발용)
+  Dev/Tests/RpgCapture.cs                   ← 프레임 캡처 (개발용)
   Editor/SampleContentBuilder.cs            ← 샘플 생성기 (개발용)
   Scripts/                                  ← 샘플 스크립트: PopupSample, ScrollBrowser, ScrollDemoPage, ScrollItemView (개발용)
   Prefabs/{Buttons,Toggles,Hover,Text,Popup,Scroll/Items,Scroll/Pages}/
@@ -581,15 +643,25 @@ Docs/                                       ← 문서 (배포 안 됨)
 
 ## 13. 남은 일
 
+A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실무 연출·성능·제작 편의·연동을 증명하는 작업입니다. 작업 하나가 브랜치·PR 하나이고, ID별 선행 작업·크기·완료 기준은 [`Reference-Samples-Plan.md`](Reference-Samples-Plan.md) §6에 있습니다.
+
 | 상태 | 항목 | 내용 |
 |---|---|---|
-| ✅ | 스크롤 직접 확인 | 사용자가 Scroll 씬을 직접 검수하고 나온 문제(튐, 깜빡임, 새로고침 위치·번호, 도구 막대)를 모두 고침 |
-| ✅ | 성능 측정 (R3) | §4.7. 측정 도구 오류(항상 0)를 발견해 고쳤고, 측정 리스트 1개 추가 42ms → 0.6ms |
-| ✅ | CI 보강 | CI가 PlayMode까지 실행. 러너에 xvfb 설치함(2026-10-15, `xvfb 2:21.1.12-1ubuntu1.8`): 에디터 창 테스트도 CI에서 실행 |
-| ✅ | `PlayAsync` PlayMode 테스트 | 완료·취소 경로 6개 |
-| ⬜ | 외부 라이브러리 샘플 분석 → 샘플 제작 | 다른 UI 애니메이션 라이브러리의 샘플을 분석해 같은 연출을 UI Animation Editor로 만들기 |
-| ✅ | 의존성 0 | LitMotion 제거(PR #11), UniTask 선택화(`feature/unitask-optional`) |
-| ⬜ | 배포 `0.1.0` | 샘플을 패키지의 `Samples~`로 넣을지 결정, 태그. Git URL로 다른 프로젝트에 설치해 동작 확인 |
+| ✅ | 스크롤 직접 확인 | 사용자 검수 완료 (나온 문제는 모두 고침) |
+| ✅ | 성능 측정 (R3) | §4.7 |
+| ✅ | CI 보강 | CI가 EditMode·PlayMode 실행, 러너에 xvfb 설치 → 에디터 창 테스트도 실행 |
+| ✅ | 서드파티 의존성 0 | LitMotion 제거(PR #11), UniTask 선택화(PR #12) |
+| ✅ | A. 엔진 보강 | A1 새 트랙 7종 · A2 역재생 `PlayReversed` · A3 AUI OutBack 이징 (`feature/aui-demo`) |
+| ✅ | B. Unity-AnimationUI 데모 재현 | 두 씬·연출 8개·버튼 23개를 원본 수치로 재현, PlayMode 테스트 5개 (`feature/aui-demo`) |
+| ✅ | C. 화면 전환 컨테이너 | Page·Modal·Sheet, Size Relative, 방향별 상태(EnterBackward), 생명주기·입력 잠금 (§7.4). 공유 요소 전환은 상태 + 실행 중 키 값으로 D3 샘플에서 (`feature/usn-demo`) |
+| ✅ | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home · D2 Shop 탭 · D3 모달 4종 + 공유 요소 전환 (`feature/usn-demo`) |
+| ⬜ | E. 성능 비교 | E1 `Benchmarks/` 프로젝트·측정 도구 · E2 5가지 방식 비교 측정 |
+| ⬜ | F. 연동 샘플 | F1 UniTask · F2 R3 · F3 UIEffect |
+| ⬜ | G. 제작 편의 비교 | G1 도구별 제작 절차 비교 문서 |
+| ✅ | 패키지 샘플 RPG 1차 | 원본 재현 두 개는 `Assets/Reference`(참고용). 패키지 샘플은 판타지 RPG: 로비·영웅 목록/상세·가방·소환·모험(승리/패배)·퀘스트 (§10) |
+| ⬜ | RPG 2차 | 타이틀·로딩, 강화·장착, 상점, 편성·전투 진입, 출석·우편 |
+| ⬜ | RPG 3차 | 수량 선택(휠), 전투 HUD, 길드 채팅, 랭킹, 스토리 대화, 설정, 공통 팝업·토스트 |
+| ⬜ | 배포 `0.1.0` | A~G 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
 | ⬜ | 글자 효과 최적화 (선택) | 텍스트당 약 0.2ms/프레임. 한 화면에 수십 개를 동시에 돌릴 때만 필요 |
 
 ### 13.1 알려진 제한

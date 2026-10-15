@@ -1080,6 +1080,14 @@ namespace SeoBYP.TimelineAnimation.Editor
                 Modify("Rename State", () => state.name = e.newValue);
             });
             info.Add(name);
+            var loop = new Toggle("Loop")
+            {
+                value = state.loop,
+                tooltip = "Plays over and over until stopped or replaced (like an Animator clip's Loop Time): idle motion, a turning wheel, a pulsing badge." + System.Environment.NewLine +
+                          "PlayAsync of a looping state completes only when it is completed or stopped.",
+            };
+            loop.RegisterValueChangedCallback(e => Modify("Edit State", () => state.loop = e.newValue));
+            info.Add(loop);
             info.Add(Hint($"Duration {state.Duration:0.00}s · {state.tracks.Count} track(s)"));
             _inspector.Add(info);
             _inspector.Add(PlayOnSection(state));
@@ -1144,8 +1152,18 @@ namespace SeoBYP.TimelineAnimation.Editor
             fromCurrent.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.start = e.newValue));
             var relative = new Toggle("Relative To Rest") { value = track.relativeToRest, tooltip = "Key values are added to the rest value. e.g. -14 = 14 smaller than the original." };
             relative.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.relativeToRest = e.newValue));
+            var sized = UIAnimation.SizeRelativeApplies(track.property);
+            var sizeRelative = new Toggle("Size Relative")
+            {
+                value = track.sizeRelative,
+                tooltip = sized ? "Key values are multiples of the target's own size: x = 1 is one width. e.g. a screen sliding in from x = 1, whatever the resolution."
+                    : "Position and Size tracks only.",
+            };
+            sizeRelative.SetEnabled(sized);   // shown on every track, disabled with the reason where it does not apply
+            sizeRelative.RegisterValueChangedCallback(e => Modify("Edit Track", () => track.sizeRelative = e.newValue));
             section.Add(fromCurrent);
             section.Add(relative);
+            section.Add(sizeRelative);
             _inspector.Add(section);
         }
 
@@ -1167,7 +1185,8 @@ namespace SeoBYP.TimelineAnimation.Editor
             var live = index == 0 && track.startFromCurrent && (track.keys.Count > 1 || key.time <= 0f);   // value set at playback start
             var value = ValueField(key.IsVibration ? "Strength"
                 : track.start == UIAnimStart.Pointer ? "Value (press point +)"
-                : track.relativeToRest ? "Value (rest +)" : "Value", track, key);
+                : track.relativeToRest ? "Value (rest +)"
+                : track.sizeRelative && UIAnimation.SizeRelativeApplies(track.property) ? "Value (× own size)" : "Value", track, key);
             value.SetEnabled(!live);
             section.Add(value);
             var canCapture = !live && !IsOffset(track) && track.target != null && !IsTextProperty(track.property);
@@ -1285,12 +1304,16 @@ namespace SeoBYP.TimelineAnimation.Editor
                 }
                 case UIAnimProperty.SizeDelta:
                 case UIAnimProperty.AnchoredPosition:
+                case UIAnimProperty.AnchorMin:
+                case UIAnimProperty.AnchorMax:
+                case UIAnimProperty.Pivot:
                 {
                     var f = new Vector2Field(label) { value = v };
                     f.RegisterValueChangedCallback(e => Set(e.newValue));
                     return f;
                 }
                 case UIAnimProperty.GraphicColor when !relative:
+                case UIAnimProperty.CameraBackground when !relative:
                 {
                     var f = new ColorField(label) { value = v };
                     f.RegisterValueChangedCallback(e => Set(e.newValue));
@@ -1302,7 +1325,14 @@ namespace SeoBYP.TimelineAnimation.Editor
                     f.RegisterValueChangedCallback(e => Set(e.newValue));
                     return f;
                 }
+                case UIAnimProperty.Active:
+                {
+                    var f = new Toggle(label) { value = v.x >= 0.5f };
+                    f.RegisterValueChangedCallback(e => Set(new Vector4(e.newValue ? 1f : 0f, 0, 0, 0)));
+                    return f;
+                }
                 case UIAnimProperty.FillAmount when !relative:
+                case UIAnimProperty.CanvasGroupAlpha when !relative:
                 case UIAnimProperty.GraphicAlpha when !relative:
                 {
                     var f = new Slider(label, 0f, 1f) { value = v.x, showInputField = true };

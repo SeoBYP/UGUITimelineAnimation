@@ -27,6 +27,13 @@ namespace SeoBYP.TimelineAnimation
         FillAmount,         // Image.fillAmount
         CharacterSpacing,   // TMP_Text.characterSpacing
         Rotation,           // Transform.localEulerAngles (degrees; -180..180 when read)
+        CanvasGroupAlpha,   // CanvasGroup.alpha (a whole screen or popup, children included)
+        AnchorMin,          // RectTransform.anchorMin
+        AnchorMax,          // RectTransform.anchorMax
+        Pivot,              // RectTransform.pivot
+        CameraBackground,   // Camera.backgroundColor
+        CameraOrthoSize,    // Camera.orthographicSize
+        Active,             // GameObject.SetActive (x >= 0.5 = active); holds each key until the next one
     }
 
     /// <summary>How a new state treats states that are still playing on the same properties.</summary>
@@ -109,6 +116,8 @@ namespace SeoBYP.TimelineAnimation
         }
         [Tooltip("Key values are added to the value the property had on Awake (e.g. -14 = 14 smaller than the original size).")]
         public bool relativeToRest;
+        [Tooltip("Position / Size only: key values are multiples of the target's own size (x = 1 is one width), read when the state starts. e.g. a screen sliding in from x = 1.")]
+        public bool sizeRelative;
         [Tooltip("Per-character tracks only: each character starts this many seconds after the previous one.")]
         public float stagger;
         [Tooltip("Per-character tracks only: when above 0, character i plays the keys over i x this many seconds (character 0 stays still).")]
@@ -171,6 +180,7 @@ namespace SeoBYP.TimelineAnimation
         Vector4 Segment(Vector4 from, UIAnimKey key, float local, float span)
         {
             var p = span > 0f ? Mathf.Clamp01(local / span) : 1f;
+            if (property == UIAnimProperty.Active) return p >= 1f ? key.resolved : from;   // on / off: no in-between
             if (!key.IsVibration) return Vector4.LerpUnclamped(from, key.resolved, key.Weight(p));
 
             // Punch/Shake: key.value is the strength; the motion oscillates around `from` and ends back on it.
@@ -183,9 +193,9 @@ namespace SeoBYP.TimelineAnimation
 
         static int Dimensions(UIAnimProperty p) => p switch
         {
-            UIAnimProperty.SizeDelta or UIAnimProperty.AnchoredPosition => 2,
+            UIAnimProperty.SizeDelta or UIAnimProperty.AnchoredPosition or UIAnimProperty.AnchorMin or UIAnimProperty.AnchorMax or UIAnimProperty.Pivot => 2,
             UIAnimProperty.Scale or UIAnimProperty.Rotation or UIAnimProperty.CharScale or UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => 3,
-            UIAnimProperty.GraphicColor or UIAnimProperty.CharColor => 4,
+            UIAnimProperty.GraphicColor or UIAnimProperty.CharColor or UIAnimProperty.CameraBackground => 4,
             _ => 1,
         };
     }
@@ -351,6 +361,8 @@ namespace SeoBYP.TimelineAnimation
         [ThreadStatic] static int _durationDepth;
 
         public string name = "State";
+        [Tooltip("Plays over and over until stopped or replaced (like an Animator clip's Loop Time): idle motion, a turning wheel, a pulsing badge. PlayAsync of a looping state completes only when it is completed or stopped.")]
+        public bool loop;
         public List<UIAnimTrack> tracks = new();
         public List<UIAnimEventTrack> eventTracks = new();
         public List<UIAnimSoundTrack> soundTracks = new();
@@ -456,6 +468,7 @@ namespace SeoBYP.TimelineAnimation
             public UIAnimTimerHandle handle;
             public bool active;
             public bool resolved;                                 // key values resolved at least once (Sample reuses them)
+            public bool reversed;                                 // playing from the end back to the start
             public float lastTime;                                // events in (lastTime, t] are raised on the next step
             public AwaitableCompletionSource completion;           // made on the first PlayAsync, reused after
             public bool awaited;                                  // a PlayAsync is waiting on completion
@@ -628,6 +641,32 @@ namespace SeoBYP.TimelineAnimation
         /// <summary>For UnityEvents (e.g. a Button's OnClick), which can only pass one argument.</summary>
         public void PlayState(string stateName) => Play(stateName);
 
+        /// <summary>For UnityEvents: plays a state backwards (e.g. a Back button undoing an Open).</summary>
+        public void PlayStateReversed(string stateName) => PlayReversed(stateName);
+
+        /// <summary>
+        /// Plays a state from its end back to its start: values, events, sounds and child calls in reverse order
+        /// (child states play reversed too). Key values started from "Current" keep what the last forward play captured,
+        /// so Back returns exactly where Open started.
+        /// </summary>
+        public void PlayReversed(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel)
+        {
+            var playback = Prepare(stateName, interrupt, null, reversed: true);
+            if (playback != null) StartMotion(playback);
+        }
+
+        /// <summary><see cref="PlayReversed"/> that completes or is canceled like <see cref="PlayAsync"/>.</summary>
+        public Awaitable PlayReversedAsync(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
+            CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.IsCancellationRequested) return Done(canceled: true);
+            var playback = Prepare(stateName, interrupt, null, reversed: true);
+            if (playback == null) return Done(canceled: false);
+            var task = Await(playback, cancellationToken);
+            StartMotion(playback);
+            return task;
+        }
+
         public void Play(string stateName, UIAnimInterrupt interrupt = UIAnimInterrupt.Cancel,
             PointerEventData pointer = null)
         {
@@ -679,13 +718,20 @@ namespace SeoBYP.TimelineAnimation
             return FindPlayback(stateName)?.state.Duration ?? 0f;
         }
 
+        /// <summary>Stops a playing state where it is (e.g. a looping one); a pending PlayAsync is canceled.</summary>
+        public void Stop(string stateName)
+        {
+            var playback = FindPlayback(stateName);
+            if (playback != null && playback.active) Stop(playback);
+        }
+
         /// <summary>Jumps a playing state to its end; a pending PlayAsync completes normally (e.g. skipping a typewriter).</summary>
         public void Complete(string stateName)
         {
             var playback = FindPlayback(stateName);
             if (playback == null || !playback.active) return;
             playback.handle.TryCancel();
-            Evaluate(playback.state, playback.state.Duration);
+            Evaluate(playback.state, playback.reversed ? 0f : playback.state.Duration);
             Finish(playback);
         }
 
@@ -698,9 +744,37 @@ namespace SeoBYP.TimelineAnimation
                 return;
             }
 
+            if (playback.state.loop)
+            {
+                // No end: each lap runs the same resolved values from 0 again, without a gap.
+                playback.handle = UIAnimTimer.Start(float.PositiveInfinity, playback,
+                    static (p, elapsed) => Lap((Playback)p, elapsed));
+                return;
+            }
+
             playback.handle = UIAnimTimer.Start(duration, playback,
-                static (p, t) => Step((Playback)p, t),
+                static (p, elapsed) =>
+                {
+                    var playback = (Playback)p;
+                    Step(playback, playback.reversed ? playback.state.Duration - elapsed : elapsed);
+                },
                 static p => Finish((Playback)p));
+        }
+
+        // A looping state at elapsed seconds. Passing the end finishes the lap (its remaining events, sounds and child calls)
+        // and starts the next one from the start, so markers at 0 fire again.
+        internal static void Lap(Playback p, float elapsed)
+        {
+            var duration = p.state.Duration;
+            var t = elapsed % duration;
+            if (p.reversed) t = duration - t;
+            var wrapped = p.reversed ? t > p.lastTime : t < p.lastTime;
+            if (wrapped)
+            {
+                RaiseEvents(p, p.reversed ? 0f : duration);
+                p.lastTime = p.reversed ? float.MaxValue : -1f;
+            }
+            Step(p, t);
         }
 
         /// <summary>One frame of a playback: values, then the child calls and animation events passed since the last frame. Internal so tests can drive time.</summary>
@@ -716,17 +790,24 @@ namespace SeoBYP.TimelineAnimation
         {
             var from = p.lastTime;
             p.lastTime = t;
+            var reversed = p.reversed;
+            // Forward: times in (from, t]. Reversed: times in [t, from), so each marker fires once either way.
+            bool Passed(float time) => reversed ? time >= t && time < from : time > from && time <= t;
             if (playSounds)
                 foreach (var track in p.state.soundTracks)
                 foreach (var sound in track.sounds)
-                    if (sound.time > from && sound.time <= t && sound.clip != null) p.owner.PlaySound(track, sound);
+                    if (Passed(sound.time) && sound.clip != null) p.owner.PlaySound(track, sound);
             if (_callDepth < UIAnimState.MaxCallDepth)
             {
                 _callDepth++;
                 try
                 {
                     foreach (var call in p.state.childCalls)
-                        if (call.time > from && call.time <= t && call.child != null) call.child.Play(call.state);
+                        if (Passed(call.time) && call.child != null)
+                        {
+                            if (reversed) call.child.PlayReversed(call.state);
+                            else call.child.Play(call.state);
+                        }
                 }
                 finally { _callDepth--; }
             }
@@ -734,7 +815,7 @@ namespace SeoBYP.TimelineAnimation
             if (handler == null) return;
             foreach (var track in p.state.eventTracks)
             foreach (var marker in track.events)
-                if (marker.time > from && marker.time <= t) handler(new UIAnimEventInfo(p.owner, p.state.name, marker));
+                if (Passed(marker.time)) handler(new UIAnimEventInfo(p.owner, p.state.name, marker));
         }
 
         /// <summary>The task for this play; split out so tests can drive time.</summary>
@@ -753,7 +834,7 @@ namespace SeoBYP.TimelineAnimation
         internal static void Finish(Playback p)
         {
             // Skipped to the end: the remaining calls and events still happen, in order; skipped sounds stay silent.
-            RaiseEvents(p, float.MaxValue, playSounds: false);
+            RaiseEvents(p, p.reversed ? float.MinValue : float.MaxValue, playSounds: false);
             foreach (var call in p.state.childCalls)
                 if (call.child != null && call.child.IsPlaying(call.state)) call.child.Complete(call.state);
             p.active = false;
@@ -788,7 +869,7 @@ namespace SeoBYP.TimelineAnimation
         }
 
         /// <summary>Everything Play does except starting the motion. Split out so tests can drive time.</summary>
-        internal Playback Prepare(string stateName, UIAnimInterrupt interrupt, PointerEventData pointer)
+        internal Playback Prepare(string stateName, UIAnimInterrupt interrupt, PointerEventData pointer, bool reversed = false)
         {
             EnsureInitialized();
             var playback = FindPlayback(stateName);
@@ -802,11 +883,13 @@ namespace SeoBYP.TimelineAnimation
             TakeOver(playback.state, interrupt);
 
             foreach (var track in playback.state.tracks) track.released = false;
-            Resolve(playback.state, pointer);
+            // Reversed keeps the values the last forward play resolved ("Current" = where Open started); first time, resolve now.
+            if (!reversed || !playback.resolved) Resolve(playback.state, pointer);
             playback.resolved = true;
-            // Show t = 0 right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
-            playback.lastTime = -1f;           // an event at 0 fires on this first step
-            Step(playback, 0f);
+            playback.reversed = reversed;
+            // Show the first pose right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
+            playback.lastTime = reversed ? float.MaxValue : -1f;   // a marker at the starting end fires on this first step
+            Step(playback, reversed ? playback.state.Duration : 0f);
 
             playback.active = true;
             return playback;
@@ -851,6 +934,25 @@ namespace SeoBYP.TimelineAnimation
             return false;
         }
 
+        /// <summary>Whether this animation has a state of that name.</summary>
+        public bool HasState(string stateName) => states.Exists(s => s.name == stateName);
+
+        /// <summary>
+        /// Adds a state at runtime, e.g. a screen container's default transition for a screen that does not define one.
+        /// A state with the same name is replaced. Call it before playing the state.
+        /// </summary>
+        public void AddState(UIAnimState state)
+        {
+            EnsureInitialized();
+            states.RemoveAll(s => s.name == state.name);
+            _playbacks.RemoveAll(p => p.state.name == state.name);
+            states.Add(state);
+            var effective = EffectiveState(state.name) ?? state;
+            CaptureRest(state);
+            if (effective != state) CaptureRest(effective);
+            _playbacks.Add(new Playback(this, effective));
+        }
+
         Playback FindPlayback(string stateName)
         {
             foreach (var p in _playbacks)
@@ -877,9 +979,13 @@ namespace SeoBYP.TimelineAnimation
                 track.startValue = track.start == UIAnimStart.Pointer && PointerPosition(track, pointer, out var pressed)
                     ? pressed : Read(track.target, track.property);
                 // Pointer: keys are offsets from the press point (0 = stay there), the only base known for them.
+                var size = track.sizeRelative && SizeRelativeApplies(track.property) ? ((RectTransform)track.target.transform).rect.size : Vector2.one;
                 foreach (var key in track.keys)
-                    key.resolved = track.start == UIAnimStart.Pointer ? track.startValue + key.value
-                        : track.relativeToRest ? track.rest + key.value : key.value;
+                {
+                    var value = new Vector4(key.value.x * size.x, key.value.y * size.y, key.value.z, key.value.w);
+                    key.resolved = track.start == UIAnimStart.Pointer ? track.startValue + value
+                        : track.relativeToRest ? track.rest + value : value;
+                }
                 // The first key becomes the live value, so the track starts where the property is. With 2+ keys it holds
                 // until its time (= a delay); a lone key keeps its value and is reached through the implicit segment.
                 if (track.startFromCurrent && (track.keys.Count > 1 || track.keys[0].time <= 0f)) track.keys[0].resolved = track.startValue;
@@ -927,6 +1033,8 @@ namespace SeoBYP.TimelineAnimation
             UIAnimTextChars.FlushAll();
         }
 
+        internal static bool SizeRelativeApplies(UIAnimProperty p) => p is UIAnimProperty.AnchoredPosition or UIAnimProperty.SizeDelta;
+
         static bool IsText(UIAnimProperty p) => p == UIAnimProperty.TextReveal || UIAnimTextChars.IsCharProperty(p);
 
         // The anchored position that puts the track's target under the pointer. Without a pointer (code, OnEnable) it is the current one.
@@ -959,6 +1067,13 @@ namespace SeoBYP.TimelineAnimation
             UIAnimProperty.CharColor => ((TMP_Text)target).color,
             UIAnimProperty.CharAlpha => new Vector4(1f, 0, 0, 0),
             UIAnimProperty.FillAmount => new Vector4(((Image)target).fillAmount, 0, 0, 0),
+            UIAnimProperty.CanvasGroupAlpha => new Vector4(((CanvasGroup)target).alpha, 0, 0, 0),
+            UIAnimProperty.AnchorMin => ((RectTransform)target.transform).anchorMin,
+            UIAnimProperty.AnchorMax => ((RectTransform)target.transform).anchorMax,
+            UIAnimProperty.Pivot => ((RectTransform)target.transform).pivot,
+            UIAnimProperty.CameraBackground => ((Camera)target).backgroundColor,
+            UIAnimProperty.CameraOrthoSize => new Vector4(((Camera)target).orthographicSize, 0, 0, 0),
+            UIAnimProperty.Active => new Vector4(target.gameObject.activeSelf ? 1f : 0f, 0, 0, 0),
             UIAnimProperty.CharacterSpacing => new Vector4(((TMP_Text)target).characterSpacing, 0, 0, 0),
             _ => throw new ArgumentOutOfRangeException(nameof(property)),
         };
@@ -989,6 +1104,16 @@ namespace SeoBYP.TimelineAnimation
                     break;
                 case UIAnimProperty.FontSize: ((TMP_Text)target).fontSize = v.x; break;
                 case UIAnimProperty.FillAmount: ((Image)target).fillAmount = v.x; break;
+                case UIAnimProperty.CanvasGroupAlpha: ((CanvasGroup)target).alpha = v.x; break;
+                case UIAnimProperty.AnchorMin: ((RectTransform)target.transform).anchorMin = v; break;
+                case UIAnimProperty.AnchorMax: ((RectTransform)target.transform).anchorMax = v; break;
+                case UIAnimProperty.Pivot: ((RectTransform)target.transform).pivot = v; break;
+                case UIAnimProperty.CameraBackground: ((Camera)target).backgroundColor = v; break;
+                case UIAnimProperty.CameraOrthoSize: ((Camera)target).orthographicSize = v.x; break;
+                case UIAnimProperty.Active:
+                    var active = v.x >= 0.5f;
+                    if (target.gameObject.activeSelf != active) target.gameObject.SetActive(active);
+                    break;
                 case UIAnimProperty.CharacterSpacing: ((TMP_Text)target).characterSpacing = v.x; break;
                 case UIAnimProperty.TextReveal:
                     var text = (TMP_Text)target;

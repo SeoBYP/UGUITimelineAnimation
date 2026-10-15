@@ -1,0 +1,3976 @@
+{
+ "source": "DhafinFawwaz/Unity-AnimationUI v1.2.0 demo (MIT). Extracted from Home.unity / Level1.unity.",
+ "scenes": [
+  {
+   "name": "Home",
+   "animations": [
+    {
+     "owner": "AnimationUIs/Home -> Settings",
+     "playOnStart": false,
+     "totalDuration": 1.21,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.06,
+       "duration": 0.5,
+       "ease": "InOutQuart",
+       "target": "Home/Title",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 0,
+          "y": 223,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 716,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.06,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Start",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 455,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 455,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.11,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Upgrade",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 345,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 345,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.11,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.16,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Settings",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 235,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 235,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.16,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.21,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Exit",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 125,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 125,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.21,
+       "duration": 0.6,
+       "ease": "InOutQuart",
+       "target": "Main Camera",
+       "targetKind": "Camera",
+       "props": [
+        {
+         "property": "CameraBackground",
+         "from": {
+          "x": 0.9490196,
+          "y": 0.43529412,
+          "z": 0.40392157,
+          "w": 1
+         },
+         "to": {
+          "x": 0.5137255,
+          "y": 0.91764706,
+          "z": 0.5764706,
+          "w": 1
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.21,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "SetActive",
+       "time": 0.41,
+       "duration": 0,
+       "ease": "",
+       "target": "Settings",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.61,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Settings/TitleDropShadow",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 0,
+          "y": 180,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": -176,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.61,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Settings/1",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": -950,
+          "y": 112.99997,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -371,
+          "y": 112.99997,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMin",
+         "from": {
+          "x": 0,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMax",
+         "from": {
+          "x": 0,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.61,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.66,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Settings/2",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 207,
+          "y": -5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -371,
+          "y": -5,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMin",
+         "from": {
+          "x": 1,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMax",
+         "from": {
+          "x": 1,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.66,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.71,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Settings/3",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": -950,
+          "y": -123,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -371,
+          "y": -123,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMin",
+         "from": {
+          "x": 0,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMax",
+         "from": {
+          "x": 0,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.71,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.76,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Settings/4",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 1044,
+          "y": -123,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 485.1908,
+          "y": -123,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMin",
+         "from": {
+          "x": 1,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMax",
+         "from": {
+          "x": 1,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0.5,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.76,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.81,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Settings/Back",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 168,
+          "y": 94.79993,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -163.00024,
+          "y": 94.79993,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.81,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "SetActive",
+       "time": 1.01,
+       "duration": 0,
+       "ease": "",
+       "target": "Home",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SetActiveAllInput",
+       "time": 1.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      }
+     ]
+    },
+    {
+     "owner": "AnimationUIs/Home -> Upgrade",
+     "playOnStart": false,
+     "totalDuration": 1.8099997,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.06,
+       "duration": 0.5,
+       "ease": "InOutQuart",
+       "target": "Home/Title",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 0,
+          "y": 223,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 716,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.06,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Start",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 455,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 455,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.06,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.11,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Upgrade",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 345,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 345,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.11,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.16,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Settings",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 235,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 235,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.16,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.21,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Exit",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 125,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 125,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.21,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "SetActive",
+       "time": 0.41,
+       "duration": 0,
+       "ease": "",
+       "target": "Upgrade",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SetActive",
+       "time": 0.41,
+       "duration": 0,
+       "ease": "",
+       "target": "Home",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.71,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Upgrade/BGYellow",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": -181.761,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -585,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "SizeDelta",
+         "from": {
+          "x": 14.149,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -585,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMin",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        },
+        {
+         "property": "AnchorMax",
+         "from": {
+          "x": 0,
+          "y": 1,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.71,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.21,
+       "duration": 0.3,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Option 3",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": -319.17,
+          "y": 50.9,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -269.56,
+          "y": -309.00006,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.21,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.26,
+       "duration": 0.3,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Option 2",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": -325.8,
+          "y": 169,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -276.3,
+          "y": -189,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.26,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.31,
+       "duration": 0.3,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Option 1",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": -332.32996,
+          "y": 284.69995,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -282.83014,
+          "y": -69.00006,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.31,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.36,
+       "duration": 0.3,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Upgrade1",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.36,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.41,
+       "duration": 0.3,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Upgrade1 (1)",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.41,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.46,
+       "duration": 0.2,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Back",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 138,
+          "y": 84.99994,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -146,
+          "y": 84.99994,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.46,
+       "duration": 0.3,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Upgrade1 (2)",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.46,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.51,
+       "duration": 0.3,
+       "ease": "InOutQuart",
+       "target": "Upgrade/Upgrade1 (3)",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.51,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "SetActiveAllInput",
+       "time": 1.56,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      }
+     ]
+    },
+    {
+     "owner": "AnimationUIs/Home -> Start",
+     "playOnStart": false,
+     "totalDuration": 1.6100001,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.01,
+       "duration": 0.8,
+       "ease": "InCubic",
+       "target": "Main Camera",
+       "targetKind": "Camera",
+       "props": [
+        {
+         "property": "CameraOrthoSize",
+         "from": {
+          "x": 5,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0.5,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.06,
+       "duration": 0.5,
+       "ease": "InOutQuart",
+       "target": "Home/Title",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 0,
+          "y": 223,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 716,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.06,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Start",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 455,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 455,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.11,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Upgrade",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 345,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 345,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.11,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.16,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Settings",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 235,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 235,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.16,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.21,
+       "duration": 0.4,
+       "ease": "InOutQuart",
+       "target": "Home/Exit",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "AnchoredPosition",
+         "from": {
+          "x": 342,
+          "y": 125,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": -303,
+          "y": 125,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.21,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.26,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.51,
+       "duration": 0.5,
+       "ease": "InOutQuad",
+       "target": "Home/TransitionToStart/Right",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.51,
+       "duration": 0.5,
+       "ease": "InOutQuad",
+       "target": "Home/TransitionToStart/Left",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.61,
+       "duration": 0.6,
+       "ease": "InOutCubic",
+       "target": "Home/TransitionToStart/Right (1)",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.61,
+       "duration": 0.6,
+       "ease": "InOutCubic",
+       "target": "Home/TransitionToStart/Left (1)",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.71,
+       "duration": 0.7,
+       "ease": "InOutQuart",
+       "target": "Home/TransitionToStart/Right (2)",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.71,
+       "duration": 0.7,
+       "ease": "InOutQuart",
+       "target": "Home/TransitionToStart/Left (2)",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.81,
+       "duration": 0.8,
+       "ease": "InOutQuart",
+       "target": "Home/TransitionToStart/Right (3)",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.81,
+       "duration": 0.8,
+       "ease": "InOutQuart",
+       "target": "Home/TransitionToStart/Left (3)",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "FillAmount",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "LoadScene",
+       "time": 1.61,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": "Level1"
+      }
+     ]
+    },
+    {
+     "owner": "AnimationUIs/-> Home",
+     "playOnStart": true,
+     "totalDuration": 0.51,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.01,
+       "duration": 0.5,
+       "ease": "OutQuart",
+       "target": "Home/Image",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "GraphicColor",
+         "from": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 1
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.51,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      }
+     ]
+    }
+   ],
+   "buttons": [
+    {
+     "path": "Upgrade/Option 1",
+     "graphic": "Upgrade/Option 1",
+     "text": "Upgrade/Option 1/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/Upgrade",
+     "graphic": "Home/Upgrade",
+     "text": "Home/Upgrade/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 0
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Upgrade/Option 3",
+     "graphic": "Upgrade/Option 3",
+     "text": "Upgrade/Option 3/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Upgrade/Option 2",
+     "graphic": "Upgrade/Option 2",
+     "text": "Upgrade/Option 2/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/Start",
+     "graphic": "Home/Start",
+     "text": "Home/Start/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 0
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/Exit",
+     "graphic": "Home/Exit",
+     "text": "Home/Exit/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 0
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/Settings",
+     "graphic": "Home/Settings",
+     "text": "Home/Settings/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 0
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Upgrade/Back",
+     "graphic": "Upgrade/Back",
+     "text": "Upgrade/Back/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Settings/Back",
+     "graphic": "Settings/Back",
+     "text": "Settings/Back/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    }
+   ],
+   "clicks": [
+    {
+     "button": "Home/Upgrade",
+     "target": "AnimationUIs/Home -> Upgrade",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/Start",
+     "target": "AnimationUIs/Home -> Start",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/Settings",
+     "target": "AnimationUIs/Home -> Settings",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Upgrade/Back",
+     "target": "AnimationUIs/Home -> Upgrade",
+     "targetKind": "AnimationUI",
+     "method": "PlayReversed",
+     "boolArgument": false
+    },
+    {
+     "button": "Settings/Back",
+     "target": "AnimationUIs/Home -> Settings",
+     "targetKind": "AnimationUI",
+     "method": "PlayReversed",
+     "boolArgument": false
+    }
+   ]
+  },
+  {
+   "name": "Level1",
+   "animations": [
+    {
+     "owner": "AnimationUIs/Start -> Lose",
+     "playOnStart": false,
+     "totalDuration": 0.61,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SetActive",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "CanvasLose",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.31,
+       "duration": 0.3,
+       "ease": "OutQuart",
+       "target": "CanvasLose",
+       "targetKind": "CanvasGroup",
+       "props": [
+        {
+         "property": "CanvasGroupAlpha",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.31,
+       "duration": 0.3,
+       "ease": "OutQuart",
+       "target": "CanvasLose/Blocker",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 1.5,
+          "y": 1.5,
+          "z": 1.5,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.31,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.61,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      }
+     ]
+    },
+    {
+     "owner": "AnimationUIs/Home -> Start",
+     "playOnStart": true,
+     "totalDuration": 2.2599998,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.51,
+       "duration": 0.2,
+       "ease": "InLinear",
+       "target": "Home/TransitionStart/White",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "GraphicColor",
+         "from": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 1
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.51,
+       "duration": 0.4,
+       "ease": "OutQuart",
+       "target": "Home/1/Box",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        },
+        {
+         "property": "Rotation",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 180,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.51,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.56,
+       "duration": 0.4,
+       "ease": "OutQuart",
+       "target": "Home/1/Box (1)",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        },
+        {
+         "property": "Rotation",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 180,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.61,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.61,
+       "duration": 0.4,
+       "ease": "OutQuart",
+       "target": "Home/1/Box (2)",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        },
+        {
+         "property": "Rotation",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 180,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.66,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.66,
+       "duration": 0.4,
+       "ease": "OutQuart",
+       "target": "Home/1/Box (3)",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        },
+        {
+         "property": "Rotation",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 180,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.71,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.71,
+       "duration": 0.4,
+       "ease": "OutQuart",
+       "target": "Home/1/Box (4)",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        },
+        {
+         "property": "Rotation",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 180,
+          "w": 0
+         },
+         "to": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 1.76,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.76,
+       "duration": 0.2,
+       "ease": "OutQuart",
+       "target": "Home/Next",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 1.76,
+       "duration": 0.2,
+       "ease": "OutQuart",
+       "target": "Home/Prev",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SetActiveAllInput",
+       "time": 2.26,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      }
+     ]
+    },
+    {
+     "owner": "AnimationUIs/Start -> Win",
+     "playOnStart": false,
+     "totalDuration": 0.51,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SetActive",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "CanvasWin",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.01,
+       "duration": 0.3,
+       "ease": "OutQuart",
+       "target": "CanvasWin",
+       "targetKind": "CanvasGroup",
+       "props": [
+        {
+         "property": "CanvasGroupAlpha",
+         "from": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 0,
+          "z": 0,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.01,
+       "duration": 0.3,
+       "ease": "OutQuart",
+       "target": "CanvasWin/Blocker",
+       "targetKind": "RectTransform",
+       "props": [
+        {
+         "property": "Scale",
+         "from": {
+          "x": 1.5,
+          "y": 1.5,
+          "z": 1.5,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "SFX",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": 1,
+       "scene": ""
+      },
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.51,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": true,
+       "sfx": -1,
+       "scene": ""
+      }
+     ]
+    },
+    {
+     "owner": "AnimationUIs/Start -> Home",
+     "playOnStart": false,
+     "totalDuration": 0.51,
+     "steps": [
+      {
+       "type": "SetActiveAllInput",
+       "time": 0.01,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.01,
+       "duration": 0.4,
+       "ease": "OutQuart",
+       "target": "CanvasWin/Blocker/White",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "GraphicColor",
+         "from": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 1
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "Animation",
+       "time": 0.01,
+       "duration": 0.4,
+       "ease": "OutQuart",
+       "target": "CanvasLose/Blocker/White",
+       "targetKind": "Image",
+       "props": [
+        {
+         "property": "GraphicColor",
+         "from": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 0
+         },
+         "to": {
+          "x": 1,
+          "y": 1,
+          "z": 1,
+          "w": 1
+         }
+        }
+       ],
+       "active": false,
+       "sfx": -1,
+       "scene": ""
+      },
+      {
+       "type": "LoadScene",
+       "time": 0.51,
+       "duration": 0,
+       "ease": "",
+       "target": "",
+       "targetKind": "",
+       "props": [],
+       "active": false,
+       "sfx": -1,
+       "scene": "Home"
+      }
+     ]
+    }
+   ],
+   "buttons": [
+    {
+     "path": "Home/1/Box (1)",
+     "graphic": "Home/1/Box (1)",
+     "text": "",
+     "normal": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "selected": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/2/Box (2)",
+     "graphic": "Home/2/Box (2)",
+     "text": "",
+     "normal": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/Next",
+     "graphic": "Home/Next",
+     "text": "Home/Next/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/1/Box (2)",
+     "graphic": "Home/1/Box (2)",
+     "text": "",
+     "normal": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.9490196,
+      "g": 0.43529412,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/1/Box (4)",
+     "graphic": "Home/1/Box (4)",
+     "text": "Home/1/Box (4)/Text (TMP)",
+     "normal": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/2/Box",
+     "graphic": "Home/2/Box",
+     "text": "",
+     "normal": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/2/Box (4)",
+     "graphic": "Home/2/Box (4)",
+     "text": "",
+     "normal": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.5137255,
+      "g": 0.91764706,
+      "b": 0.5764706,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/1/Box (3)",
+     "graphic": "Home/1/Box (3)",
+     "text": "",
+     "normal": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/Prev",
+     "graphic": "Home/Prev",
+     "text": "Home/Prev/Text (TMP)",
+     "normal": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.29411766,
+      "g": 0.31764707,
+      "b": 0.40392157,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/2/Box (1)",
+     "graphic": "Home/2/Box (1)",
+     "text": "",
+     "normal": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "selected": {
+      "r": 1,
+      "g": 0.8509804,
+      "b": 0.4,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "CanvasLose/Blocker/Next",
+     "graphic": "CanvasLose/Blocker/Next",
+     "text": "CanvasLose/Blocker/Next/Text (TMP)",
+     "normal": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "CanvasWin/Blocker/Home",
+     "graphic": "CanvasWin/Blocker/Home",
+     "text": "CanvasWin/Blocker/Home/Text (TMP)",
+     "normal": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "pressed": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.2509804,
+      "g": 0.26666668,
+      "b": 0.34117648,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/1/Box",
+     "graphic": "Home/1/Box",
+     "text": "",
+     "normal": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.9411765,
+      "g": 0.41960785,
+      "b": 0.6509804,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    },
+    {
+     "path": "Home/2/Box (3)",
+     "graphic": "Home/2/Box (3)",
+     "text": "",
+     "normal": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "highlighted": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "pressed": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "selected": {
+      "r": 0.38039216,
+      "g": 0.9490196,
+      "b": 0.96862745,
+      "a": 1
+     },
+     "textNormal": {
+      "r": 1,
+      "g": 1,
+      "b": 1,
+      "a": 1
+     },
+     "textHighlighted": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "textPressed": {
+      "r": 0.78431374,
+      "g": 0.78431374,
+      "b": 0.78431374,
+      "a": 1
+     },
+     "textSelected": {
+      "r": 0.9607843,
+      "g": 0.9607843,
+      "b": 0.9607843,
+      "a": 1
+     },
+     "normalScale": 1,
+     "highlightedScale": 1.1,
+     "pressedScale": 1.2,
+     "selectedScale": 1.1,
+     "duration": 0.15
+    }
+   ],
+   "clicks": [
+    {
+     "button": "Home/1/Box (1)",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/2/Box (2)",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/Next",
+     "target": "Home/2",
+     "targetKind": "GameObject",
+     "method": "SetActive",
+     "boolArgument": true
+    },
+    {
+     "button": "Home/Next",
+     "target": "Home/1",
+     "targetKind": "GameObject",
+     "method": "SetActive",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/1/Box (2)",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/1/Box (4)",
+     "target": "AnimationUIs/Start -> Win",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/2/Box",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/2/Box (4)",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/1/Box (3)",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/Prev",
+     "target": "Home/1",
+     "targetKind": "GameObject",
+     "method": "SetActive",
+     "boolArgument": true
+    },
+    {
+     "button": "Home/Prev",
+     "target": "Home/2",
+     "targetKind": "GameObject",
+     "method": "SetActive",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/2/Box (1)",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "CanvasLose/Blocker/Next",
+     "target": "AnimationUIs/Start -> Home",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "CanvasWin/Blocker/Home",
+     "target": "AnimationUIs/Start -> Home",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/1/Box",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    },
+    {
+     "button": "Home/2/Box (3)",
+     "target": "AnimationUIs/Start -> Lose",
+     "targetKind": "AnimationUI",
+     "method": "Play",
+     "boolArgument": false
+    }
+   ]
+  }
+ ]
+}

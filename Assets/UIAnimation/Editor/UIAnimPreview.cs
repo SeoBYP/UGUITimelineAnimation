@@ -265,7 +265,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             var duration = State.Duration;
             if (t >= duration)
             {
-                if (Loop && duration > 0f)
+                if ((Loop || State.loop) && duration > 0f)   // the preview button, or the state itself loops
                 {
                     Begin(Target, State, t % duration);   // restart from the rest pose so Current clips loop cleanly
                     IsPlaying = true;
@@ -334,6 +334,28 @@ namespace SeoBYP.TimelineAnimation.Editor
                 case UIAnimProperty.FillAmount:
                     Add(root, target, "m_FillAmount");
                     break;
+                case UIAnimProperty.CanvasGroupAlpha:
+                    Add(root, target, "m_Alpha");
+                    break;
+                case UIAnimProperty.AnchorMin:
+                    Add(root, target.transform, "m_AnchorMin", "x", "y");
+                    break;
+                case UIAnimProperty.AnchorMax:
+                    Add(root, target.transform, "m_AnchorMax", "x", "y");
+                    break;
+                case UIAnimProperty.Pivot:
+                    Add(root, target.transform, "m_Pivot", "x", "y");
+                    break;
+                case UIAnimProperty.CameraBackground:
+                    Add(root, target, "m_BackGroundColor", "r", "g", "b", "a");
+                    break;
+                case UIAnimProperty.CameraOrthoSize:
+                    Add(root, target, "orthographic size");
+                    break;
+                case UIAnimProperty.Active:
+                    AddOne(new SerializedObject(target.gameObject), target.gameObject,
+                        AnimationUtility.CalculateTransformPath(target.transform, root.transform), "m_IsActive");
+                    break;
                 case UIAnimProperty.CharacterSpacing:
                     Add(root, target, "m_characterSpacing");
                     break;
@@ -356,6 +378,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             {
                 SerializedPropertyType.Float => prop.floatValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 SerializedPropertyType.Integer => prop.longValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                SerializedPropertyType.Boolean => prop.boolValue ? "1" : "0",
                 SerializedPropertyType.String => prop.stringValue,
                 _ => null,
             };
