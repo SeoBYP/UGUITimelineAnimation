@@ -1,0 +1,80 @@
+# Keeps the integration branches (integration/unitask, integration/r3, integration/uieffect) up to date, every day:
+#  - a new release of the library → a PR "bump/<lib>-<version>" into its integration branch
+#  - main moved ahead of the branch → a PR "sync/<lib>-<main sha>" (the branch with main merged in) into it
+# and starts the Unity tests on that PR's branch. A failing test means the integration needs a fix: fix it on that
+# PR branch, then merge it into the integration branch (and the fix into main if the package code changed).
+# Scheduled workflows run from the default branch, so this file lives on main.
+# Needs: Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests".
+name: Integration Watch
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 09:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  watch:
+    name: ${{ matrix.lib }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lib: [unitask, r3, uieffect]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      BRANCH: integration/${{ matrix.lib }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/${{ matrix.lib }}
+          fetch-depth: 0
+
+      - name: Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: New release → bump PR
+        run: |
+          lib=${{ matrix.lib }}
+          current=$(python3 Tools/integration_bump.py current $lib)
+          latest=$(python3 Tools/integration_bump.py latest $lib)
+          echo "$lib: 설치 '$current', 최신 '$latest'"
+          if [ -z "$latest" ] || [ "$current" = "$latest" ]; then echo "최신입니다"; exit 0; fi
+          head="bump/$lib-$latest"
+          if git ls-remote --exit-code --heads origin "$head" >/dev/null; then echo "$head 이미 있음"; exit 0; fi
+          git switch -c "$head"
+          python3 Tools/integration_bump.py apply $lib "$latest"
+          git commit -am "$lib $current → $latest"
+          git push origin "$head"
+          gh pr create --base "$BRANCH" --head "$head" --title "$lib $latest 확인 ($current → $latest)" \
+            --body "새 버전이 나와서 \`$BRANCH\`에 올려 봅니다. Unity 테스트가 통과하면 머지하고, 실패하면 이 브랜치에서 고칩니다."
+          gh workflow run unity-tests.yml --ref "$head"
+
+      - name: main ahead → sync PR
+        run: |
+          lib=${{ matrix.lib }}
+          git fetch origin main "$BRANCH"
+          git switch -C "$BRANCH" "origin/$BRANCH"
+          behind=$(git rev-list --count "origin/$BRANCH..origin/main")
+          echo "main보다 $behind 커밋 뒤"
+          [ "$behind" -eq 0 ] && exit 0
+          head="sync/$lib-$(git rev-parse --short origin/main)"
+          if git ls-remote --exit-code --heads origin "$head" >/dev/null; then echo "$head 이미 있음"; exit 0; fi
+          git switch -c "$head"
+          if ! git merge --no-edit origin/main; then
+            git merge --abort
+            gh issue create --title "integration/$lib: main 병합 충돌" \
+              --body "\`main\`을 \`$BRANCH\`에 합칠 때 충돌이 났습니다. 직접 합쳐 주세요." || true
+            exit 1
+          fi
+          git push origin "$head"
+          gh pr create --base "$BRANCH" --head "$head" --title "main → $BRANCH 동기화" \
+            --body "\`main\`의 새 커밋 $behind개를 합쳤습니다. Unity 테스트(라이브러리 설치 상태)가 통과하면 머지합니다."
+          gh workflow run unity-tests.yml --ref "$head"
