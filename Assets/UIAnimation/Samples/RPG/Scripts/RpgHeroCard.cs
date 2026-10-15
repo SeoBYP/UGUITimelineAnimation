@@ -20,7 +20,7 @@ public sealed class RpgHeroCard : MonoBehaviour
         portrait.sprite = RpgDemo.Instance.Sprite(hero.id);
         frame.color = RpgData.StarColor(hero.stars);
         heroName.text = hero.name;
-        level.text = "Lv. " + hero.level;
+        level.text = "Lv. " + RpgDemo.Instance.Level(index);
         for (var i = 0; i < stars.Length; i++) stars[i].SetActive(i < hero.stars);
     }
 }
