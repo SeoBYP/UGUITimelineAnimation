@@ -32,7 +32,9 @@
 3. 두 경우 모두 그 브랜치에서 Unity 테스트(`unity-tests.yml`)를 실행합니다.
    - GITHUB_TOKEN으로 연 PR은 테스트를 스스로 시작하지 못해서 `workflow_dispatch`로 실행합니다. 결과는 PR의 검사 표시로 보입니다.
 
-**테스트가 실패하면** 그 PR 브랜치에서 고쳐 연동 브랜치로 머지합니다. 패키지 코드가 바뀌었으면 같은 수정을 `main`으로도 PR합니다.
+**테스트가 통과하면** `unity-tests.yml`의 `automerge` 작업이 그 PR을 연동 브랜치로 머지하고 브랜치를 지웁니다. 그래서 연동 브랜치는 사람 손 없이 최신으로 유지됩니다.
+
+**테스트가 실패하면** PR이 열린 채 남습니다. 그 PR 브랜치에서 고쳐 연동 브랜치로 머지합니다. 패키지 코드가 바뀌었으면 같은 수정을 `main`으로도 PR합니다.
 
 필요한 저장소 설정: Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**.
 

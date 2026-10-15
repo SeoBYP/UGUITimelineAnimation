@@ -4,7 +4,8 @@
 # and starts the Unity tests on that PR's branch. A failing test means the integration needs a fix: fix it on that
 # PR branch, then merge it into the integration branch (and the fix into main if the package code changed).
 # Scheduled workflows run from the default branch, so this file lives on main.
-# Needs: Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests".
+# PRs need Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"; without it the
+# tests still run on the branch and unity-tests' automerge fast-forwards the integration branch when they pass.
 name: Integration Watch
 
 on:
@@ -54,7 +55,8 @@ jobs:
           git commit -am "$lib $current → $latest"
           git push origin "$head"
           gh pr create --base "$BRANCH" --head "$head" --title "$lib $latest 확인 ($current → $latest)" \
-            --body "새 버전이 나와서 \`$BRANCH\`에 올려 봅니다. Unity 테스트가 통과하면 머지하고, 실패하면 이 브랜치에서 고칩니다."
+            --body "새 버전이 나와서 \`$BRANCH\`에 올려 봅니다. Unity 테스트가 통과하면 머지하고, 실패하면 이 브랜치에서 고칩니다." \
+            || echo "::warning::PR을 만들지 못했습니다(저장소 설정). 테스트가 통과하면 unity-tests의 automerge가 브랜치를 바로 반영합니다."
           gh workflow run unity-tests.yml --ref "$head"
 
       - name: main ahead → sync PR
@@ -76,5 +78,6 @@ jobs:
           fi
           git push origin "$head"
           gh pr create --base "$BRANCH" --head "$head" --title "main → $BRANCH 동기화" \
-            --body "\`main\`의 새 커밋 $behind개를 합쳤습니다. Unity 테스트(라이브러리 설치 상태)가 통과하면 머지합니다."
+            --body "\`main\`의 새 커밋 $behind개를 합쳤습니다. Unity 테스트(라이브러리 설치 상태)가 통과하면 머지합니다." \
+            || echo "::warning::PR을 만들지 못했습니다(저장소 설정). 테스트가 통과하면 unity-tests의 automerge가 브랜치를 바로 반영합니다."
           gh workflow run unity-tests.yml --ref "$head"
