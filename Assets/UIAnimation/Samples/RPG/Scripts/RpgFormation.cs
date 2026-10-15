@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using SeoBYP.TimelineAnimation;
 using TMPro;
@@ -7,7 +8,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Formation before a stage (opened by START on the adventure page): tap a hero to put them in the next free slot
 /// (the slot's "In": the portrait drops in), tap a slot to take them out (the same state reversed). The team power counts.
-/// BATTLE plays the page's "Battle" (the team charges off, the screen flashes) and then the stage's result.
+/// BATTLE plays the page's "Battle" (the team charges off, the screen flashes) and opens the battle.
 /// </summary>
 public sealed class RpgFormation : MonoBehaviour, IUIAnimScreenLifecycle
 {
@@ -119,9 +120,11 @@ public sealed class RpgFormation : MonoBehaviour, IUIAnimScreenLifecycle
         }
         _charging = true;
         var anim = GetComponent<UIAnimation>();
-        await anim.PlayAsync("Battle");
+        try { await anim.PlayAsync("Battle"); }
+        catch (OperationCanceledException) { _charging = false; return; }
         var (chapter, s) = demo.SelectedStage;
-        demo.StartStage(chapter, s);
+        demo.Team = _team.Where(h => h >= 0).ToArray();
+        demo.BeginBattle(chapter, s);
         anim.Sample("Battle", 0f);   // the team is back in place under the result popup
         _charging = false;
     }

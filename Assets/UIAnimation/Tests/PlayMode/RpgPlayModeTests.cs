@@ -55,6 +55,14 @@ namespace SeoBYP.TimelineAnimation.Tests
         static Vector3 CenterOf(RectTransform rt) => rt.TransformPoint(rt.rect.center);
         static string Text(Component root, string path) => root.transform.Find(path).GetComponent<TMP_Text>().text;
 
+        // The team charges off, the battle page fights by itself, then the result pops up.
+        IEnumerator BattleResult()
+        {
+            var end = Time.realtimeSinceStartup + 20f;
+            while (_modals.Modals.Count == 0 && Time.realtimeSinceStartup < end) yield return null;
+            Assert.AreEqual(1, _modals.Modals.Count, "전투가 끝나면 결과 팝업");
+        }
+
         IEnumerator Open(string menu)
         {
             Named(Page, menu + "Button").onClick.Invoke();
@@ -176,7 +184,7 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [UnityTest]
-        public IEnumerator 모험은_챕터를_고르고_편성을_거쳐_승리와_패배_결과가_뜬다()
+        public IEnumerator 모험은_챕터를_고르고_편성과_전투를_거쳐_승리와_패배_결과가_뜬다()
         {
             yield return Load();
             yield return Open("ADVENTURE");
@@ -192,7 +200,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             yield return Idle();
             StringAssert.StartsWith("Formation", Page.name, "START → 편성");
             Named(Page, "BattleButton").onClick.Invoke();
-            yield return new WaitForSeconds(1.2f);   // the team charges off ("Battle")
+            yield return BattleResult();
             yield return Idle(3f);
             var victory = Modal;
             StringAssert.StartsWith("Victory", victory.name);
@@ -214,7 +222,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             Named(Page, "StartButton").onClick.Invoke();
             yield return Idle();
             Named(Page, "BattleButton").onClick.Invoke();
-            yield return new WaitForSeconds(1.2f);
+            yield return BattleResult();
             yield return Idle(3.5f);
             var defeat = Modal;
             StringAssert.StartsWith("Defeat", defeat.name);

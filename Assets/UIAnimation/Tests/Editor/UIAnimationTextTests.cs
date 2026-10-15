@@ -55,6 +55,23 @@ namespace SeoBYP.TimelineAnimation.Tests
         }
 
         [Test]
+        public void 글자_효과_중에_상자가_넓어지면_줄바꿈을_다시_한다()
+        {
+            // A title growing with its banner (Victory): laid out narrow first, then the rect widens.
+            _text.text = "VICTORY";
+            _text.textWrappingMode = TextWrappingModes.Normal;
+            var rect = _text.rectTransform;
+            rect.sizeDelta = new Vector2(60, 100);
+            var offset = Add(UIAnimProperty.CharOffset, 0.05f, Key(0f, new Vector4(0, 50)), Key(0.5f, Vector4.zero));
+
+            UIAnimation.Evaluate(offset, 0.1f);
+            Assert.Greater(_text.textInfo.lineCount, 1, "좁으면 여러 줄");
+            rect.sizeDelta = new Vector2(1000, 100);
+            UIAnimation.Evaluate(offset, 0.2f);
+            Assert.AreEqual(1, _text.textInfo.lineCount, "넓어지면 한 줄");
+        }
+
+        [Test]
         public void 글자_간격만큼_마지막_글자가_늦어져_길이가_늘어난다()
         {
             // 4 characters: the last one starts 3 × 0.1s later than the first.
