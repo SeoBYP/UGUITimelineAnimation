@@ -382,6 +382,18 @@ var info = await anim.WaitEventUniTaskAsync("Shown");
 var canceled = await popup.PlayUniTaskAsync("Close").SuppressCancellationThrow();
 ```
 - 완료·취소 규칙은 `PlayAsync`와 같습니다(내부적으로 `Awaitable`을 `AsUniTask()`로 바꿈).
+- 샘플 `Samples/UniTask`(UniTask 설치 시에만): `WhenAll`, `SuppressCancellationThrow`, `Timeout` + `Complete`, `WaitEventUniTaskAsync`, `destroyCancellationToken`.
+
+### 7.2.1 R3 연동 (선택)
+R3(`com.cysharp.r3`)가 설치돼 있으면 `versionDefines`가 `UIANIM_R3`를 켭니다.
+```csharp
+open.OnClickAsObservable().ThrottleFirst(TimeSpan.FromSeconds(0.5))
+    .SelectMany(_ => popup.PlayAsObservable("Open"))          // 끝나면 Unit 하나, 끝나지 못하면 OperationCanceledException
+    .Subscribe(_ => Debug.Log("열림")).AddTo(this);
+popup.EventAsObservable("Shown").Subscribe(e => Debug.Log(e.Time)).AddTo(this);   // EventsAsObservable() = 전부
+```
+- 구독을 끊으면 상태가 그 자리에서 멈춥니다.
+- 샘플 `Samples/R3`: 버튼 연타 `ThrottleFirst`, 닫기 `Switch`, 이벤트 로그. 테스트 `R3PlayModeTests` 4개 + 샘플 1개(R3 설치 시에만).
 
 ### 7.4 화면 전환 (Page · Modal · Sheet 컨테이너)
 UnityScreenNavigator와 같은 역할을 패키지 안에서 합니다. 전환 연출은 **화면의 UIAnimation 상태**이고, 화면에 그 이름의 상태가 없으면 기본 전환을 씁니다.
@@ -664,12 +676,12 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 | ✅ | C. 화면 전환 컨테이너 | Page·Modal·Sheet, Size Relative, 방향별 상태(EnterBackward), 생명주기·입력 잠금 (§7.4). 공유 요소 전환은 `UIAnimSharedElement` (PR #13) |
 | ✅ | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home · D2 Shop 탭 · D3 모달 4종 + 공유 요소 전환 (PR #13) |
 | ✅ | E. 성능 비교 (PR #14) | 별도 프로젝트 `Benchmarks/`(UI Animation·Animator·DOTween Pro·LitMotion·AnimationUI + 직접 대입 기준), Windows 플레이어 Mono·IL2CPP. 결과 [`Benchmarks.md`](Benchmarks.md), 기록·최적화 [`Performance.md`](Performance.md) |
-| 🟡 | F. 연동 샘플 | F3 UIEffect ✅ 트랙 14종(§7.3, PR #14) · F1 UniTask 샘플 ⬜ · F2 R3 샘플 ⬜ |
+| ✅ | F. 연동 | F1 UniTask 샘플 · F2 R3 연동(§7.2.1)·샘플 · F3 UIEffect 트랙 14종(§7.3, PR #14). 각각 `integration/*` 브랜치에서 라이브러리 설치 상태로 테스트, 매일 새 버전 자동 확인([`Branches.md`](Branches.md)) |
 | ✅ | G. 제작 편의 비교 (PR #14) | [`Authoring-Comparison.md`](Authoring-Comparison.md) |
 | ✅ | 패키지 샘플 RPG 1차 (PR #13) | 원본 재현 두 개는 `Assets/Reference`(참고용). 패키지 샘플은 판타지 RPG: 로비·영웅 목록/상세·가방·소환·모험(승리/패배)·퀘스트 (§10) |
 | ⬜ | RPG 2차 | 타이틀·로딩, 강화·장착, 상점, 편성·전투 진입, 출석·우편 |
 | ⬜ | RPG 3차 | 수량 선택(휠), 전투 HUD, 길드 채팅, 랭킹, 스토리 대화, 설정, 공통 팝업·토스트 |
-| ⬜ | 배포 `0.1.0` | F1·F2 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
+| ⬜ | 배포 `0.1.0` | Burst 최적화 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
 | ✅ | 글자 효과 최적화 | 배치 정점을 저장해 두고 변형만 적용 → 텍스트 100개 3.64 → 0.98ms ([`Performance.md`](Performance.md) §4.1) |
 
 ### 13.1 알려진 제한
