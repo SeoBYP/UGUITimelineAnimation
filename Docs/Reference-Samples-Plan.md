@@ -172,6 +172,8 @@ USN은 화면 전환 프레임워크입니다.
 | C + D (D1·D2) | ✅ `feature/usn-demo` | Page·Modal·Sheet 컨테이너(패키지, `Awaitable`), Size Relative 트랙 옵션, 시트 방향별 상태. ScreenNavigator 데모는 **원본 Prefab 8개를 GUID 그대로** 가져와 원본 스크립트·Timeline 오브젝트를 떼고 UIAnimScreen·상태로 교체(빌더 `ScreenNavigatorSampleBuilder`). 전환 수치는 원본 Timeline(UnityUIPlayables 클립)·SimpleTransition 파일에서 추출(이징 번호 2 = OutQuad, UnityUIPlayables 소스로 확인). 그림 43장은 같은 크기·같은 GUID의 대체 그림. EditMode 129/129, PlayMode 33/33 |
 | D3 (모달 4종 + 공유 요소 전환) | ✅ `feature/usn-demo` | 원본 모달 Prefab 8개 추가(GUID 유지). Settings(VOICE·BGM·SE, 바뀐 값만 닫을 때 PlayerPrefs 저장, LOCKED → Confirmation 쌓기), UnitTypeInformation(랭크 썸네일 = 탭, 초상화 시트 3장 기본 페이드), PortraitViewer(공유 요소 전환: 원본 UnitPortraitModalTransitionAnimation 0.3초 QuarticEaseOut). 공유 요소는 패키지 기능 대신 **`Enter`/`Exit` 상태 + 상대 쪽 키 값만 코드로 채움**(샘플 `UsnPortraitViewerModal`). 샘플 폴더는 `Assets/UIAnimation/Samples/`로 이동. EditMode 129/129, PlayMode 35/35 |
 
+| 샘플 재구성 | ✅ `feature/usn-demo` | 원본 재현(AnimationUI·ScreenNavigator)은 **참고·비교용**으로 `Assets/Reference/`에 둠(패키지 밖, 테스트도 `Assets/Reference/Tests`). 패키지에 들어갈 샘플은 **Showcase**: 원본에 없는 화면(하단 탭 인디케이터, 상점 → 상세 공유 요소, 보상 상자, 레벨업, 토스트) × 테마 3종(Casual·SciFi·Fantasy, 코드는 같고 상태만 다름). 공유 요소 키 채우기는 패키지 `UIAnimSharedElement`로. 초상화 뷰어가 돌아올 때 크기가 튀던 문제 수정(시트 초상화를 영역에 맞춤) |
+
 **권장 순서**: A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → C3 → C4 → D1 → D2 → D3 → E1 → E2 → F1 → F2 → F3 → G1.
 E1·F1·F2는 다른 작업과 겹치지 않아서 언제든 끼워 넣을 수 있습니다.
 
