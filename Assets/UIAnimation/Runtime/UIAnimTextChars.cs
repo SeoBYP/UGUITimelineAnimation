@@ -113,6 +113,7 @@ namespace SeoBYP.TimelineAnimation
         // The text's own geometry (before our transforms), per sub-mesh: rebuilt only when TMP has to lay the text out again.
         Vector3[][] _baseVertices = new Vector3[0][];
         Color32[][] _baseColors = new Color32[0][];
+        Vector2 _layoutSize;   // the rect size the cached geometry was laid out for
 
         void Flush()
         {
@@ -120,15 +121,18 @@ namespace SeoBYP.TimelineAnimation
             if (_text == null) return;
 
             // Laying the text out (ForceMeshUpdate) is the expensive part, so it happens only when something TMP lays out
-            // changed (text, reveal, size, color, rect …: havePropertiesChanged) or the geometry is not cached yet.
+            // changed (text, reveal, size, color …: havePropertiesChanged), the rect was resized (e.g. a banner growing
+            // around it: TMP does not flag that) or the geometry is not cached yet.
             // Otherwise the cached base geometry is copied back and the per-character transforms applied to it, so they
             // never stack up across frames.
             var info = _text.textInfo;
-            if (_text.havePropertiesChanged || !Cached(info))
+            var size = _text.rectTransform.rect.size;
+            if (_text.havePropertiesChanged || size != _layoutSize || !Cached(info))
             {
                 _text.ForceMeshUpdate();
                 info = _text.textInfo;
                 Remember(info);
+                _layoutSize = size;
             }
             else Restore(info);
 
