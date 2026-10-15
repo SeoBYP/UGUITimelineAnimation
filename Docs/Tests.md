@@ -6,12 +6,12 @@
 
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
-| EditMode (패키지) | 135 | `Assets/UIAnimation/Tests/Editor` |
+| EditMode (패키지) | 138 | `Assets/UIAnimation/Tests/Editor` |
 | PlayMode (패키지) | 33 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
 | PlayMode (개발용 캡처) | 2 | `Assets/Dev/Tests` |
 
-## EditMode (패키지) — 135개
+## EditMode (패키지) — 138개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.Editor` · CI에서 실행
 
@@ -80,6 +80,14 @@ Scroll animations made from nothing the way a user does: the list's (or indicato
 
 1. 휠 피커 줄을 에디터로 처음부터 만들면 가운데만 똑바로 선다
 2. 페이지 점의 On Off를 에디터로 만들면 현재 페이지 점이 커진다
+
+### `UIAnimBatchTests` (3개) — `Assets/UIAnimation/Tests/Editor/UIAnimBatchTests.cs`
+
+Burst batch (UIAnimBatch): the values it computes for a frame are the ones UIAnimTrack.Sample gives, and Step writes them.
+
+1. 배치 값은 관리 코드 샘플과 같다
+2. 역재생과 반복도 같은 시간을 계산한다
+3. Step은 배치 값을 쓰고 다시 재생하면 자리를 재사용한다
 
 ### `UIAnimEaseTests` (3개) — `Assets/UIAnimation/Tests/Editor/UIAnimEaseTests.cs`
 

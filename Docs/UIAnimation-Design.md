@@ -639,7 +639,7 @@ Docs/                                       ← 문서 (배포 안 됨)
 ```
 
 - **배포 경계**: `Assets/UIAnimation`의 런타임·에디터 코드는 샘플을 참조하지 않습니다(asmdef로 분리). 테스트 일부(`SampleButton2Tests`, 샘플 Prefab을 쓰는 테스트)는 샘플이 없으면 건너뜁니다.
-- **의존성**: 서드파티 **없음**. `package.json`에는 Unity 공식 패키지 `com.unity.ugui`, `com.unity.mathematics`(Shake 난수)만 있습니다. UniTask는 선택(§7.2). 개발 프로젝트에는 연동 테스트를 위해 UniTask가 설치돼 있습니다.
+- **의존성**: 서드파티 **없음**. `package.json`에는 Unity 공식 패키지 `com.unity.ugui`, `com.unity.mathematics`(Shake 난수), `com.unity.burst`(재생 중 값 일괄 계산, [`Performance.md`](Performance.md) 4.5)만 있습니다. UniTask는 선택(§7.2). 개발 프로젝트에는 연동 테스트를 위해 UniTask가 설치돼 있습니다.
 - **UniTask 없는 상태 검증**: 테스트용 프로젝트 복사본에서 UniTask를 빼고 실행해 EditMode 120/120, PlayMode 18/18(연동 테스트 1개는 컴파일에서 빠짐)을 확인했습니다.
 - **배포 절차 (예정)**: 직접 써 본 뒤 `0.1.0`으로 올리고 태그를 붙입니다.
   ```

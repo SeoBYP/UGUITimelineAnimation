@@ -16,7 +16,8 @@ namespace Bench
     /// <summary>
     /// Runs every case (scenario × approach × count) in the player: builds the objects, starts the motion, warms up,
     /// then records each frame's time and GC allocation, and writes one JSON line per case.
-    /// Args: -benchOut &lt;file&gt; (default: persistentDataPath/bench.jsonl), -benchQuick (short runs, small counts).
+    /// Args: -benchOut &lt;file&gt; (default: persistentDataPath/bench.jsonl), -benchQuick (short runs, small counts),
+    /// -benchOnly &lt;approach,approach&gt; (only those approaches).
     /// </summary>
     public sealed class BenchRunner : MonoBehaviour
     {
@@ -53,6 +54,7 @@ namespace Bench
             var args = Environment.GetCommandLineArgs();
             string Arg(string name) => Array.IndexOf(args, name) is var i and >= 0 && i + 1 < args.Length ? args[i + 1] : null;
             var quick = args.Contains("-benchQuick");
+            var only = Arg("-benchOnly")?.Split(',');   // e.g. Baseline,UIAnimation: A/B runs of one approach
             if (quick) (_warmup, _measure) = (0.3f, 0.7f);
             var output = Arg("-benchOut") ?? Path.Combine(Application.persistentDataPath, "bench.jsonl");
             Directory.CreateDirectory(Path.GetDirectoryName(output));
@@ -73,7 +75,7 @@ namespace Bench
             foreach (var n in quick ? Counts[scenario].Take(2) : Counts[scenario])
             foreach (var driver in Drivers())
             {
-                if (!driver.Supports(scenario)) continue;
+                if (!driver.Supports(scenario) || (only != null && !only.Contains(driver.Approach.ToString()))) continue;
                 var items = Build(scenario, n);
                 yield return null;
 
