@@ -1,6 +1,6 @@
 # UGUI Animation System — 설계 문서
 
-> 기준: `main` 487631c (PR #12 머지 시점) · 2026-10-15
+> 기준: `main` 2b7cc83 (PR #14 머지 시점) · 2026-10-15
 > 대상: Unity 6000.6.3f1 · uGUI 2.x (TMP 내장) · **서드파티 의존성 없음** (LitMotion 대신 자체 타이머·이징, 대기는 Unity `Awaitable`) · UniTask는 **선택**(설치돼 있으면 연동이 켜짐)
 > 방식: **완전 커스텀**. 데이터, 런타임, 에디터 창을 모두 직접 만듭니다. Animator와 Timeline은 사용하지 않습니다.
 > 표기: ✅ 구현됨 · 🟡 일부 구현 · ⬜ 아직 안 함
@@ -658,17 +658,17 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 | ✅ | 성능 측정 (R3) | §4.7 |
 | ✅ | CI 보강 | CI가 EditMode·PlayMode 실행, 러너에 xvfb 설치 → 에디터 창 테스트도 실행 |
 | ✅ | 서드파티 의존성 0 | LitMotion 제거(PR #11), UniTask 선택화(PR #12) |
-| ✅ | A. 엔진 보강 | A1 새 트랙 7종 · A2 역재생 `PlayReversed` · A3 AUI OutBack 이징 (`feature/aui-demo`) |
-| ✅ | B. Unity-AnimationUI 데모 재현 | 두 씬·연출 8개·버튼 23개를 원본 수치로 재현, PlayMode 테스트 5개 (`feature/aui-demo`) |
-| ✅ | C. 화면 전환 컨테이너 | Page·Modal·Sheet, Size Relative, 방향별 상태(EnterBackward), 생명주기·입력 잠금 (§7.4). 공유 요소 전환은 상태 + 실행 중 키 값으로 D3 샘플에서 (`feature/usn-demo`) |
-| ✅ | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home · D2 Shop 탭 · D3 모달 4종 + 공유 요소 전환 (`feature/usn-demo`) |
-| ✅ | E. 성능 비교 | 별도 프로젝트 `Benchmarks/`(UI Animation·Animator·DOTween Pro·LitMotion·AnimationUI + 직접 대입 기준), Windows 플레이어 Mono·IL2CPP. 결과 [`Benchmarks.md`](Benchmarks.md), 기록·최적화 [`Performance.md`](Performance.md) |
-| ⬜ | F. 연동 샘플 | F1 UniTask · F2 R3 · **F3 UIEffect ✅ 트랙 14종(§7.3)** |
-| ✅ | G. 제작 편의 비교 | [`Authoring-Comparison.md`](Authoring-Comparison.md) |
-| ✅ | 패키지 샘플 RPG 1차 | 원본 재현 두 개는 `Assets/Reference`(참고용). 패키지 샘플은 판타지 RPG: 로비·영웅 목록/상세·가방·소환·모험(승리/패배)·퀘스트 (§10) |
+| ✅ | A. 엔진 보강 | A1 새 트랙 7종 · A2 역재생 `PlayReversed` · A3 AUI OutBack 이징 (PR #13) |
+| ✅ | B. Unity-AnimationUI 데모 재현 | 두 씬·연출 8개·버튼 23개를 원본 수치로 재현, PlayMode 테스트 5개 (PR #13) |
+| ✅ | C. 화면 전환 컨테이너 | Page·Modal·Sheet, Size Relative, 방향별 상태(EnterBackward), 생명주기·입력 잠금 (§7.4). 공유 요소 전환은 `UIAnimSharedElement` (PR #13) |
+| ✅ | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home · D2 Shop 탭 · D3 모달 4종 + 공유 요소 전환 (PR #13) |
+| ✅ | E. 성능 비교 (PR #14) | 별도 프로젝트 `Benchmarks/`(UI Animation·Animator·DOTween Pro·LitMotion·AnimationUI + 직접 대입 기준), Windows 플레이어 Mono·IL2CPP. 결과 [`Benchmarks.md`](Benchmarks.md), 기록·최적화 [`Performance.md`](Performance.md) |
+| 🟡 | F. 연동 샘플 | F3 UIEffect ✅ 트랙 14종(§7.3, PR #14) · F1 UniTask 샘플 ⬜ · F2 R3 샘플 ⬜ |
+| ✅ | G. 제작 편의 비교 (PR #14) | [`Authoring-Comparison.md`](Authoring-Comparison.md) |
+| ✅ | 패키지 샘플 RPG 1차 (PR #13) | 원본 재현 두 개는 `Assets/Reference`(참고용). 패키지 샘플은 판타지 RPG: 로비·영웅 목록/상세·가방·소환·모험(승리/패배)·퀘스트 (§10) |
 | ⬜ | RPG 2차 | 타이틀·로딩, 강화·장착, 상점, 편성·전투 진입, 출석·우편 |
 | ⬜ | RPG 3차 | 수량 선택(휠), 전투 HUD, 길드 채팅, 랭킹, 스토리 대화, 설정, 공통 팝업·토스트 |
-| ⬜ | 배포 `0.1.0` | A~G 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
+| ⬜ | 배포 `0.1.0` | F1·F2 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
 | ✅ | 글자 효과 최적화 | 배치 정점을 저장해 두고 변형만 적용 → 텍스트 100개 3.64 → 0.98ms ([`Performance.md`](Performance.md) §4.1) |
 
 ### 13.1 알려진 제한
