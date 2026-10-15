@@ -122,3 +122,23 @@ jobs:
             ${{ runner.temp }}/*-results.xml
             ${{ runner.temp }}/unity-*.log
           if-no-files-found: ignore
+
+  # integration-watch opens bump/* and sync/* PRs into an integration branch and dispatches this workflow on them.
+  # When the tests pass, the PR merges by itself, so the integration branches stay current; when they fail, it stays
+  # open to be fixed on its branch.
+  automerge:
+    name: Merge passing integration update
+    needs: editmode
+    if: success() && github.event_name == 'workflow_dispatch' && (startsWith(github.ref_name, 'sync/') || startsWith(github.ref_name, 'bump/'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Merge the PR from this branch
+        run: |
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" --state open --json number -q '.[0].number')
+          if [ -z "$pr" ]; then echo "::warning::$GITHUB_REF_NAME 에서 열린 PR이 없습니다."; exit 0; fi
+          gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --merge --delete-branch
