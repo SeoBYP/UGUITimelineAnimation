@@ -86,6 +86,9 @@ namespace SeoBYP.TimelineAnimation.Editor
                 yield return (text, UIAnimProperty.CharColor);
                 yield return (text, UIAnimProperty.CharAlpha);
             }
+            // Optional packages' components (UIEffect …), when their integration is installed.
+            foreach (var external in UIAnimExternalProperties.All)
+                if (tr.GetComponent(external.componentType) is { } component) yield return (component, external.property);
         }
 
         void CreateGUI()

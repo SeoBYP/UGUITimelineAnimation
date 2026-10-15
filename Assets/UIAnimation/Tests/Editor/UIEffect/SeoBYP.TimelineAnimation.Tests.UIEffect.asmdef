@@ -1,0 +1,32 @@
+{
+    "name": "SeoBYP.TimelineAnimation.Tests.UIEffect",
+    "rootNamespace": "SeoBYP.TimelineAnimation.Tests",
+    "references": [
+        "SeoBYP.TimelineAnimation",
+        "SeoBYP.TimelineAnimation.Editor",
+        "SeoBYP.TimelineAnimation.UIEffect",
+        "Coffee.UIEffect",
+        "UnityEngine.UI",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "UIANIM_UIEFFECT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.coffee.ui-effect",
+            "expression": "5.0.0",
+            "define": "UIANIM_UIEFFECT"
+        }
+    ]
+}

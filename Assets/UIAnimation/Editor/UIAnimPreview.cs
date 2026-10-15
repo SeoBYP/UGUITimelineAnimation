@@ -359,6 +359,13 @@ namespace SeoBYP.TimelineAnimation.Editor
                 case UIAnimProperty.CharacterSpacing:
                     Add(root, target, "m_characterSpacing");
                     break;
+                default:
+                    if (UIAnimExternalProperties.TryGet(track.property, out var external) && !string.IsNullOrEmpty(external.serializedField))
+                    {
+                        if (external.isColor) Add(root, target, external.serializedField, "r", "g", "b", "a");
+                        else Add(root, target, external.serializedField);
+                    }
+                    break;
             }
         }
 

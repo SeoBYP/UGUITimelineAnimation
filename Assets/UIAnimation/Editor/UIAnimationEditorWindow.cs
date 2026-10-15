@@ -1339,6 +1339,18 @@ namespace SeoBYP.TimelineAnimation.Editor
                     f.RegisterValueChangedCallback(e => Set(new Vector4(e.newValue, 0, 0, 0)));
                     return f;
                 }
+                case var p when UIAnimExternalProperties.TryGet(p, out var external) && external.isColor && !relative:
+                {
+                    var f = new ColorField(label) { value = v };
+                    f.RegisterValueChangedCallback(e => Set(e.newValue));
+                    return f;
+                }
+                case var p when UIAnimExternalProperties.TryGet(p, out var external) && external.max > external.min && !relative:
+                {
+                    var f = new Slider(label, external.min, external.max) { value = v.x, showInputField = true };
+                    f.RegisterValueChangedCallback(e => Set(new Vector4(e.newValue, 0, 0, 0)));
+                    return f;
+                }
                 default:
                 {
                     var f = new FloatField(label) { value = v.x };

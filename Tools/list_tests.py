@@ -28,7 +28,8 @@ lines = ['# 테스트 목록', '',
          '실행: Unity를 batchmode로 `-runTests -testPlatform EditMode` / `PlayMode` (에디터가 프로젝트를 잠그므로 복사본에서). CI는 둘 다 실행합니다.', '']
 body, totals = [], []
 for title, folder, note in SUITES:
-    files = sorted(f for f in os.listdir(os.path.join(ROOT, folder)) if f.endswith('.cs'))
+    base = os.path.join(ROOT, folder)
+    files = sorted(os.path.relpath(os.path.join(d, f), base).replace(os.sep, '/') for d, _, fs in os.walk(base) for f in fs if f.endswith('.cs'))
     parsed = [(f, *parse(os.path.join(ROOT, folder, f))) for f in files]
     count = sum(len(t) for *_, t in parsed)
     totals.append((title, count, folder))

@@ -109,6 +109,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             UIAnimProperty.TextReveal => new Color32(171, 207, 92, 255),
             UIAnimProperty.CharScale or UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => new Color32(77, 182, 172, 255),
             UIAnimProperty.CharColor or UIAnimProperty.CharAlpha => new Color32(240, 98, 146, 255),
+            _ when UIAnimExternalProperties.TryGet(property, out var external) => external.trackColor,
             _ => Color.gray,
         };
 
@@ -138,6 +139,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             UIAnimProperty.CharRotation => "Char Rotation",
             UIAnimProperty.CharColor => "Char Color",
             UIAnimProperty.CharAlpha => "Char Alpha",
+            _ when UIAnimExternalProperties.TryGet(property, out var external) => external.name,
             _ => property.ToString(),
         };
 

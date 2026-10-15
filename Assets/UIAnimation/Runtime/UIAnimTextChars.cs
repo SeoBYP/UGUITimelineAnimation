@@ -110,16 +110,27 @@ namespace SeoBYP.TimelineAnimation
             Touched.Clear();
         }
 
+        // The text's own geometry (before our transforms), per sub-mesh: rebuilt only when TMP has to lay the text out again.
+        Vector3[][] _baseVertices = new Vector3[0][];
+        Color32[][] _baseColors = new Color32[0][];
+
         void Flush()
         {
             _touched = false;
             if (_text == null) return;
 
-            // Fresh geometry every frame: respects maxVisibleCharacters (reveal) and text changes,
-            // and means the per-character transforms never stack up across frames.
-            // ponytail: one mesh rebuild per animated text per frame; cache base vertices if many texts animate at once
-            _text.ForceMeshUpdate();
+            // Laying the text out (ForceMeshUpdate) is the expensive part, so it happens only when something TMP lays out
+            // changed (text, reveal, size, color, rect …: havePropertiesChanged) or the geometry is not cached yet.
+            // Otherwise the cached base geometry is copied back and the per-character transforms applied to it, so they
+            // never stack up across frames.
             var info = _text.textInfo;
+            if (_text.havePropertiesChanged || !Cached(info))
+            {
+                _text.ForceMeshUpdate();
+                info = _text.textInfo;
+                Remember(info);
+            }
+            else Restore(info);
 
             for (var i = 0; i < info.characterCount && i < _scale.Length; i++)
             {
@@ -145,6 +156,45 @@ namespace SeoBYP.TimelineAnimation
                 }
             }
             _text.UpdateVertexData(TMP_VertexDataUpdateFlags.Vertices | TMP_VertexDataUpdateFlags.Colors32);
+        }
+
+        bool Cached(TMP_TextInfo info)
+        {
+            if (info == null || info.meshInfo == null || _baseVertices.Length != info.meshInfo.Length) return false;
+            for (var m = 0; m < info.meshInfo.Length; m++)
+                if (info.meshInfo[m].vertices == null || _baseVertices[m] == null || _baseVertices[m].Length != info.meshInfo[m].vertices.Length) return false;
+            return true;
+        }
+
+        void Remember(TMP_TextInfo info)
+        {
+            if (_baseVertices.Length != info.meshInfo.Length)
+            {
+                _baseVertices = new Vector3[info.meshInfo.Length][];
+                _baseColors = new Color32[info.meshInfo.Length][];
+            }
+            for (var m = 0; m < info.meshInfo.Length; m++)
+            {
+                var mesh = info.meshInfo[m];
+                if (mesh.vertices == null) continue;
+                if (_baseVertices[m] == null || _baseVertices[m].Length != mesh.vertices.Length)
+                {
+                    _baseVertices[m] = new Vector3[mesh.vertices.Length];
+                    _baseColors[m] = new Color32[mesh.colors32.Length];
+                }
+                System.Array.Copy(mesh.vertices, _baseVertices[m], mesh.vertices.Length);
+                System.Array.Copy(mesh.colors32, _baseColors[m], mesh.colors32.Length);
+            }
+        }
+
+        void Restore(TMP_TextInfo info)
+        {
+            for (var m = 0; m < info.meshInfo.Length; m++)
+            {
+                var mesh = info.meshInfo[m];
+                System.Array.Copy(_baseVertices[m], mesh.vertices, _baseVertices[m].Length);
+                System.Array.Copy(_baseColors[m], mesh.colors32, _baseColors[m].Length);
+            }
         }
     }
 }

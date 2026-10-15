@@ -1,0 +1,25 @@
+{
+    "name": "SeoBYP.TimelineAnimation.UIEffect",
+    "rootNamespace": "SeoBYP.TimelineAnimation",
+    "references": [
+        "SeoBYP.TimelineAnimation",
+        "Coffee.UIEffect"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UIANIM_UIEFFECT"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.coffee.ui-effect",
+            "expression": "5.0.0",
+            "define": "UIANIM_UIEFFECT"
+        }
+    ],
+    "noEngineReferences": false
+}
