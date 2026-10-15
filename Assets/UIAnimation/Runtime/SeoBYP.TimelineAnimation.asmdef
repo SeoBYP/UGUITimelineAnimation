@@ -5,14 +5,21 @@
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "UniTask",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "Unity.Burst"
     ],
+    "allowUnsafeCode": true,
     "autoReferenced": true,
     "versionDefines": [
         {
             "name": "com.cysharp.unitask",
             "expression": "2.0.0",
             "define": "UIANIM_UNITASK"
+        },
+        {
+            "name": "com.cysharp.r3",
+            "expression": "1.0.0",
+            "define": "UIANIM_R3"
         }
     ]
 }

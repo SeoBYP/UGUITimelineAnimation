@@ -1,0 +1,29 @@
+{
+    "name": "SeoBYP.TimelineAnimation.Tests.R3",
+    "rootNamespace": "SeoBYP.TimelineAnimation.Tests",
+    "references": [
+        "SeoBYP.TimelineAnimation",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "R3.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "UIANIM_R3"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.cysharp.r3",
+            "expression": "1.0.0",
+            "define": "UIANIM_R3"
+        }
+    ]
+}

@@ -1,6 +1,6 @@
 # 참고 샘플 재현 계획 — UnityScreenNavigator · Unity-AnimationUI
 
-> 작성: 2026-10-15 · 상태: **A~E, F3, G 완료 — PR #13(A~D, 샘플 재구성, RPG 1차), PR #14(E, F3, G) 머지. 남은 것: F1 UniTask·F2 R3 샘플** · 기준 `main` 2b7cc83 (PR #14 머지 시점)
+> 작성: 2026-10-15 · 상태: **A~E, F3, G 완료 — PR #13(A~D, 샘플 재구성, RPG 1차), PR #14(E, F3, G) 머지. F1 UniTask·F2 R3는 연동 브랜치와 함께 완료** · 기준 `main` 2b7cc83 (PR #14 머지 시점)
 > 설계 문서: [`UIAnimation-Design.md`](UIAnimation-Design.md)
 
 ## 1. 목적
@@ -175,6 +175,7 @@ USN은 화면 전환 프레임워크입니다.
 | 샘플 재구성 | ✅ PR #13 | 원본 재현(AnimationUI·ScreenNavigator)은 **참고·비교용**으로 `Assets/Reference/`에 둠(패키지 밖, 테스트도 `Assets/Reference/Tests`). 패키지에 들어갈 샘플은 **Showcase**: 원본에 없는 화면(하단 탭 인디케이터, 상점 → 상세 공유 요소, 보상 상자, 레벨업, 토스트) × 테마 3종(Casual·SciFi·Fantasy, 코드는 같고 상태만 다름). 공유 요소 키 채우기는 패키지 `UIAnimSharedElement`로. 초상화 뷰어가 돌아올 때 크기가 튀던 문제 수정(시트 초상화를 영역에 맞춤) |
 | RPG 샘플 1차 | ✅ PR #13 | Showcase(테마 3종)를 판타지 RPG 하나로 바꿈. 화면 목록 26개 중 1차 9개: 로비·배너, 영웅 목록·상세, 가방, 소환, 스테이지 선택, 승리·패배, 퀘스트. 아이콘·영웅 얼굴은 game-icons.net(CC BY 3.0, 출처 `Art/CREDITS.md`), 틀·배경·효과는 직접 그림. 패키지 보강: `ResizeItem`이 `Awaitable`을 돌려줌(접힘이 끝난 뒤 데이터 삭제). PlayMode `RpgPlayModeTests` 6개 |
 | E 성능 비교 · F3 UIEffect · G 제작 편의 | ✅ PR #14 | E: 별도 프로젝트 `Benchmarks/`에서 5가지 방식 + 직접 대입 기준, Mono·IL2CPP 릴리스(시간)와 Mono 개발 빌드(GC). 측정 중 글자 효과(3.7배)·재생 경로(자체 비용 절반) 최적화 → [`Performance.md`](Performance.md), 표 [`Benchmarks.md`](Benchmarks.md). F3: UIEffect 14종을 키프레임 트랙으로(`UIAnimExternalProperties` + 설치 시에만 컴파일되는 연동 asmdef). G: [`Authoring-Comparison.md`](Authoring-Comparison.md). F1 UniTask·F2 R3 샘플은 남음 |
+| F1 UniTask · F2 R3 | ✅ | F1: `Samples/UniTask`(WhenAll, 중단 처리, Timeout, 이벤트 대기). F2: `PlayAsObservable`·`EventsAsObservable`·`EventAsObservable` + `Samples/R3`. 오래 유지하는 `integration/unitask`·`integration/r3`·`integration/uieffect` 브랜치에서 라이브러리 설치 상태로 테스트하고, 새 버전·main 변경을 매일 자동 확인([`Branches.md`](Branches.md)) |
 
 **권장 순서**: A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → C3 → C4 → D1 → D2 → D3 → E1 → E2 → F1 → F2 → F3 → G1.
 E1·F1·F2는 다른 작업과 겹치지 않아서 언제든 끼워 넣을 수 있습니다.
