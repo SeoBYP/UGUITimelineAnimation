@@ -122,3 +122,29 @@ jobs:
             ${{ runner.temp }}/*-results.xml
             ${{ runner.temp }}/unity-*.log
           if-no-files-found: ignore
+
+  # integration-watch opens bump/* and sync/* PRs into an integration branch and dispatches this workflow on them.
+  # When the tests pass, the PR merges by itself (or, with no PR, the branch fast-forwards the integration branch), so the integration branches stay current; when they fail, it stays
+  # open to be fixed on its branch.
+  automerge:
+    name: Merge passing integration update
+    needs: editmode
+    if: success() && github.event_name == 'workflow_dispatch' && (startsWith(github.ref_name, 'sync/') || startsWith(github.ref_name, 'bump/'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge into the integration branch
+        run: |
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" --state open --json number -q '.[0].number')
+          if [ -n "$pr" ]; then gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --merge --delete-branch; exit 0; fi
+          # No PR (Actions may not open PRs here): the branch is the integration branch plus one merge, so fast-forward it.
+          lib=${GITHUB_REF_NAME#*/}; lib=${lib%%-*}
+          git push origin "HEAD:refs/heads/integration/$lib"
+          git push origin --delete "$GITHUB_REF_NAME"
