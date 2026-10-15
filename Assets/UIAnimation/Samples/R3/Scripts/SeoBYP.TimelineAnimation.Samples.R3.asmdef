@@ -1,0 +1,21 @@
+{
+    "name": "SeoBYP.TimelineAnimation.Samples.R3",
+    "rootNamespace": "",
+    "references": [
+        "SeoBYP.TimelineAnimation",
+        "R3.Unity",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UIANIM_R3"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.cysharp.r3",
+            "expression": "1.0.0",
+            "define": "UIANIM_R3"
+        }
+    ]
+}

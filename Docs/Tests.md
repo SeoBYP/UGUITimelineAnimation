@@ -6,12 +6,12 @@
 
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
-| EditMode (패키지) | 135 | `Assets/UIAnimation/Tests/Editor` |
-| PlayMode (패키지) | 33 | `Assets/UIAnimation/Tests/PlayMode` |
+| EditMode (패키지) | 138 | `Assets/UIAnimation/Tests/Editor` |
+| PlayMode (패키지) | 39 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
 | PlayMode (개발용 캡처) | 2 | `Assets/Dev/Tests` |
 
-## EditMode (패키지) — 135개
+## EditMode (패키지) — 138개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.Editor` · CI에서 실행
 
@@ -80,6 +80,14 @@ Scroll animations made from nothing the way a user does: the list's (or indicato
 
 1. 휠 피커 줄을 에디터로 처음부터 만들면 가운데만 똑바로 선다
 2. 페이지 점의 On Off를 에디터로 만들면 현재 페이지 점이 커진다
+
+### `UIAnimBatchTests` (3개) — `Assets/UIAnimation/Tests/Editor/UIAnimBatchTests.cs`
+
+Burst batch (UIAnimBatch): the values it computes for a frame are the ones UIAnimTrack.Sample gives, and Step writes them.
+
+1. 배치 값은 관리 코드 샘플과 같다
+2. 역재생과 반복도 같은 시간을 계산한다
+3. Step은 배치 값을 쓰고 다시 재생하면 자리를 재사용한다
 
 ### `UIAnimEaseTests` (3개) — `Assets/UIAnimation/Tests/Editor/UIAnimEaseTests.cs`
 
@@ -219,7 +227,7 @@ UIEffect values as keyframe tracks (compiled only when UIEffect is installed).
 1. UIEffect 값을 키프레임 트랙으로 움직인다
 2. UIEffect가 있는 오브젝트는 트랙 고르기에 14가지가 나온다
 
-## PlayMode (패키지) — 33개
+## PlayMode (패키지) — 39개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.PlayMode` · CI에서 실행
 
@@ -234,6 +242,21 @@ PlayAsync on the real player loop: the animation timer drives the state and the 
 5. 비활성화와 토큰 취소는 대기를 취소한다
 6. 이벤트를 기다릴 수 있다
 7. UniTask 연동 PlayUniTaskAsync는 WhenAll로 묶을 수 있다
+
+### `R3PlayModeTests` (4개) — `Assets/UIAnimation/Tests/PlayMode/R3/R3PlayModeTests.cs`
+
+R3 integration (compiled only when R3 is installed): states and animation events as Observables.
+
+1. PlayAsObservable은 끝나면 한 번 내보내고 완료된다
+2. 구독을 끊으면 그 자리에서 멈춘다
+3. 다른 상태가 가져가면 오류로 완료된다
+4. 이벤트를 Observable로 받는다
+
+### `R3SamplePlayModeTests` (1개) — `Assets/UIAnimation/Tests/PlayMode/R3/R3SamplePlayModeTests.cs`
+
+The R3 sample scene (Samples/R3): button streams → states, animation events → log.
+
+1. Open 연타는 한 번만 재생되고 이벤트와 끝이 로그에 남는다
 
 ### `RpgPlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPlayModeTests.cs`
 
@@ -280,6 +303,12 @@ The Scroll sample in real Play mode: a pager of 18 pages, one scroll form each (
 Removing one item from the middle of a list (a claimed quest): fold it with ResizeItem (awaitable), then RemoveItem. The rows below keep their objects and only move up; rows that come into view meanwhile get no Appear.
 
 1. 가운데 줄을 접고 지우면 아래 줄은 그대로 올라오고 등장 연출이 없다
+
+### `UniTaskSamplePlayModeTests` (1개) — `Assets/UIAnimation/Tests/PlayMode/UniTaskSamplePlayModeTests.cs`
+
+The UniTask sample scene (Samples/UniTask), compiled only when UniTask is installed.
+
+1. WhenAll Timeout 이벤트 대기가 로그대로 동작한다
 
 ## PlayMode (참고 데모, 패키지 밖) — 9개
 
