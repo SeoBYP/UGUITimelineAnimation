@@ -5,11 +5,11 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The lobby: player info and currencies on top, the main hero breathing (a looping state played on enable), an event banner that turns by
-/// itself (scroll list: loop + one per swipe + auto scroll, with dots), the menu to the other screens, and the side buttons (shop, mail, attendance).
+/// itself (scroll list: loop + one per swipe + auto scroll, with dots), the menu to the other screens, and the side buttons (shop, mail, attendance; guild, ranking, story; settings).
 /// </summary>
 public sealed class RpgLobby : MonoBehaviour
 {
-    public Button heroes, bag, summon, adventure, quests, shop, mail, attendance;
+    public Button heroes, bag, summon, adventure, quests, shop, mail, attendance, guild, ranking, story, settings;
     public UIAnimScrollList banners;
 
     static readonly (string title, string text, string icon)[] Events =
@@ -30,6 +30,10 @@ public sealed class RpgLobby : MonoBehaviour
         shop.onClick.AddListener(() => demo.Open(demo.shop));
         mail.onClick.AddListener(() => demo.Open(demo.mail));
         attendance.onClick.AddListener(demo.OpenAttendance);
+        guild.onClick.AddListener(() => demo.Open(demo.guild));
+        ranking.onClick.AddListener(() => demo.Open(demo.ranking));
+        story.onClick.AddListener(() => demo.Open(demo.story));
+        settings.onClick.AddListener(demo.OpenSettings);
         banners.SetData(Events, (RpgRow row, (string title, string text, string icon) e, int _) =>
         {
             row.title.text = e.title;

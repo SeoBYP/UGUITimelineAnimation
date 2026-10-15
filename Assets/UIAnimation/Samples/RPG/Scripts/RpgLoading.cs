@@ -1,3 +1,4 @@
+using System;
 using SeoBYP.TimelineAnimation;
 using TMPro;
 using UnityEngine;
@@ -13,13 +14,14 @@ public sealed class RpgLoading : MonoBehaviour, IUIAnimScreenLifecycle
 
     public Awaitable WillEnter(UIAnimTransition t)
     {
-        tip.text = RpgData.Tips[Random.Range(0, RpgData.Tips.Length)];
+        tip.text = RpgData.Tips[UnityEngine.Random.Range(0, RpgData.Tips.Length)];
         return UIAnimScreen.Completed();
     }
 
     public async void DidEnter(UIAnimTransition t)
     {
-        await GetComponent<UIAnimation>().PlayAsync("Progress");
+        try { await GetComponent<UIAnimation>().PlayAsync("Progress"); }
+        catch (OperationCanceledException) { return; }
         RpgDemo.Instance.EnterLobby();
     }
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using SeoBYP.TimelineAnimation;
 using TMPro;
@@ -70,7 +71,11 @@ public sealed class RpgMailPage : MonoBehaviour
     {
         var index = _mails.IndexOf(mail);
         var item = list.GetItem(index);
-        if (item != null) await item.GetComponent<UIAnimation>().PlayAsync("Claim");
+        if (item != null)
+        {
+            try { await item.GetComponent<UIAnimation>().PlayAsync("Claim"); }
+            catch (OperationCanceledException) { }   // the row was reused or the page closed: pay anyway
+        }
         RpgDemo.Instance.Add(gold: mail.gold, gems: mail.gems, stamina: mail.stamina);
         await list.ResizeItem(index, 0f, foldSeconds);
         _mails.RemoveAt(index);

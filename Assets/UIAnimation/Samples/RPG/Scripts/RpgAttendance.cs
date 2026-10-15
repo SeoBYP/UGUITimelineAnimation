@@ -1,3 +1,4 @@
+using System;
 using SeoBYP.TimelineAnimation;
 using TMPro;
 using UnityEngine;
@@ -45,7 +46,8 @@ public sealed class RpgAttendance : MonoBehaviour, IUIAnimScreenLifecycle
         claim.interactable = false;
         today.Stop("Today");
         today.Sample("Today", 0f);
-        await today.PlayAsync("Stamp");
+        try { await today.PlayAsync("Stamp"); }
+        catch (OperationCanceledException) { return; }   // closed before the stamp landed
         demo.ClaimAttendance();
     }
 }

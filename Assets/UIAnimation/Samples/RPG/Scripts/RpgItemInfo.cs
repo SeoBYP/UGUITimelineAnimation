@@ -18,7 +18,7 @@ public sealed class RpgItemInfo : MonoBehaviour, IUIAnimScreenLifecycle
     void Awake()
     {
         close.onClick.AddListener(() => RpgDemo.Instance.Back());
-        use.onClick.AddListener(() => RpgDemo.Instance.Back());
+        use.onClick.AddListener(() => RpgDemo.Instance.AskQuantity());
     }
 
     public Awaitable WillEnter(UIAnimTransition t)
@@ -33,7 +33,7 @@ public sealed class RpgItemInfo : MonoBehaviour, IUIAnimScreenLifecycle
         rarity.text = item.rarity.ToString().ToUpperInvariant();
         rarity.color = color;
         description.text = item.text;
-        count.text = "Owned: " + item.count;
+        count.text = "Owned: " + demo.Owned(item);
         UIAnimSharedElement.SetPartnerKeys(GetComponent<UIAnimation>(), "Enter", icon.rectTransform, demo.SelectedIcon, atStart: true);
         _slotIcon.enabled = false;
         return UIAnimScreen.Completed();
