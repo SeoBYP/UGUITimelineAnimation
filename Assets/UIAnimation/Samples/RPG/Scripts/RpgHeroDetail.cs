@@ -14,6 +14,7 @@ public sealed class RpgHeroDetail : MonoBehaviour, IUIAnimScreenLifecycle
     public TMP_Text heroName, role, level;
     public GameObject[] stars;
     public UIAnimScrollList list;
+    public Button upgrade;
 
     RectTransform _card;
     RpgData.Hero _hero;
@@ -26,21 +27,26 @@ public sealed class RpgHeroDetail : MonoBehaviour, IUIAnimScreenLifecycle
 
     void Awake()
     {
+        upgrade.onClick.AddListener(() => RpgDemo.Instance.Open(RpgDemo.Instance.upgrade));
         list.prefabOf = PrefabOf;
         list.sizeOf = i => PrefabOf(i) switch { HeaderPrefab => 70f, StatPrefab => 92f, SkillPrefab => 120f, _ => 200f };
     }
 
     public Awaitable WillEnter(UIAnimTransition t)
     {
-        if (t.Kind != UIAnimTransitionKind.Push) return UIAnimScreen.Completed();
         var demo = RpgDemo.Instance;
+        if (t.Kind != UIAnimTransitionKind.Push)
+        {
+            level.text = "Lv. " + demo.Level(demo.SelectedHero);   // back from the upgrade page
+            return UIAnimScreen.Completed();
+        }
         _hero = RpgData.Heroes[demo.SelectedHero];
         _card = demo.SelectedPortrait;
         portrait.sprite = demo.Sprite(_hero.id);
         weapon.sprite = demo.Sprite(_hero.weapon);
         heroName.text = _hero.name;
         role.text = _hero.role.ToUpperInvariant();
-        level.text = "Lv. " + _hero.level;
+        level.text = "Lv. " + demo.Level(demo.SelectedHero);
         for (var i = 0; i < stars.Length; i++) stars[i].SetActive(i < _hero.stars);
         list.SetCount(Rows, (RpgRow row, int i) => Bind(row, i));
 

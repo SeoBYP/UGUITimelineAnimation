@@ -6,12 +6,12 @@
 
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
-| EditMode (패키지) | 138 | `Assets/UIAnimation/Tests/Editor` |
-| PlayMode (패키지) | 39 | `Assets/UIAnimation/Tests/PlayMode` |
+| EditMode (패키지) | 139 | `Assets/UIAnimation/Tests/Editor` |
+| PlayMode (패키지) | 51 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
-| PlayMode (개발용 캡처) | 2 | `Assets/Dev/Tests` |
+| PlayMode (개발용 캡처) | 4 | `Assets/Dev/Tests` |
 
-## EditMode (패키지) — 138개
+## EditMode (패키지) — 139개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.Editor` · CI에서 실행
 
@@ -205,20 +205,21 @@ The scroll forms beyond a plain list: sizes, prefab types, masonry, loop, pages,
 42. 상태 복사본은 참조는 같고 값은 독립적이다
 43. 예전 형식의 이벤트와 사운드는 불러올 때 트랙으로 옮겨진다
 
-### `UIAnimationTextTests` (12개) — `Assets/UIAnimation/Tests/Editor/UIAnimationTextTests.cs`
+### `UIAnimationTextTests` (13개) — `Assets/UIAnimation/Tests/Editor/UIAnimationTextTests.cs`
 
 1. 공개 비율만큼 글자가 보인다
-2. 글자 간격만큼 마지막 글자가 늦어져 길이가 늘어난다
-3. 글자 크기는 각 글자 중심 기준으로 줄었다가 돌아온다
-4. Punch 키는 흔들린 뒤 이전 값으로 돌아온다
-5. 스크램블은 글자 수를 유지하고 끝나면 원문이 된다
-6. 스크램블은 공백을 유지해서 줄바꿈이 바뀌지 않는다
-7. 텍스트를 바꾸고 다시 재생하면 새 글자수로 공개된다
-8. 텍스트를 바꾸고 재생하면 첫 프레임부터 새 텍스트가 숨겨져 있다
-9. 텍스트를 바꾸면 글자 간격으로 늘어나는 길이도 새 글자수로 계산된다
-10. 스크램블 텍스트를 바꾸고 다시 재생하면 새 텍스트로 공개된다
-11. 스크램블 재생 중에 텍스트를 바꾸면 새 텍스트를 덮어쓰지 않는다
-12. CharacterSpacing 트랙은 자간을 움직이고 원래 값으로 돌아온다
+2. 글자 효과 중에 상자가 넓어지면 줄바꿈을 다시 한다
+3. 글자 간격만큼 마지막 글자가 늦어져 길이가 늘어난다
+4. 글자 크기는 각 글자 중심 기준으로 줄었다가 돌아온다
+5. Punch 키는 흔들린 뒤 이전 값으로 돌아온다
+6. 스크램블은 글자 수를 유지하고 끝나면 원문이 된다
+7. 스크램블은 공백을 유지해서 줄바꿈이 바뀌지 않는다
+8. 텍스트를 바꾸고 다시 재생하면 새 글자수로 공개된다
+9. 텍스트를 바꾸고 재생하면 첫 프레임부터 새 텍스트가 숨겨져 있다
+10. 텍스트를 바꾸면 글자 간격으로 늘어나는 길이도 새 글자수로 계산된다
+11. 스크램블 텍스트를 바꾸고 다시 재생하면 새 텍스트로 공개된다
+12. 스크램블 재생 중에 텍스트를 바꾸면 새 텍스트를 덮어쓰지 않는다
+13. CharacterSpacing 트랙은 자간을 움직이고 원래 값으로 돌아온다
 
 ### `UIAnimUIEffectTests` (2개) — `Assets/UIAnimation/Tests/Editor/UIEffect/UIAnimUIEffectTests.cs`
 
@@ -227,7 +228,7 @@ UIEffect values as keyframe tracks (compiled only when UIEffect is installed).
 1. UIEffect 값을 키프레임 트랙으로 움직인다
 2. UIEffect가 있는 오브젝트는 트랙 고르기에 14가지가 나온다
 
-## PlayMode (패키지) — 39개
+## PlayMode (패키지) — 51개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.PlayMode` · CI에서 실행
 
@@ -258,6 +259,28 @@ The R3 sample scene (Samples/R3): button streams → states, animation events �
 
 1. Open 연타는 한 번만 재생되고 이벤트와 끝이 로그에 남는다
 
+### `RpgPhase2PlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPhase2PlayModeTests.cs`
+
+The RPG sample's second set of screens (title, loading, upgrade, shop, formation, mail, attendance) in Play mode.
+
+1. 타이틀은 탭하면 로딩을 거쳐 로비로 가고 기록에 남지 않는다
+2. 강화는 골드를 쓰고 레벨이 오르며 장비가 차례로 들어간다
+3. 상점은 구매 팝업을 거쳐 재화가 바뀌고 다 사면 품절이 찍힌다
+4. 편성은 영웅을 넣고 빼면 전투력이 바뀐다
+5. 우편은 모두 받기로 한 통씩 접히고 빈 안내가 뜬다
+6. 출석은 오늘 칸에 도장을 찍고 보상을 준다
+
+### `RpgPhase3PlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPhase3PlayModeTests.cs`
+
+The RPG sample's third set (settings, confirm, toast, quantity wheel, battle HUD, guild chat, ranking, story) in Play mode.
+
+1. 설정 스위치는 손잡이가 옮겨가고 초기화는 확인 후 토스트로 알린다
+2. 수량 휠을 돌리면 개수가 바뀌고 사용하면 토스트와 보유량이 줄어든다
+3. 전투는 자동 공격과 스킬로 적을 쓰러뜨리고 승리 팝업이 뜬다
+4. 길드 채팅은 빠른 답장을 보내면 내 말풍선과 답장이 붙는다
+5. 랭킹은 단상이 솟고 내 순위로 스크롤하면 그 줄이 빛난다
+6. 스토리는 글자가 타자처럼 나오고 탭하면 한번에 끝나며 마지막에 선택지가 뜬다
+
 ### `RpgPlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPlayModeTests.cs`
 
 The RPG sample (Assets/UIAnimation/Samples/RPG) in Play mode: each screen opens, moves as built, and closes.
@@ -266,7 +289,7 @@ The RPG sample (Assets/UIAnimation/Samples/RPG) in Play mode: each screen opens,
 2. 영웅 초상이 카드에서 상세 자리로 이어지고 뒤로 가면 카드로 돌아간다
 3. 가방은 탭으로 페이지가 넘어가고 아이템 아이콘이 정보 팝업으로 이어진다
 4. 소환 10회는 카드가 떨어지고 모두 앞면으로 뒤집힌다
-5. 모험은 챕터를 고르면 스테이지가 나오고 승리와 패배 결과가 뜬다
+5. 모험은 챕터를 고르고 편성과 전투를 거쳐 승리와 패배 결과가 뜬다
 6. 퀘스트 보상을 받으면 도장이 찍히고 그 줄만 접혀 사라진다
 
 ### `ScreenContainerPlayModeTests` (7개) — `Assets/UIAnimation/Tests/PlayMode/ScreenContainerPlayModeTests.cs`
@@ -333,13 +356,15 @@ The UnityScreenNavigator demo rebuilt with UI Animation (Assets/Reference/Screen
 3. 설정 모달은 커지며 열리고 바꾼 값을 닫을 때 저장하며 잠긴 항목은 확인 모달을 쌓는다
 4. 유닛 정보의 초상화가 뷰어의 위치와 크기로 이어지고 닫으면 돌아간다
 
-## PlayMode (개발용 캡처) — 2개
+## PlayMode (개발용 캡처) — 4개
 
 `UIANIM_CAPTURE=<폴더>`가 있을 때만 실행(없으면 건너뜀) · 프레임을 PNG로 저장
 
-### `RpgCapture` (2개) — `Assets/Dev/Tests/RpgCapture.cs`
+### `RpgCapture` (4개) — `Assets/Dev/Tests/RpgCapture.cs`
 
 Dev-only: plays the RPG sample and saves frames as PNG, to look at the motion without opening the editor. Runs only when UIANIM_CAPTURE is set to an output folder (skipped otherwise, e.g. on CI).
 
 1. CaptureDense
 2. Capture
+3. CapturePhase2
+4. CapturePhase3

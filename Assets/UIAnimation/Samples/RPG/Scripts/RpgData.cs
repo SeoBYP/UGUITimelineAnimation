@@ -106,6 +106,100 @@ public static class RpgData
         Q("ACHIEVEMENTS", "Own a legendary item", 1, 1, "gem", 200), Q("ACHIEVEMENTS", "Defeat the dragon", 0, 1, "gem", 3000),
     };
 
+    // ---------- 2nd set: shop, mail, attendance, loading ----------
+
+    public sealed class Offer
+    {
+        public string icon, name, currency;   // currency: "gold" or "gem" (what it costs)
+        public int price, stock;               // stock: how many times it can be bought (-1 = any)
+        public int gold, gems, stamina;        // what it gives
+    }
+
+    public static List<Offer> Offers() => new()
+    {
+        O("chest", "Hero Chest", "gem", 900, 1, gems: 0, gold: 8000), O("gems", "Handful of Gems", "gold", 6000, 3, gems: 120),
+        O("stamina", "Stamina Pack", "gem", 100, 5, stamina: 30), O("gold_bar", "Gold Bars", "gem", 200, -1, gold: 5000),
+        O("potion_red", "Potion Bundle", "gold", 1500, 10, gold: 0, stamina: 6), O("crystal", "Mana Crystals", "gem", 300, 2, gold: 2500),
+        O("rune", "Rune Pouch", "gold", 2400, 4, gold: 0, gems: 20), O("seal", "Royal Seal", "gem", 2000, 1, gold: 20000),
+    };
+
+    public sealed class Mail
+    {
+        public string from, title, icon;
+        public int gold, gems, stamina;
+    }
+
+    public static List<Mail> Mails() => new()
+    {
+        M("Guild Master", "Welcome to the guild!", "gem", gems: 300), M("Royal Court", "Maintenance compensation", "gold", gold: 5000),
+        M("Event Team", "Summon Festival bonus", "gem", gems: 150), M("Innkeeper", "A warm meal", "stamina", stamina: 30),
+        M("Royal Court", "Daily login (Day 4)", "gold", gold: 2000), M("Merlin", "Found this in the library", "gem", gems: 80),
+    };
+
+    /// <summary>Attendance rewards, day 1–7 (icon, amount). The 7th is the big one.</summary>
+    public static readonly (string icon, int amount)[] Attendance =
+    {
+        ("gold", 1000), ("stamina", 20), ("gem", 50), ("gold", 3000), ("gem", 100), ("stamina", 40), ("chest", 1),
+    };
+
+    public static readonly string[] Tips =
+    {
+        "Tip: Guardians hold the front row; put them first.",
+        "Tip: Summon Festival doubles legendary rates this week.",
+        "Tip: Clear every stage of a chapter to open the next one.",
+    };
+
+    // ---------- 3rd set: guild chat, ranking, story ----------
+
+    public static readonly (string who, string hero, string text)[] GuildChat =
+    {
+        ("Merlin", "merlin", "Raid starts at nine. Bring potions!"),
+        ("Borg", "borg", "I was born ready."),
+        ("Vex", "vex", "Someone saw the dragon near the Frost Peaks..."),
+        ("Durin", "durin", "Guardians up front, please. Last time was a mess."),
+    };
+
+    /// <summary>Quick replies the player can send, and what a guild member answers to each.</summary>
+    public static readonly (string mine, string who, string hero, string answer)[] QuickChat =
+    {
+        ("On my way!", "Merlin", "merlin", "Good. The portal closes in ten minutes."),
+        ("Need a healer?", "Leon", "leon", "Always. I'll bring the Holy Light."),
+        ("GG everyone", "Borg", "borg", "GG! Same time tomorrow?"),
+    };
+
+    public sealed class Rank
+    {
+        public string name, hero;
+        public int score;
+        public bool me;
+    }
+
+    /// <summary>The weekly ranking, best first; the player is somewhere in the middle.</summary>
+    public static List<Rank> Ranking()
+    {
+        string[] names = { "Shadowfang", "Lumina", "IronWill", "Nightshade", "Ember", "Frostbite", "Valkyr", "Thorn", "Seraph", "Grimm" };
+        string[] heroes = { "vex", "aria", "durin", "merlin", "borg", "leon" };
+        var list = new List<Rank>();
+        for (var i = 0; i < 50; i++)
+            list.Add(new Rank { name = i == 23 ? "COMMANDER" : names[i % names.Length] + (i >= names.Length ? (i / names.Length).ToString() : ""), hero = heroes[i % heroes.Length], score = 98000 - i * 1730 - i * i * 7, me = i == 23 });
+        return list;
+    }
+
+    public static readonly (string who, string hero, bool right, string text)[] Story =
+    {
+        ("Aria", "aria", false, "The forest is too quiet tonight, Commander. Even the owls have fled."),
+        ("Merlin", "merlin", true, "I feel it too. Something old is waking beneath the Ember Caldera."),
+        ("Aria", "aria", false, "Then we march at dawn. Will you lead us?"),
+    };
+
+    public static readonly string[] StoryChoices = { "We march at dawn", "Wait for the guild" };
+
+    static Offer O(string icon, string name, string currency, int price, int stock, int gold = 0, int gems = 0, int stamina = 0) =>
+        new() { icon = icon, name = name, currency = currency, price = price, stock = stock, gold = gold, gems = gems, stamina = stamina };
+
+    static Mail M(string from, string title, string icon, int gold = 0, int gems = 0, int stamina = 0) =>
+        new() { from = from, title = title, icon = icon, gold = gold, gems = gems, stamina = stamina };
+
     public static Color RarityColor(Rarity r) => r switch
     {
         Rarity.Legendary => new Color32(255, 196, 70, 255),
