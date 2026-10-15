@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Quests: one list with section headers that stick to the top (DAILY / WEEKLY / ACHIEVEMENTS). Claiming stamps the
-/// row ("Claim"), pays the reward (the counters count up) and folds the row away (ResizeItem) before it is removed.
+/// row ("Claim"), pays the reward (the counters count up) and folds the row away (ResizeItem) before it is removed (RemoveItem: the rows below just move up).
 /// </summary>
 public sealed class RpgQuestsPage : MonoBehaviour
 {
@@ -55,9 +55,13 @@ public sealed class RpgQuestsPage : MonoBehaviour
         var index = _rows.FindIndex(r => r.quest == quest);
         await list.ResizeItem(index, 0f, foldSeconds);
         _rows.RemoveAt(index);
-        if (index - 1 >= 0 && _rows[index - 1].quest == null && (index >= _rows.Count || _rows[index].quest == null))
-            _rows.RemoveAt(index - 1);   // the section is empty now
-        list.SetCount(_rows.Count);   // keeps the scroll position and rebinds the rows that moved up (no entry again)
+        list.RemoveItem(index);   // the rows below move up as they are
+        if (_rows[index - 1].quest == null && (index >= _rows.Count || _rows[index].quest == null))
+        {
+            await list.ResizeItem(index - 1, 0f, foldSeconds);   // the section is empty now: fold its header too
+            _rows.RemoveAt(index - 1);
+            list.RemoveItem(index - 1);
+        }
         _claiming = false;
     }
 }

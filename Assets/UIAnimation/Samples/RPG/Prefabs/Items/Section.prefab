@@ -52,6 +52,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Show
+    loop: 0
     tracks:
     - target: {fileID: 1633753418258739545}
       property: 15

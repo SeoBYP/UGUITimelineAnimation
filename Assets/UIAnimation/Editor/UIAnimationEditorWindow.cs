@@ -1080,6 +1080,14 @@ namespace SeoBYP.TimelineAnimation.Editor
                 Modify("Rename State", () => state.name = e.newValue);
             });
             info.Add(name);
+            var loop = new Toggle("Loop")
+            {
+                value = state.loop,
+                tooltip = "Plays over and over until stopped or replaced (like an Animator clip's Loop Time): idle motion, a turning wheel, a pulsing badge." + System.Environment.NewLine +
+                          "PlayAsync of a looping state completes only when it is completed or stopped.",
+            };
+            loop.RegisterValueChangedCallback(e => Modify("Edit State", () => state.loop = e.newValue));
+            info.Add(loop);
             info.Add(Hint($"Duration {state.Duration:0.00}s · {state.tracks.Count} track(s)"));
             _inspector.Add(info);
             _inspector.Add(PlayOnSection(state));

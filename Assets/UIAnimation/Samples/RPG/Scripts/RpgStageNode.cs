@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>A stage on the chapter map: cleared (gold, stars), next (pulses), or locked (dim); selected shows a ring.</summary>
+/// <summary>A stage on the chapter map: cleared (gold, stars), next (pulses: a looping state), or locked (dim); selected shows a ring.</summary>
 public sealed class RpgStageNode : MonoBehaviour
 {
     public enum State { Cleared, Next, Locked }
@@ -21,9 +21,13 @@ public sealed class RpgStageNode : MonoBehaviour
         frame.color = state switch { State.Cleared => new Color32(255, 214, 120, 255), State.Next => Color.white, _ => new Color32(110, 100, 96, 255) };
         stars.SetActive(state == State.Cleared);
         GetComponent<Button>().interactable = state != State.Locked;
-        var repeat = GetComponent<RpgRepeat>();
-        repeat.enabled = state == State.Next;
-        if (state != State.Next) GetComponent<UIAnimation>().Sample("Pulse", 0f);
+        var anim = GetComponent<UIAnimation>();   // "Pulse" loops (state Loop)
+        if (state == State.Next) anim.Play("Pulse");
+        else
+        {
+            anim.Stop("Pulse");
+            anim.Sample("Pulse", 0f);
+        }
     }
 
     public void Select(bool on) => ring.SetActive(on);

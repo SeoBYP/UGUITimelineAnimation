@@ -341,6 +341,7 @@ public sealed class UIAnimation : MonoBehaviour
                                        CancellationToken cancellationToken = default);
     public void PlayStateReversed(string stateName);   // UnityEvent 연결용 (Back 버튼)
     public void Complete(string stateName);   // 재생 중인 상태를 끝으로 건너뛰기 (역재생이면 시작 모습)
+    public void Stop(string stateName);       // 그 자리에서 멈춤 (반복 상태를 끌 때). 기다리던 PlayAsync는 취소
     public bool IsPlaying(string stateName);
     public void PlayState(string stateName);  // UnityEvent 연결용
     public void Sample(string stateName, float time);   // 재생하지 않고 그 시간의 모습만 (이벤트·사운드 없음)
@@ -349,6 +350,8 @@ public sealed class UIAnimation : MonoBehaviour
 ```
 
 **역재생** — 값은 끝에서 시작으로, 이벤트·사운드·자식 호출도 거꾸로 한 번씩 발생합니다(자식 상태도 역재생). 시작 값이 "현재 값"인 트랙은 마지막 정방향 재생이 잡은 값을 다시 써서, Back이 Open을 시작한 자리로 정확히 돌아갑니다. 이징 곡선은 시간을 거꾸로 따라가므로 뒤집힌 모양이 됩니다.
+
+**반복 (상태의 Loop)** — Animator 클립의 Loop Time과 같은 개념입니다. 상태 인스펙터의 **Loop** 토글을 켜면, 끝에 닿았을 때 남은 시간을 넘겨 0초부터 이어서 재생해 이음매가 없습니다. 이벤트·사운드·자식 호출은 바퀴마다 다시 울리고, 역재생 반복도 됩니다. `Stop`이나 다른 상태가 속성을 가져갈 때까지 계속되므로, 반복 상태의 `PlayAsync`는 `Complete`/`Stop` 전에는 끝나지 않습니다. 켜질 때 바로 돌게 하려면 Play On에 On Enable을 고릅니다(코드 불필요). 창의 미리보기도 반복합니다. 예: 로비 영웅 숨쉬기, 소환 마법진 회전, 알림 표시 맥박.
 
 **팝업 닫기** — 닫히는 도중 다시 열리면 Destroy하지 않습니다.
 ```csharp
@@ -483,6 +486,7 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | Auto Scroll (s) | 초마다 다음 아이템으로, 드래그 중엔 멈춤 (배너) |
 | Stick To End | 끝을 보고 있을 때 아이템이 늘면 끝 유지 (채팅) |
 | Sticky Header | 이 Prefab 종류는 섹션 헤더. 지나간 헤더가 위에 고정되고 다음 헤더가 밀어 올림 |
+| `RemoveItem(index)` | 데이터 가운데에서 하나를 지운 뒤 호출. 그 아이템만 사라지고 아래 아이템은 오브젝트·연출 상태 그대로 한 칸씩 올라감(다시 바인딩·등장 없음). 끝에서 늘고 줄 때는 `SetCount(count)` |
 | `ResizeItem(index, size, duration)` | 한 아이템 크기를 애니메이션으로 바꾸고 뒤 아이템이 따라 이동 (아코디언). 끝나면 완료되는 `Awaitable`을 돌려줌 → `await list.ResizeItem(i, 0)` 뒤에 데이터에서 지우기 (RPG 퀘스트) |
 | 중첩 | 리스트 축과 다른 방향 드래그는 감싼 `ScrollRect`로 넘김 (페이지 안의 세로 리스트, 세로 리스트 안의 가로 줄) |
 | `ItemShown` / `ItemHidden` | 아이템이 보이게 됨 / 사라짐 이벤트 |
@@ -491,7 +495,7 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | 항목 | 동작 |
 |---|---|
 | Entry State + Stagger | `PlayEntry()`(또는 처음 채울 때)에 보이는 아이템이 Stagger 간격으로 차례로 재생. 기다리는 아이템은 시작 모습, 끝난 뒤 들어오는 아이템은 끝 모습 |
-| Appear State | 스크롤로 새로 보이게 된 아이템에 재생. 처음 채울 때는 재생하지 않음 |
+| Appear State | 스크롤로 새로 보이게 된 아이템에 재생. 처음 채울 때, 그리고 다른 아이템의 크기 변경·삭제(`ResizeItem`, `RemoveItem`)로 화면에 들어온 아이템은 재생하지 않음 (같은 목록이 올라오는 것일 뿐이라 흔들려 보이지 않게) |
 | Scrub State | 아이템의 뷰포트 안 위치(0 = 시작 가장자리, 0.5 = 가운데, 1 = 끝)를 상태 시간으로 씀(`UIAnimation.Sample`). 캐러셀 확대, 휠 피커 기울기, 페이지 패럴랙스 |
 
 - 재사용되는 오브젝트는 이전 인덱스의 애니메이션 모습이 남아 있을 수 있어서, 보이게 될 때 진입 끝 모습으로 맞춘 뒤 등장 상태를 재생합니다.
@@ -523,7 +527,7 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | `Scroll` | 페이지 18장(`Prefabs/Scroll/Pages`), 아이템 13종(`Prefabs/Scroll/Items`) | 스크롤 형태 18가지를 한 장씩 넘겨 봄(한 장씩 넘기기 + 점 + Prev/Next, 페이지 위 세로 리스트에서 가로로 밀어도 넘어감). 위쪽 도구 막대: 현재 페이지의 아이템 수 슬라이더(0~200), Add / Remove, **Edit Animation**(그 페이지의 상태를 UI Animation Editor로 엶, Play 모드에서도 됨). 아래 표 참고 | — |
 | `Reference/AnimationUI/Scenes/Home`, `Level1` (참고용) | 원본 씬 그대로 + UIAnimation | [Unity-AnimationUI](https://github.com/DhafinFawwaz/Unity-AnimationUI) 데모 재현: 메뉴 → Settings/Upgrade(Back = 역재생), Start(카메라 줌·줄무늬·씬 전환), Level1(박스 등장·Win/Lose). 원본 연출 수치는 원본 씬 YAML에서 추출(`Data/AnimationUI-Demo.json`), 빌더 `AnimationUISampleBuilder` | Unity-AnimationUI Demo |
 | `Reference/ScreenNavigator/Scenes/ScreenNavigatorDemo` (참고용) | 원본 Prefab 8개 그대로(GUID 유지) + UIAnimScreen | [UnityScreenNavigator](https://github.com/Haruma-K/UnityScreenNavigator) 데모 재현(D1·D2): Top → Loading(기록 안 남음) → Home(1초 준비) → Shop(탭 3개 시트 슬라이드, 구매 → Connecting) → 뒤로. 전환은 원본 Timeline·SimpleTransition 수치(원본 파일에서 추출). 일러스트·GUI 그림은 같은 크기·같은 GUID의 **대체 그림**. 모달(D3): Settings(값 저장)·Confirmation·유닛 정보(랭크 탭 시트)·초상화 뷰어(**공유 요소 전환**: 유닛 정보의 초상화 영역 위치·크기 ↔ 뷰어 자리, `Enter`/`Exit` 상태의 상대 쪽 키만 실행 중 채움) | UnityScreenNavigator Demo |
-| **`UIAnimation/Samples/RPG/Scenes/RPG`** (패키지 샘플) | 판타지 RPG 1차 화면: 로비, 영웅 목록·상세, 가방, 소환, 모험, 퀘스트 + 팝업(아이템 정보, 소환 결과, 승리, 패배). 빌더 `Assets/Dev/Editor/RpgSampleBuilder`, 그림 `Tools/rpg_art.py`(틀·배경·효과는 직접 그림, 아이콘·영웅 얼굴은 game-icons.net CC BY 3.0 → `Art/CREDITS.md`), 폰트 Passion One(OFL) | 로비: 등장(패널·재화·영웅·메뉴 순차), 영웅 숨쉬기·퀘스트 배지 반복(`RpgRepeat`), 이벤트 배너(루프 + 한 장씩 + 자동 넘김 + 점, Parallax). 영웅: 그리드 순차 등장·정렬 재생, 카드 → 상세 **공유 요소**(페이지 PushEnter/PopExit), 상세 목록(줄 등장·능력치 바 채우기), 스크롤하면 제목 영역 접힘(`UIAnimScrollScrub`). 가방: 탭(`UIAnimPageIndicator`) + 한 장씩 넘기는 페이지 안의 그리드(중첩), 슬롯 → 정보 팝업 공유 요소. 소환: 마법진 회전, x1/x10(젬 부족이면 버튼 흔들림), 결과(섬광 → 카드 순차 낙하 → 한 장씩 뒤집기, 4★ 보라 빛, 5★ 흔들림·빛줄기·Punch). 모험: 챕터 캐러셀(Focus), 챕터마다 스테이지 순차 등장·다음 스테이지 맥박, 승리(글자·별 3개·보상·경험치 바)/패배(붉은 화면·해골 흔들림·글자 낙하·팁 타자기). 퀘스트: 섹션 헤더 고정(Sticky), 받기 → 도장·흔들림 → 재화 카운트업 → 그 줄 접힘(`await ResizeItem`) | — (원본 없음) |
+| **`UIAnimation/Samples/RPG/Scenes/RPG`** (패키지 샘플) | 판타지 RPG 1차 화면: 로비, 영웅 목록·상세, 가방, 소환, 모험, 퀘스트 + 팝업(아이템 정보, 소환 결과, 승리, 패배). 빌더 `Assets/Dev/Editor/RpgSampleBuilder`, 그림 `Tools/rpg_art.py`(틀·배경·효과는 직접 그림, 아이콘·영웅 얼굴은 game-icons.net CC BY 3.0 → `Art/CREDITS.md`), 폰트 Passion One(OFL) | 로비: 등장(패널·재화·영웅·메뉴 순차), 영웅 숨쉬기·퀘스트 배지 반복(상태 Loop + Play On: On Enable), 이벤트 배너(루프 + 한 장씩 + 자동 넘김 + 점, Parallax). 영웅: 그리드 순차 등장·정렬 재생, 카드 → 상세 **공유 요소**(페이지 PushEnter/PopExit), 상세 목록(줄 등장·능력치 바 채우기), 스크롤하면 제목 영역 접힘(`UIAnimScrollScrub`). 가방: 탭(`UIAnimPageIndicator`) + 한 장씩 넘기는 페이지 안의 그리드(중첩), 슬롯 → 정보 팝업 공유 요소. 소환: 마법진 회전, x1/x10(젬 부족이면 버튼 흔들림), 결과(섬광 → 카드 순차 낙하 → 한 장씩 뒤집기, 4★ 보라 빛, 5★ 흔들림·빛줄기·Punch). 모험: 챕터 캐러셀(Focus), 챕터마다 스테이지 순차 등장·다음 스테이지 맥박, 승리(글자·별 3개·보상·경험치 바)/패배(붉은 화면·해골 흔들림·글자 낙하·팁 타자기). 퀘스트: 섹션 헤더 고정(Sticky), 받기 → 도장·흔들림 → 재화 카운트업 → 그 줄 접힘(`await ResizeItem`) | — (원본 없음) |
 | `Popup` | Popup1 (+ 공용 Button1 중첩) | Open(이벤트 `Shown`, 사운드, 닫기 버튼 Hover·Unhover 호출, Hover 2배 빠르게 오버라이드)/Close. `PopupSample`이 코드로 Open/Close 후 Destroy | — |
 
 Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일 때 데이터를 채움):
@@ -558,7 +562,9 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 
 ## 11. 테스트와 CI
 
-### 11.1 EditMode 테스트 (129개, 메서드 이름은 한국어)
+### 11.1 EditMode 테스트 (133개, 메서드 이름은 한국어)
+
+전체 목록: [`Tests.md`](Tests.md) (`python Tools/list_tests.py`로 테스트 코드에서 생성). `UIAnimLoopTests`(4개): 반복이 끝에서 처음으로 이어짐, 바퀴마다 이벤트, 역재생 반복, Stop.
 | 파일 | 개수 | 다루는 것 |
 |---|---|---|
 | `UIAnimationTests.cs` | 43 | 키 보간, 시작 값(현재 값·지연·누른 위치), 원래 값 기준, 속성 인계, 완료 대기·취소, 이벤트·struct 데이터, 사운드, 자식 호출, 오버라이드 해석, 예전 데이터 변환 |
@@ -575,7 +581,9 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 | `PerformanceTests.cs` | 4 | 성능 측정(버튼 100개, 텍스트 10개 상태별, 무거운 스크롤 형태)과 측정 도구 검증. 결과는 테스트 로그, 할당 없어야 하는 경로는 검사 |
 | `ScrollEditorWorkflowTests.cs` | 2 | **실제 에디터 창**: Create → 트랙 추가 → 키 입력으로 휠 피커 줄(Rotation)과 페이지 점(On/Off)을 처음부터 만들고 리스트에서 동작 확인 |
 
-### 11.2 PlayMode 테스트 (패키지 32개 + 참고 데모 9개, UniTask 없으면 1개 적음)
+### 11.2 PlayMode 테스트 (패키지 33개 + 참고 데모 9개, UniTask 없으면 1개 적음)
+
+`ScrollRemoveItemPlayModeTests`(1개): 가운데 줄을 `await ResizeItem`으로 접고 `RemoveItem` → 아래 줄은 같은 오브젝트로 한 칸 위, 다시 바인딩·등장 연출 없음, 접힘 크기 기록 안 남음.
 **`ScreenContainerPlayModeTests`** (7개): 페이지 Push/Pop(화면 폭 슬라이드·입력 잠금·파괴), `stack: false`, `renderingOrder`, 생명주기 순서와 Will 대기(측정: Push 0.60초 = Will 0.3 + 전환 0.3), 화면 상태가 기본을 대신함, 모달+배경, 시트 Enter/EnterBackward.
 
 **`RpgPlayModeTests`** (6개): 로비 메뉴 5개 열고 닫기(로비 크기 복귀); 영웅 공유 요소(카드 초상 크기 근처 → 460×598, 제목 영역 240 → 스크롤하면 120, 뒤로 갈 때 마지막 프레임이 카드 자리 8px 이내); 가방 탭 3 → 첫 슬롯 Royal Seal, 아이콘 280, 닫으면 슬롯 아이콘 복귀; 소환 x10 카드 10장 모두 앞면·4★ 이상 보장·젬 3,800 → 800; 모험 챕터 3 선택(다음 스테이지 7, 8 잠김), 승리(별·띠 1100·+450), 보스 패배(스태미나 48/60), 로비로; 퀘스트 받기 → 그 줄만 빠짐(다음 줄 유지), 골드 12,950.
@@ -591,7 +599,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 **`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 129개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 38개 + 개발용 캡처 1개 건너뜀).
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 133개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 42개 + 개발용 캡처 2개 건너뜀).
 - 연출 눈으로 확인(개발용): `UIANIM_CAPTURE=<폴더>`를 주고 PlayMode `RpgCapture`를 돌리면 RPG 샘플 각 화면의 프레임을 PNG로 저장합니다(`Assets/Dev/Tests`, 환경 변수 없으면 건너뜀).
 
 ### 11.3 CI

@@ -392,6 +392,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Parallax
+    loop: 0
     tracks:
     - target: {fileID: 1013987134656533451}
       property: 2

@@ -30,12 +30,16 @@ def vgradient(w, h, top, bottom):
 
 
 # ---------- backgrounds (1920x1080) ----------
+# Translucent shapes go on their own layer and are composited: ImageDraw would write their alpha into the
+# background itself, leaving see-through pixels in what must be an opaque page background.
 def stars(img, count, seed, max_y=1.0):
     rnd = random.Random(seed)
-    d = ImageDraw.Draw(img)
+    layer = Image.new('RGBA', img.size)
+    d = ImageDraw.Draw(layer)
     for _ in range(count):
         x, y, r = rnd.randrange(1920), rnd.randrange(int(1080 * max_y)), rnd.choice([1, 1, 2, 2, 3])
         d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 240, 200, rnd.randrange(90, 230)))
+    img.alpha_composite(layer)
 
 
 def vignette(img, strength=150):
@@ -68,10 +72,12 @@ def bg_lobby():
 
 def bg_hall():   # sub pages: dim stone hall
     img = vgradient(1920, 1080, (44, 32, 30), (20, 14, 14))
-    d = ImageDraw.Draw(img, 'RGBA')
+    lines = Image.new('RGBA', img.size)
+    d = ImageDraw.Draw(lines)
     for x in range(0, 1920, 240):
         d.rectangle([x, 0, x + 6, 1080], fill=(0, 0, 0, 50))
         for y in range(0, 1080, 120): d.rectangle([x, y + (60 if (x // 240) % 2 else 0), x + 240, y + (60 if (x // 240) % 2 else 0) + 4], fill=(0, 0, 0, 40))
+    img.alpha_composite(lines)
     glow = Image.new('RGBA', img.size)
     ImageDraw.Draw(glow).ellipse([360, 80, 1560, 900], fill=(255, 170, 80, 60))
     return vignette(Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(180))), 170)
@@ -92,14 +98,16 @@ def frame(kind):
     w = h = 128 * S - 1
     def rr(inset, r, **k): d.rounded_rectangle([inset * S, inset * S, w - inset * S, h - inset * S], radius=r * S, **k)
     if kind == 'panel':          # parchment with a gold edge
-        rr(0, 18, fill=GOLD); rr(5, 14, fill=GOLD_DARK); rr(8, 12, fill=(242, 226, 190)); rr(14, 8, outline=GOLD + (200,), width=2 * S)
+        rr(0, 18, fill=GOLD); rr(5, 14, fill=GOLD_DARK); rr(8, 12, fill=(242, 226, 190)); rr(14, 8, outline=(230, 190, 112), width=2 * S)   # opaque: gold 80 % over parchment
     elif kind == 'dark':         # dark wood/leather panel
-        rr(0, 18, fill=GOLD); rr(5, 14, fill=(70, 44, 26)); rr(8, 12, fill=(46, 30, 22)); rr(14, 8, outline=GOLD + (120,), width=2 * S)
+        rr(0, 18, fill=GOLD); rr(5, 14, fill=(70, 44, 26)); rr(8, 12, fill=(46, 30, 22)); rr(14, 8, outline=(128, 98, 55), width=2 * S)   # opaque: gold 47 % over the dark fill
     elif kind == 'button':       # gold button
         rr(0, 26, fill=GOLD_DARK)
         top = vgradient(128 * S, 128 * S, (255, 222, 140), (214, 150, 50)); m = big(128, 128); ImageDraw.Draw(m).rounded_rectangle([4 * S, 4 * S, w - 4 * S, h - 10 * S], radius=22 * S, fill=(255, 255, 255, 255))
         img = Image.composite(top, img, m.split()[3]); d = ImageDraw.Draw(img)
-        d.rounded_rectangle([12 * S, 8 * S, w - 12 * S, 40 * S], radius=14 * S, fill=(255, 255, 255, 60))
+        hl = big(128, 128)   # a translucent highlight on its own layer, so the button stays opaque
+        ImageDraw.Draw(hl).rounded_rectangle([12 * S, 8 * S, w - 12 * S, 40 * S], radius=14 * S, fill=(255, 255, 255, 60))
+        img.alpha_composite(hl)
     elif kind == 'button_dark':
         rr(0, 26, fill=GOLD); rr(4, 22, fill=(92, 56, 30)); rr(8, 18, fill=(120, 74, 40))
     elif kind == 'pill':         # resource counters
@@ -153,7 +161,7 @@ def card_back():
     img = vgradient(320, 440, (70, 40, 110), (30, 16, 50)).resize((320 * S, 440 * S))
     d = ImageDraw.Draw(img); w, h = 320 * S, 440 * S
     d.rounded_rectangle([0, 0, w - 1, h - 1], radius=24 * S, outline=GOLD, width=10 * S)
-    d.rounded_rectangle([22 * S, 22 * S, w - 22 * S, h - 22 * S], radius=14 * S, outline=GOLD + (140,), width=3 * S)
+    d.rounded_rectangle([22 * S, 22 * S, w - 22 * S, h - 22 * S], radius=14 * S, outline=(147, 111, 87), width=3 * S)   # opaque: gold 55 % over the purple
     c = (w / 2, h / 2)
     for r in (110, 80): d.ellipse([c[0] - r * S, c[1] - r * S, c[0] + r * S, c[1] + r * S], outline=GOLD, width=4 * S)
     pts = [(c[0] + math.cos(math.radians(-90 + i * 144)) * 80 * S, c[1] + math.sin(math.radians(-90 + i * 144)) * 80 * S) for i in range(5)]
@@ -230,7 +238,10 @@ def hero_portrait(face, card, skin):
 
 if __name__ == '__main__':
     if ICONS is None: sys.exit('usage: python Tools/rpg_art.py <game-icons .../1x1 folder>')
-    for name, fn in [('lobby', bg_lobby), ('hall', bg_hall), ('summon', bg_summon)]: save(fn(), 'Backgrounds', name + '.png')
+    for name, fn in [('lobby', bg_lobby), ('hall', bg_hall), ('summon', bg_summon)]:
+        bg = fn()
+        assert bg.getextrema()[3][0] == 255, name + ' must be opaque'
+        save(bg, 'Backgrounds', name + '.png')
     for kind in ('panel', 'dark', 'button', 'button_dark', 'pill', 'slot', 'card', 'bar', 'header'): save(frame(kind), 'Frames', kind + '.png')
     save(circle_sprite(64, (255, 255, 255, 255)), 'Effects', 'dot.png')
     save(rays(), 'Effects', 'rays.png'); save(glow(), 'Effects', 'glow.png'); save(summon_circle(), 'Effects', 'summon_circle.png'); save(card_back(), 'Effects', 'card_back.png')

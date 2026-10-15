@@ -341,6 +341,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Show
+    loop: 0
     tracks:
     - target: {fileID: 4776060863685434752}
       property: 15
@@ -839,6 +840,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Press
+    loop: 0
     tracks:
     - target: {fileID: 1507727662122585204}
       property: 0
@@ -915,6 +917,7 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Release
+    loop: 0
     tracks:
     - target: {fileID: 1507727662122585204}
       property: 0

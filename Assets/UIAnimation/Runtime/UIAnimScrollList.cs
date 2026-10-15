@@ -356,6 +356,53 @@ namespace SeoBYP.TimelineAnimation
         /// <summary>The list is scrolled to its end (or shows everything).</summary>
         public bool AtEnd => Offset >= MaxOffset - 1f;
 
+        /// <summary>
+        /// One item was removed from the data at <paramref name="index"/>: its object goes, and the items after it move up
+        /// keeping their objects (no rebind, no Appear again). e.g. <c>await list.ResizeItem(i, 0); data.RemoveAt(i); list.RemoveItem(i);</c>
+        /// </summary>
+        public void RemoveItem(int index)
+        {
+            if (index < 0 || index >= _count) return;
+            if (Looping)   // every index repeats in a loop: lay it out again
+            {
+                SetCount(_count - 1);
+                Refresh();
+                return;
+            }
+            _shift.Clear();
+            foreach (var (i, size) in _sizeOverride) if (i != index) _shift[i < index ? i : i - 1] = size;
+            _sizeOverride.Clear();
+            foreach (var (i, size) in _shift) _sizeOverride[i] = size;
+            if (index < _measured.Count) _measured.RemoveAt(index);
+            if (_active.ContainsKey(index)) Release(index);
+            _moved.Clear();
+            foreach (var item in _active.Values)
+                if (item.slot > index) _moved.Add(item);
+            foreach (var item in _moved) _active.Remove(item.slot);
+            foreach (var item in _moved)
+            {
+                item.slot--;
+                item.index--;
+                _active[item.slot] = item;
+            }
+            _count--;
+            RelayoutResized();
+        }
+
+        readonly Dictionary<int, float> _shift = new();
+
+        // Items that come into view because others changed size (not because of a scroll) get no Appear: they are
+        // the same list moving up, e.g. the rows below a folded one.
+        bool _resizing;
+
+        void RelayoutResized()
+        {
+            _resizing = true;
+            try { Relayout(); }
+            finally { _resizing = false; }
+        }
+        readonly List<Item> _moved = new();
+
         // ---------- item size changes (accordion) ----------
 
         /// <summary>
@@ -369,7 +416,7 @@ namespace SeoBYP.TimelineAnimation
             if (duration <= 0f)
             {
                 _sizeOverride[index] = size;
-                Relayout();
+                RelayoutResized();
                 return UIAnimScreen.Completed();
             }
             var resize = new Resize(this, index, from, size, duration);
@@ -395,7 +442,7 @@ namespace SeoBYP.TimelineAnimation
                 if (_list != null)   // not destroyed
                 {
                     _list._sizeOverride[_index] = Mathf.LerpUnclamped(_from, _to, UIAnimEasing.OutCubic(Mathf.Min(1f, t / _duration)));
-                    _list.Relayout();
+                    _list.RelayoutResized();
                 }
                 if (_list != null && t < _duration) return;
                 _done = true;
@@ -880,7 +927,7 @@ namespace SeoBYP.TimelineAnimation
             item.rect.gameObject.SetActive(true);
             Place(item);
             _bind?.Invoke(item);
-            Shown(item, scrolledIn: _filled);
+            Shown(item, scrolledIn: _filled && !_resizing);
         }
 
         void Release(int slot)

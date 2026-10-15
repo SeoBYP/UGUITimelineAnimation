@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The lobby: player info and currencies on top, the main hero breathing (RpgRepeat), an event banner that turns by
+/// The lobby: player info and currencies on top, the main hero breathing (a looping state played on enable), an event banner that turns by
 /// itself (scroll list: loop + one per swipe + auto scroll, with dots), and the menu to the other screens.
 /// </summary>
 public sealed class RpgLobby : MonoBehaviour

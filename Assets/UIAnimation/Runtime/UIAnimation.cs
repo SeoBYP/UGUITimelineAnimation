@@ -361,6 +361,8 @@ namespace SeoBYP.TimelineAnimation
         [ThreadStatic] static int _durationDepth;
 
         public string name = "State";
+        [Tooltip("Plays over and over until stopped or replaced (like an Animator clip's Loop Time): idle motion, a turning wheel, a pulsing badge. PlayAsync of a looping state completes only when it is completed or stopped.")]
+        public bool loop;
         public List<UIAnimTrack> tracks = new();
         public List<UIAnimEventTrack> eventTracks = new();
         public List<UIAnimSoundTrack> soundTracks = new();
@@ -716,6 +718,13 @@ namespace SeoBYP.TimelineAnimation
             return FindPlayback(stateName)?.state.Duration ?? 0f;
         }
 
+        /// <summary>Stops a playing state where it is (e.g. a looping one); a pending PlayAsync is canceled.</summary>
+        public void Stop(string stateName)
+        {
+            var playback = FindPlayback(stateName);
+            if (playback != null && playback.active) Stop(playback);
+        }
+
         /// <summary>Jumps a playing state to its end; a pending PlayAsync completes normally (e.g. skipping a typewriter).</summary>
         public void Complete(string stateName)
         {
@@ -735,6 +744,14 @@ namespace SeoBYP.TimelineAnimation
                 return;
             }
 
+            if (playback.state.loop)
+            {
+                // No end: each lap runs the same resolved values from 0 again, without a gap.
+                playback.handle = UIAnimTimer.Start(float.PositiveInfinity, playback,
+                    static (p, elapsed) => Lap((Playback)p, elapsed));
+                return;
+            }
+
             playback.handle = UIAnimTimer.Start(duration, playback,
                 static (p, elapsed) =>
                 {
@@ -742,6 +759,22 @@ namespace SeoBYP.TimelineAnimation
                     Step(playback, playback.reversed ? playback.state.Duration - elapsed : elapsed);
                 },
                 static p => Finish((Playback)p));
+        }
+
+        // A looping state at elapsed seconds. Passing the end finishes the lap (its remaining events, sounds and child calls)
+        // and starts the next one from the start, so markers at 0 fire again.
+        internal static void Lap(Playback p, float elapsed)
+        {
+            var duration = p.state.Duration;
+            var t = elapsed % duration;
+            if (p.reversed) t = duration - t;
+            var wrapped = p.reversed ? t > p.lastTime : t < p.lastTime;
+            if (wrapped)
+            {
+                RaiseEvents(p, p.reversed ? 0f : duration);
+                p.lastTime = p.reversed ? float.MaxValue : -1f;
+            }
+            Step(p, t);
         }
 
         /// <summary>One frame of a playback: values, then the child calls and animation events passed since the last frame. Internal so tests can drive time.</summary>

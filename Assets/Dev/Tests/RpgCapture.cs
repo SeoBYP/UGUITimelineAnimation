@@ -62,6 +62,54 @@ public sealed class RpgCapture
         yield return Idle();
     }
 
+    // Every frame-ish (30 fps) through the page opens and quest claims, to find jumps between frames.
+    [UnityTest]
+    public IEnumerator CaptureDense()
+    {
+        yield return Setup();
+        yield return new WaitForSeconds(2f);
+        var steps = Enumerable.Range(1, 30).Select(i => i / 30f).ToArray();
+        foreach (var menu in new[] { "HEROES", "BAG", "QUESTS" })
+        {
+            Click(Page, menu + "Button");
+            yield return Snaps("d_" + menu, steps);
+            yield return Idle(0.8f);
+            if (menu == "QUESTS") break;
+            Click(Page, "BackButton");
+            yield return Snaps("d_" + menu + "back", steps);
+            yield return Idle();
+        }
+        for (var claim = 0; claim < 2; claim++)
+        {
+            Page.GetComponentsInChildren<Button>().First(b => b.name == "ClaimButton" && b.interactable).onClick.Invoke();
+            yield return Snaps($"d_claim{claim}", Enumerable.Range(1, 45).Select(i => i / 30f).ToArray());
+            yield return new WaitForSeconds(0.5f);
+        }
+    }
+
+    IEnumerator Setup()
+    {
+        _dir = System.Environment.GetEnvironmentVariable("UIANIM_CAPTURE");
+        if (string.IsNullOrEmpty(_dir)) Assert.Ignore("UIANIM_CAPTURE not set");
+        Directory.CreateDirectory(_dir);
+        LogAssert.ignoreFailingMessages = true;
+#if UNITY_EDITOR
+        yield return UnityEditor.SceneManagement.EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
+#endif
+        _rt = new RenderTexture(1280, 720, 24);
+        _read = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+        _camera = Object.FindAnyObjectByType<Camera>();
+        _camera.targetTexture = _rt;
+        foreach (var canvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+        {
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = _camera;
+            canvas.planeDistance = 10;
+        }
+        _pages = Object.FindAnyObjectByType<UIAnimPageContainer>();
+        _modals = Object.FindAnyObjectByType<UIAnimModalContainer>();
+    }
+
     [UnityTest]
     public IEnumerator Capture()
     {

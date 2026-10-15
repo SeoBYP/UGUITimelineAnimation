@@ -323,6 +323,13 @@ static class RpgSampleBuilder
     static UIAnimTrack Scrub(Component target, UIAnimProperty property, Vector4 edge, Vector4 center) =>
         Keys(target, property, K(0, edge), K(0.5f, center, UIAnimEase.InOutSine), K(1, edge, UIAnimEase.InOutSine));
 
+    // A looping state (state Loop), optionally started by Play On: On Enable — both set in the UI Animation window.
+    static void Loop(Component c, string state, bool playOnEnable)
+    {
+        c.GetComponent<UIAnimation>().states.Find(s => s.name == state).loop = true;
+        if (playOnEnable) Get<UIAnimTrigger>(c).bindings.Add(new UIAnimBinding { evt = UIAnimEvent.OnEnable, state = state });
+    }
+
     static UIAnimState State(string name, params UIAnimTrack[] tracks) => new() { name = name, tracks = tracks.Where(t => t != null).ToList() };
     static UIAnimState State(string name, IEnumerable<UIAnimTrack> tracks) => State(name, tracks.ToArray());
     static void States(GameObject go, params UIAnimState[] states) => go.GetComponent<UIAnimation>().states.AddRange(states);
@@ -584,7 +591,7 @@ static class RpgSampleBuilder
             Keys(heroBody, UIAnimProperty.Scale, K(0, S(1)), K(1.6f, S(1.025f), UIAnimEase.InOutSine), K(3.2f, S(1), UIAnimEase.InOutSine)),
             Keys(heroBody, UIAnimProperty.AnchoredPosition, K(0, V(0, 0)), K(1.6f, V(0, 8), UIAnimEase.InOutSine), K(3.2f, V(0, 0), UIAnimEase.InOutSine)),
             Keys(glow, UIAnimProperty.GraphicAlpha, K(0, A(0.35f)), K(1.6f, A(0.65f), UIAnimEase.InOutSine), K(3.2f, A(0.35f), UIAnimEase.InOutSine))));
-        hero.gameObject.AddComponent<RpgRepeat>().state = "Idle";
+        Loop(hero, "Idle", playOnEnable: true);
 
         // Event banner: loops, one per swipe, turns by itself every 3 s
         var bannerRt = Center("Banners", content, 380, 170, 900, 300);
@@ -622,7 +629,7 @@ static class RpgSampleBuilder
         Text(Fill("Mark", badge), "!", 36, Color.white);
         badge.gameObject.AddComponent<UIAnimation>().states.Add(State("Pulse",
             Keys(badge, UIAnimProperty.Scale, K(0, S(1)), K(0.25f, S(1.3f), UIAnimEase.OutSine), K(0.6f, S(1), UIAnimEase.OutBack), K(1.4f, S(1)))));
-        badge.gameObject.AddComponent<RpgRepeat>().state = "Pulse";
+        Loop(badge, "Pulse", playOnEnable: true);
 
         // Intro: the world fades in, the panels slide in from their edges, the hero steps in, the menu rises one by one.
         var enter = new List<UIAnimTrack>
@@ -774,14 +781,14 @@ static class RpgSampleBuilder
             var circle = Pic(name, content, Fx("summon_circle"), 0, 40, size, size, color);
             var anim = circle.gameObject.AddComponent<UIAnimation>();
             anim.states.Add(State("Spin", Go(circle.rectTransform, UIAnimProperty.Rotation, Rot(0, 0, 0), Rot(0, 0, degrees), 0, seconds, UIAnimEase.Linear)));
-            circle.gameObject.AddComponent<RpgRepeat>().state = "Spin";
+            Loop(circle, "Spin", playOnEnable: true);
             return anim;
         }
         var outer = Spinner("Circle", 640, -360, 24, new Color(0.95f, 0.8f, 1f, 0.9f));
         Spinner("InnerCircle", 380, 360, 16, new Color(1f, 0.85f, 0.5f, 0.6f));
         glow.gameObject.AddComponent<UIAnimation>().states.Add(State("Pulse",
             Keys(glow, UIAnimProperty.GraphicAlpha, K(0, A(0.35f)), K(1.2f, A(0.7f), UIAnimEase.InOutSine), K(2.4f, A(0.35f), UIAnimEase.InOutSine))));
-        glow.gameObject.AddComponent<RpgRepeat>().state = "Pulse";
+        Loop(glow, "Pulse", playOnEnable: true);
         var note = Label(content, "Note", "Legendary heroes appear twice as often this week", 0, -300, 1200, 50, 38, Light);
         Button SummonButton(string name, string label, string cost, float x, bool gold)
         {
@@ -850,7 +857,7 @@ static class RpgSampleBuilder
             for (var s = 0; s < 3; s++) Pic("Star" + s, starRow, Icon("star"), (s - 1) * 28, 0, 28, 28);
             var anim = rt.gameObject.AddComponent<UIAnimation>();
             anim.states.Add(State("Pulse", Keys(body, UIAnimProperty.Scale, K(0, S(1)), K(0.6f, S(1.12f), UIAnimEase.InOutSine), K(1.2f, S(1), UIAnimEase.InOutSine))));
-            rt.gameObject.AddComponent<RpgRepeat>().state = "Pulse";
+            Loop(rt, "Pulse", playOnEnable: false);   // RpgStageNode plays it on the next stage only
             return node;
         }).ToArray();
 
@@ -878,7 +885,7 @@ static class RpgSampleBuilder
         list.extraPrefabs.Add(section);
         list.layout = UIAnimScrollList.LayoutType.Vertical;
         list.controlChildSize = true;
-        list.spacing = 4;
+        list.spacing = 0;   // the gap is inside each row (its frame is inset), so a folded row leaves none behind
         list.padding = new RectOffset(0, 0, 10, 30);
         list.stickyHeaderPrefab = 1;
         list.entryState = "Show";

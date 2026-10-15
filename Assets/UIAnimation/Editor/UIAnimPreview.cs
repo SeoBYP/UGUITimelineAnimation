@@ -265,7 +265,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             var duration = State.Duration;
             if (t >= duration)
             {
-                if (Loop && duration > 0f)
+                if ((Loop || State.loop) && duration > 0f)   // the preview button, or the state itself loops
                 {
                     Begin(Target, State, t % duration);   // restart from the rest pose so Current clips loop cleanly
                     IsPlaying = true;
