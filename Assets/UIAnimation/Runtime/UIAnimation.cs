@@ -34,6 +34,22 @@ namespace SeoBYP.TimelineAnimation
         CameraBackground,   // Camera.backgroundColor
         CameraOrthoSize,    // Camera.orthographicSize
         Active,             // GameObject.SetActive (x >= 0.5 = active); holds each key until the next one
+        // UIEffect (com.coffee.ui-effect), the same set as its own Timeline tracks. Read and written through
+        // UIAnimExternalProperties, registered by SeoBYP.TimelineAnimation.UIEffect when UIEffect is installed.
+        UIEffectToneIntensity,
+        UIEffectColorIntensity,
+        UIEffectColor,
+        UIEffectSamplingIntensity,
+        UIEffectTransitionRate,
+        UIEffectTransitionColor,
+        UIEffectEdgeShinyRate,
+        UIEffectEdgeColor,
+        UIEffectGradationIntensity,
+        UIEffectGradationOffset,
+        UIEffectGradationRotation,
+        UIEffectGradationScale,
+        UIEffectDetailIntensity,
+        UIEffectDetailColor,
     }
 
     /// <summary>How a new state treats states that are still playing on the same properties.</summary>
@@ -196,6 +212,7 @@ namespace SeoBYP.TimelineAnimation
             UIAnimProperty.SizeDelta or UIAnimProperty.AnchoredPosition or UIAnimProperty.AnchorMin or UIAnimProperty.AnchorMax or UIAnimProperty.Pivot => 2,
             UIAnimProperty.Scale or UIAnimProperty.Rotation or UIAnimProperty.CharScale or UIAnimProperty.CharOffset or UIAnimProperty.CharRotation => 3,
             UIAnimProperty.GraphicColor or UIAnimProperty.CharColor or UIAnimProperty.CameraBackground => 4,
+            _ when UIAnimExternalProperties.TryGet(p, out var e) && e.isColor => 4,
             _ => 1,
         };
     }
@@ -470,6 +487,8 @@ namespace SeoBYP.TimelineAnimation
             public bool resolved;                                 // key values resolved at least once (Sample reuses them)
             public bool reversed;                                 // playing from the end back to the start
             public float lastTime;                                // events in (lastTime, t] are raised on the next step
+            public float duration;                                // state.Duration when it started (not recounted every frame)
+            public bool hasMarkers;                               // any sound, child call or event to raise
             public AwaitableCompletionSource completion;           // made on the first PlayAsync, reused after
             public bool awaited;                                  // a PlayAsync is waiting on completion
             public CancellationTokenRegistration cancelRegistration;
@@ -737,7 +756,7 @@ namespace SeoBYP.TimelineAnimation
 
         static void StartMotion(Playback playback)
         {
-            var duration = playback.state.Duration;
+            var duration = playback.duration;
             if (duration <= 0f)
             {
                 Finish(playback);
@@ -756,7 +775,7 @@ namespace SeoBYP.TimelineAnimation
                 static (p, elapsed) =>
                 {
                     var playback = (Playback)p;
-                    Step(playback, playback.reversed ? playback.state.Duration - elapsed : elapsed);
+                    Step(playback, playback.reversed ? playback.duration - elapsed : elapsed);
                 },
                 static p => Finish((Playback)p));
         }
@@ -765,7 +784,7 @@ namespace SeoBYP.TimelineAnimation
         // and starts the next one from the start, so markers at 0 fire again.
         internal static void Lap(Playback p, float elapsed)
         {
-            var duration = p.state.Duration;
+            var duration = p.duration;
             var t = elapsed % duration;
             if (p.reversed) t = duration - t;
             var wrapped = p.reversed ? t > p.lastTime : t < p.lastTime;
@@ -773,6 +792,7 @@ namespace SeoBYP.TimelineAnimation
             {
                 RaiseEvents(p, p.reversed ? 0f : duration);
                 p.lastTime = p.reversed ? float.MaxValue : -1f;
+                p.hasMarkers = p.state.soundTracks.Count > 0 || p.state.childCalls.Count > 0 || p.state.eventTracks.Count > 0;
             }
             Step(p, t);
         }
@@ -790,6 +810,7 @@ namespace SeoBYP.TimelineAnimation
         {
             var from = p.lastTime;
             p.lastTime = t;
+            if (!p.hasMarkers) return;   // most states: nothing to raise, skip the scans (and the thread-static depth)
             var reversed = p.reversed;
             // Forward: times in (from, t]. Reversed: times in [t, from), so each marker fires once either way.
             bool Passed(float time) => reversed ? time >= t && time < from : time > from && time <= t;
@@ -887,9 +908,11 @@ namespace SeoBYP.TimelineAnimation
             if (!reversed || !playback.resolved) Resolve(playback.state, pointer);
             playback.resolved = true;
             playback.reversed = reversed;
+            playback.duration = playback.state.Duration;
+            playback.hasMarkers = playback.state.soundTracks.Count > 0 || playback.state.childCalls.Count > 0 || playback.state.eventTracks.Count > 0;
             // Show the first pose right away: e.g. a typewriter after a text change must not show the whole new line for a frame.
             playback.lastTime = reversed ? float.MaxValue : -1f;   // a marker at the starting end fires on this first step
-            Step(playback, reversed ? playback.state.Duration : 0f);
+            Step(playback, reversed ? playback.duration : 0f);
 
             playback.active = true;
             return playback;
@@ -1075,6 +1098,8 @@ namespace SeoBYP.TimelineAnimation
             UIAnimProperty.CameraOrthoSize => new Vector4(((Camera)target).orthographicSize, 0, 0, 0),
             UIAnimProperty.Active => new Vector4(target.gameObject.activeSelf ? 1f : 0f, 0, 0, 0),
             UIAnimProperty.CharacterSpacing => new Vector4(((TMP_Text)target).characterSpacing, 0, 0, 0),
+            _ when UIAnimExternalProperties.TryGet(property, out var external) => external.read(target),
+            _ when UIAnimExternalProperties.IsExternal(property) => Vector4.zero,   // its package is not installed
             _ => throw new ArgumentOutOfRangeException(nameof(property)),
         };
 
@@ -1087,14 +1112,17 @@ namespace SeoBYP.TimelineAnimation
             return count == 0 || text.maxVisibleCharacters >= count ? 1f : (float)text.maxVisibleCharacters / count;
         }
 
+        // Tracks usually target the Transform itself: skip the native .transform lookup then (it runs every frame).
+        static Transform Tr(Component c) => c as Transform ?? c.transform;
+
         public static void Write(Component target, UIAnimProperty property, Vector4 v)
         {
             switch (property)
             {
-                case UIAnimProperty.Scale: target.transform.localScale = v; break;
-                case UIAnimProperty.Rotation: target.transform.localEulerAngles = v; break;
-                case UIAnimProperty.SizeDelta: ((RectTransform)target.transform).sizeDelta = v; break;
-                case UIAnimProperty.AnchoredPosition: ((RectTransform)target.transform).anchoredPosition = v; break;
+                case UIAnimProperty.Scale: Tr(target).localScale = v; break;
+                case UIAnimProperty.Rotation: Tr(target).localEulerAngles = v; break;
+                case UIAnimProperty.SizeDelta: ((RectTransform)Tr(target)).sizeDelta = v; break;
+                case UIAnimProperty.AnchoredPosition: ((RectTransform)Tr(target)).anchoredPosition = v; break;
                 case UIAnimProperty.GraphicColor: ((Graphic)target).color = v; break;
                 case UIAnimProperty.GraphicAlpha:
                     var g = (Graphic)target;
@@ -1105,9 +1133,9 @@ namespace SeoBYP.TimelineAnimation
                 case UIAnimProperty.FontSize: ((TMP_Text)target).fontSize = v.x; break;
                 case UIAnimProperty.FillAmount: ((Image)target).fillAmount = v.x; break;
                 case UIAnimProperty.CanvasGroupAlpha: ((CanvasGroup)target).alpha = v.x; break;
-                case UIAnimProperty.AnchorMin: ((RectTransform)target.transform).anchorMin = v; break;
-                case UIAnimProperty.AnchorMax: ((RectTransform)target.transform).anchorMax = v; break;
-                case UIAnimProperty.Pivot: ((RectTransform)target.transform).pivot = v; break;
+                case UIAnimProperty.AnchorMin: ((RectTransform)Tr(target)).anchorMin = v; break;
+                case UIAnimProperty.AnchorMax: ((RectTransform)Tr(target)).anchorMax = v; break;
+                case UIAnimProperty.Pivot: ((RectTransform)Tr(target)).pivot = v; break;
                 case UIAnimProperty.CameraBackground: ((Camera)target).backgroundColor = v; break;
                 case UIAnimProperty.CameraOrthoSize: ((Camera)target).orthographicSize = v.x; break;
                 case UIAnimProperty.Active:
@@ -1126,7 +1154,10 @@ namespace SeoBYP.TimelineAnimation
                 case UIAnimProperty.CharColor:
                 case UIAnimProperty.CharAlpha:
                     break;   // per-character tracks are applied through UIAnimTextChars, not as a single value
-                default: throw new ArgumentOutOfRangeException(nameof(property));
+                default:
+                    if (UIAnimExternalProperties.TryGet(property, out var external)) external.write(target, v);
+                    else if (!UIAnimExternalProperties.IsExternal(property)) throw new ArgumentOutOfRangeException(nameof(property));
+                    break;   // an external property whose package is not installed: nothing to write
             }
         }
     }

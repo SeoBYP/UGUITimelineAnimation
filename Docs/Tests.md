@@ -6,12 +6,12 @@
 
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
-| EditMode (패키지) | 133 | `Assets/UIAnimation/Tests/Editor` |
+| EditMode (패키지) | 135 | `Assets/UIAnimation/Tests/Editor` |
 | PlayMode (패키지) | 33 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
 | PlayMode (개발용 캡처) | 2 | `Assets/Dev/Tests` |
 
-## EditMode (패키지) — 133개
+## EditMode (패키지) — 135개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.Editor` · CI에서 실행
 
@@ -211,6 +211,13 @@ The scroll forms beyond a plain list: sizes, prefab types, masonry, loop, pages,
 10. 스크램블 텍스트를 바꾸고 다시 재생하면 새 텍스트로 공개된다
 11. 스크램블 재생 중에 텍스트를 바꾸면 새 텍스트를 덮어쓰지 않는다
 12. CharacterSpacing 트랙은 자간을 움직이고 원래 값으로 돌아온다
+
+### `UIAnimUIEffectTests` (2개) — `Assets/UIAnimation/Tests/Editor/UIEffect/UIAnimUIEffectTests.cs`
+
+UIEffect values as keyframe tracks (compiled only when UIEffect is installed).
+
+1. UIEffect 값을 키프레임 트랙으로 움직인다
+2. UIEffect가 있는 오브젝트는 트랙 고르기에 14가지가 나온다
 
 ## PlayMode (패키지) — 33개
 

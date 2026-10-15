@@ -124,6 +124,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 | Image (Filled) | `FillAmount` |
 | TMP_Text | `FontSize`, `CharacterSpacing`, `TextReveal` (타자기, 0~1) |
 | TMP_Text 글자별 | `CharScale`, `CharOffset`, `CharRotation`, `CharColor`, `CharAlpha` |
+| UIEffect (설치돼 있을 때) | `UIEffectToneIntensity`, `…ColorIntensity`, `…Color`, `…SamplingIntensity`, `…TransitionRate`(디졸브 등), `…TransitionColor`, `…EdgeShinyRate`, `…EdgeColor`, `…GradationIntensity/Offset/Rotation/Scale`, `…DetailIntensity`, `…DetailColor` — UIEffect의 Timeline 트랙과 같은 14종 (§7.3) |
 
 ### 3.2 키프레임과 도착 방식
 - Unity Animation 창처럼 트랙마다 키(시간, 값)를 찍습니다. 1 → 1.2 → 1은 키 3개입니다.
@@ -368,6 +369,11 @@ var typing = anim.PlayAsync("Typewriter");
 await typing;
 ```
 
+### 7.3 UIEffect 트랙 (선택)
+UIEffect(`com.coffee.ui-effect` 5.x)가 설치돼 있으면 asmdef `SeoBYP.TimelineAnimation.UIEffect`(versionDefines `UIANIM_UIEFFECT`)가 컴파일되어, UIEffect가 붙은 오브젝트의 트랙 고르기 창에 **UIEffect 14종**(위 표)이 나옵니다. 다른 트랙과 똑같이 키·이징·Start(Current 등)·미리보기(편집 모드, 끝나면 원래 값으로 복원)·역재생·반복이 됩니다. 숫자는 UIEffect의 범위대로 슬라이더(예: Gradation Rotation 0~360), 색은 색 필드입니다. 설치하지 않으면 이 속성들은 목록에 나오지 않고, 저장돼 있던 트랙은 아무것도 하지 않습니다.
+- 구조: 코어는 UIEffect를 참조하지 않습니다. `UIAnimProperty`에 이름만 있고, 읽기·쓰기·필드 이름·범위는 연동 어셈블리가 `UIAnimExternalProperties.Register`로 등록합니다(에디터 `InitializeOnLoadMethod` + 런타임 `RuntimeInitializeOnLoadMethod`). 다른 라이브러리도 같은 방식으로 붙일 수 있습니다.
+- 확인: UIEffect 있음 → EditMode `UIAnimUIEffectTests` 2개(값 보간·읽기, 고르기 창 14종·이름). UIEffect 없음 → `Benchmarks` 프로젝트에서 컴파일 오류 0.
+
 ### 7.2 UniTask 연동 (선택)
 UniTask(`com.cysharp.unitask`)가 설치돼 있으면 asmdef `versionDefines`가 `UIANIM_UNITASK`를 켜서 확장 메서드가 생깁니다. 설치하지 않아도 패키지는 그대로 컴파일·동작합니다(VContainer·LitMotion의 UniTask 연동과 같은 방식).
 ```csharp
@@ -562,7 +568,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 
 ## 11. 테스트와 CI
 
-### 11.1 EditMode 테스트 (133개, 메서드 이름은 한국어)
+### 11.1 EditMode 테스트 (135개 — UIEffect 설치 시, 없으면 133개. 메서드 이름은 한국어)
 
 전체 목록: [`Tests.md`](Tests.md) (`python Tools/list_tests.py`로 테스트 코드에서 생성). `UIAnimLoopTests`(4개): 반복이 끝에서 처음으로 이어짐, 바퀴마다 이벤트, 역재생 반복, Stop.
 | 파일 | 개수 | 다루는 것 |
@@ -599,7 +605,7 @@ Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일
 **`ScrollPlayModeTests`** (12개): Scroll 씬을 실제 Play 모드로 열어 18페이지를 모두 확인합니다: 페이지 넘기기(버튼·가로 스와이프 전달), 리스트·그리드·메이슨리, 캐러셀·루프·페이징·자동 배너, 휠 피커, 섹션 헤더·가변 크기·채팅, 아코디언·중첩·탭, 접히는 헤더·당겨서 새로고침. 그리고 아이템 수 슬라이더·Add·Remove, Play 모드에서 Edit Animation으로 Prefab 모드 + 에디터 창 열기, 상단·하단 컨트롤의 화면 위치 겹침 검사, 끝 너머로 당겼다 놓았을 때 튀지 않고 돌아오는지(프레임별 위치), 채팅 Send 연타 시 있던 말풍선이 깜빡이지 않는지(프레임별 alpha).
 
 - 에디터 창 테스트(`EditorWorkflowTests`, `ScrollEditorWorkflowTests`, `PrefabOverrideTests`, `EditorLayoutMeasureTests`)는 **그래픽 장치가 필요**합니다. `-nographics`로 실행하면 실패하지 않고 건너뜁니다.
-- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 133개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 42개 + 개발용 캡처 2개 건너뜀).
+- 로컬 실행: 에디터가 프로젝트를 잠그므로, 프로젝트를 복사해서 `Unity -batchmode -runTests -testPlatform EditMode`로 실행합니다(그래픽 포함: 135개 전부 실행). PlayMode는 `-testPlatform PlayMode`(그래픽 포함 42개 + 개발용 캡처 2개 건너뜀).
 - 연출 눈으로 확인(개발용): `UIANIM_CAPTURE=<폴더>`를 주고 PlayMode `RpgCapture`를 돌리면 RPG 샘플 각 화면의 프레임을 PNG로 저장합니다(`Assets/Dev/Tests`, 환경 변수 없으면 건너뜀).
 
 ### 11.3 CI
@@ -622,6 +628,7 @@ Assets/
     Tests/PlayMode/ (asmdef SeoBYP.TimelineAnimation.Tests.PlayMode)
     Samples/RPG/                              ← 패키지 샘플 (배포 시 Samples~)
   Reference/{AnimationUI,ScreenNavigator,Tests}/  ← 원본 데모 재현 (참고·비교용, 배포 안 됨)
+    Runtime/UIEffect/ (asmdef SeoBYP.TimelineAnimation.UIEffect, UIEffect 설치 시에만)
   Dev/Editor/RpgSampleBuilder.cs            ← RPG 샘플 생성기 (개발용)
   Dev/Tests/RpgCapture.cs                   ← 프레임 캡처 (개발용)
   Editor/SampleContentBuilder.cs            ← 샘플 생성기 (개발용)
@@ -655,14 +662,14 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 | ✅ | B. Unity-AnimationUI 데모 재현 | 두 씬·연출 8개·버튼 23개를 원본 수치로 재현, PlayMode 테스트 5개 (`feature/aui-demo`) |
 | ✅ | C. 화면 전환 컨테이너 | Page·Modal·Sheet, Size Relative, 방향별 상태(EnterBackward), 생명주기·입력 잠금 (§7.4). 공유 요소 전환은 상태 + 실행 중 키 값으로 D3 샘플에서 (`feature/usn-demo`) |
 | ✅ | D. UnityScreenNavigator 데모 재현 | D1 Top·Loading·Home · D2 Shop 탭 · D3 모달 4종 + 공유 요소 전환 (`feature/usn-demo`) |
-| ⬜ | E. 성능 비교 | E1 `Benchmarks/` 프로젝트·측정 도구 · E2 5가지 방식 비교 측정 |
-| ⬜ | F. 연동 샘플 | F1 UniTask · F2 R3 · F3 UIEffect |
-| ⬜ | G. 제작 편의 비교 | G1 도구별 제작 절차 비교 문서 |
+| ✅ | E. 성능 비교 | 별도 프로젝트 `Benchmarks/`(UI Animation·Animator·DOTween Pro·LitMotion·AnimationUI + 직접 대입 기준), Windows 플레이어 Mono·IL2CPP. 결과 [`Benchmarks.md`](Benchmarks.md), 기록·최적화 [`Performance.md`](Performance.md) |
+| ⬜ | F. 연동 샘플 | F1 UniTask · F2 R3 · **F3 UIEffect ✅ 트랙 14종(§7.3)** |
+| ✅ | G. 제작 편의 비교 | [`Authoring-Comparison.md`](Authoring-Comparison.md) |
 | ✅ | 패키지 샘플 RPG 1차 | 원본 재현 두 개는 `Assets/Reference`(참고용). 패키지 샘플은 판타지 RPG: 로비·영웅 목록/상세·가방·소환·모험(승리/패배)·퀘스트 (§10) |
 | ⬜ | RPG 2차 | 타이틀·로딩, 강화·장착, 상점, 편성·전투 진입, 출석·우편 |
 | ⬜ | RPG 3차 | 수량 선택(휠), 전투 HUD, 길드 채팅, 랭킹, 스토리 대화, 설정, 공통 팝업·토스트 |
 | ⬜ | 배포 `0.1.0` | A~G 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
-| ⬜ | 글자 효과 최적화 (선택) | 텍스트당 약 0.2ms/프레임. 한 화면에 수십 개를 동시에 돌릴 때만 필요 |
+| ✅ | 글자 효과 최적화 | 배치 정점을 저장해 두고 변형만 적용 → 텍스트 100개 3.64 → 0.98ms ([`Performance.md`](Performance.md) §4.1) |
 
 ### 13.1 알려진 제한
 
