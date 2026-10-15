@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 78457337265729855}
   - component: {fileID: 78457337265729849}
   - component: {fileID: 78457337265729848}
-  - component: {fileID: 839582732447027997}
-  - component: {fileID: 1438892581720732339}
-  - component: {fileID: 5626119917948246757}
+  - component: {fileID: 6031167642601289318}
+  - component: {fileID: 8329751498381866985}
+  - component: {fileID: 1419940944358561682}
   m_Layer: 5
   m_Name: prefab_modal_backdrop
   m_TagString: Untagged
@@ -78,7 +78,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!225 &839582732447027997
+--- !u!225 &6031167642601289318
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -90,7 +90,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &1438892581720732339
+--- !u!114 &8329751498381866985
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -105,7 +105,7 @@ MonoBehaviour:
   states: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &5626119917948246757
+--- !u!114 &1419940944358561682
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

@@ -131,9 +131,9 @@ GameObject:
   m_Component:
   - component: {fileID: 6372800624481524282}
   - component: {fileID: 9174898284614137540}
-  - component: {fileID: 9159408335659406821}
-  - component: {fileID: 7251656945347598368}
-  - component: {fileID: 4431291231451231634}
+  - component: {fileID: 7090188766909337819}
+  - component: {fileID: 4494337660343167019}
+  - component: {fileID: 580564687883485971}
   m_Layer: 5
   m_Name: prefab_unit_shop_page
   m_TagString: Untagged
@@ -175,7 +175,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &9159408335659406821
+--- !u!114 &7090188766909337819
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -266,7 +266,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &7251656945347598368
+--- !u!114 &4494337660343167019
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -279,7 +279,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimScreen
   renderingOrder: 0
---- !u!114 &4431291231451231634
+--- !u!114 &580564687883485971
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -291,8 +291,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d06f242c7d9fcf419b8ded1e9f1e27f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UsnShopPage
-  sheets: {fileID: 4550693556091397502}
-  itemSetSheet: {fileID: 7891460110838878219, guid: 032047f25292f2540b40b2d3c21d0605, type: 3}
+  sheets: {fileID: 6690351911581401550}
+  itemSetSheet: {fileID: 3128554347149497390, guid: 032047f25292f2540b40b2d3c21d0605, type: 3}
   tabs:
   - {fileID: 8533566383492151457}
   - {fileID: 5503231441394167764}
@@ -597,8 +597,8 @@ GameObject:
   m_Component:
   - component: {fileID: 7225803148355229542}
   - component: {fileID: 8760942871074163620}
-  - component: {fileID: 6798009646146835251}
-  - component: {fileID: 4550693556091397502}
+  - component: {fileID: 3473833166598231425}
+  - component: {fileID: 6690351911581401550}
   m_Layer: 5
   m_Name: Sheet Container
   m_TagString: Untagged
@@ -639,7 +639,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Padding: {x: 0, y: 0, z: 0, w: 0}
   m_Softness: {x: 0, y: 0}
---- !u!225 &6798009646146835251
+--- !u!225 &3473833166598231425
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -651,7 +651,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &4550693556091397502
+--- !u!114 &6690351911581401550
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

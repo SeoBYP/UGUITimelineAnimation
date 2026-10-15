@@ -10,10 +10,10 @@ GameObject:
   m_Component:
   - component: {fileID: 1616405201594747127}
   - component: {fileID: 1616405201594747121}
-  - component: {fileID: 3996776275508332495}
-  - component: {fileID: 4944057366678327240}
-  - component: {fileID: 9101272327869827727}
-  - component: {fileID: 646017150198673013}
+  - component: {fileID: 5549431752231132945}
+  - component: {fileID: 5900166186342147401}
+  - component: {fileID: 375224439846141187}
+  - component: {fileID: 387662970188031778}
   m_Layer: 5
   m_Name: prefab_unit_portrait_viewer_modal
   m_TagString: Untagged
@@ -50,7 +50,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1616405201594747124}
   m_CullTransparentMesh: 1
---- !u!225 &3996776275508332495
+--- !u!225 &5549431752231132945
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -62,7 +62,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &4944057366678327240
+--- !u!114 &5900166186342147401
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -367,7 +367,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &9101272327869827727
+--- !u!114 &375224439846141187
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -380,7 +380,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimScreen
   renderingOrder: 0
---- !u!114 &646017150198673013
+--- !u!114 &387662970188031778
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

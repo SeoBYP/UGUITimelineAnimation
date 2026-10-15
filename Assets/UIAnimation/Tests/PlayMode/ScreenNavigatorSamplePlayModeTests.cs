@@ -218,6 +218,9 @@ namespace SeoBYP.TimelineAnimation.Tests
 
             // Expand: the viewer's portrait starts on the information modal's portrait area and grows into its own place.
             var area = (RectTransform)portraits.transform;
+            var shown = portraits.Active.GetComponentInChildren<Image>().rectTransform;
+            Assert.AreEqual(area.rect.size, shown.rect.size, "보이는 초상화 = 영역 (돌아왔을 때 크기가 튀지 않게)");
+            Assert.AreEqual(area.TransformPoint(area.rect.center), shown.TransformPoint(shown.rect.center));
             var areaCenter = area.TransformPoint(area.rect.center);
             Named(info, "ExpandButton").onClick.Invoke();
             yield return null;

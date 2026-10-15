@@ -67,7 +67,7 @@ static class ScreenNavigatorSampleBuilder
             case "prefab_home_page": HomePage(root); break;
             case "prefab_unit_shop_page": ShopPage(root); break;
             case "prefab_modal_backdrop": Screen(root); break;
-            case "prefab_unit_portrait_sheet": Screen(root); break;
+            case "prefab_unit_portrait_sheet": PortraitSheet(root); break;
             case "prefab_settings_modal": SettingsModal(root); break;
             case "prefab_confirmation_modal": ConfirmationModal(root); break;
             case "prefab_unit_type_information_modal": UnitInfoModal(root); break;
@@ -258,6 +258,18 @@ static class ScreenNavigatorSampleBuilder
                 select AssetDatabase.LoadAssetAtPath<Sprite>($"{Root}Art/Illustration/{folder}/{prefix}_{u}_{r}.png")).ToArray();
         modal.thumbnailSprites = Sprites("UnitThumbnail", "tex_unit_thumb");
         modal.portraitSprites = Sprites("UnitPortrait", "tex_unit_portrait");
+    }
+
+    // Portrait sheet: the original's 600×800 portrait sits 30 lower in the 547.5×730 masked area, so what shows is a crop
+    // and the viewer's portrait (which goes back to the area) would jump in size and position when it lands. Filling the
+    // area makes the two the same.
+    static void PortraitSheet(GameObject root)
+    {
+        Screen(root);
+        var portrait = (RectTransform)root.GetComponentInChildren<Image>(true).transform;
+        portrait.anchorMin = Vector2.zero;
+        portrait.anchorMax = Vector2.one;
+        portrait.offsetMin = portrait.offsetMax = Vector2.zero;
     }
 
     // Portrait viewer: only the portrait moves (UnitPortraitModalTransitionAnimation, 0.3 s QuarticEaseOut): position and

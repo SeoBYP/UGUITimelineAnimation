@@ -148,10 +148,10 @@ GameObject:
   - component: {fileID: 8644593960100687349}
   - component: {fileID: 8644593960100687351}
   - component: {fileID: 8644593960100687348}
-  - component: {fileID: 6962716731434723688}
-  - component: {fileID: 6469976179573387991}
-  - component: {fileID: 3800561319227649844}
-  - component: {fileID: 2715918823783697644}
+  - component: {fileID: 7402266694938531174}
+  - component: {fileID: 821907431779455676}
+  - component: {fileID: 7703666507220511937}
+  - component: {fileID: 1572649949413441279}
   m_Layer: 5
   m_Name: prefab_loading_page
   m_TagString: Untagged
@@ -217,7 +217,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!225 &6962716731434723688
+--- !u!225 &7402266694938531174
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -229,7 +229,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &6469976179573387991
+--- !u!114 &821907431779455676
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -244,7 +244,7 @@ MonoBehaviour:
   states:
   - name: PushEnter
     tracks:
-    - target: {fileID: 6962716731434723688}
+    - target: {fileID: 7402266694938531174}
       property: 15
       start: 0
       relativeToRest: 0
@@ -320,7 +320,7 @@ MonoBehaviour:
     sounds: []
   - name: PushExit
     tracks:
-    - target: {fileID: 6962716731434723688}
+    - target: {fileID: 7402266694938531174}
       property: 15
       start: 0
       relativeToRest: 0
@@ -396,7 +396,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &3800561319227649844
+--- !u!114 &7703666507220511937
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -409,7 +409,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimScreen
   renderingOrder: 100
---- !u!114 &2715918823783697644
+--- !u!114 &1572649949413441279
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

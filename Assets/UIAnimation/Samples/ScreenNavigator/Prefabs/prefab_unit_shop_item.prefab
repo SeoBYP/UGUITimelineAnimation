@@ -148,7 +148,7 @@ GameObject:
   - component: {fileID: 9134605603557541844}
   - component: {fileID: 3792344884516679409}
   - component: {fileID: 9061261304077790235}
-  - component: {fileID: 1454375403270404527}
+  - component: {fileID: 3926934018362302432}
   m_Layer: 5
   m_Name: prefab_unit_shop_item
   m_TagString: Untagged
@@ -215,7 +215,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &1454375403270404527
+--- !u!114 &3926934018362302432
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

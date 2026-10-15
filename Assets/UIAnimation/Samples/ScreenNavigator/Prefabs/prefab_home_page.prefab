@@ -85,9 +85,9 @@ GameObject:
   m_Component:
   - component: {fileID: 6275506607628168964}
   - component: {fileID: 2245201809904586190}
-  - component: {fileID: 4142757862462825053}
-  - component: {fileID: 6993200149630838156}
-  - component: {fileID: 4648216681098581366}
+  - component: {fileID: 2353560492402781345}
+  - component: {fileID: 3908526694210731640}
+  - component: {fileID: 2304885485743920345}
   m_Layer: 5
   m_Name: prefab_home_page
   m_TagString: Untagged
@@ -132,7 +132,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &4142757862462825053
+--- !u!114 &2353560492402781345
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -757,7 +757,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &6993200149630838156
+--- !u!114 &3908526694210731640
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -770,7 +770,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimScreen
   renderingOrder: 10
---- !u!114 &4648216681098581366
+--- !u!114 &2304885485743920345
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

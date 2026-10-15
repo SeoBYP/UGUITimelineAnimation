@@ -555,10 +555,10 @@ GameObject:
   - component: {fileID: 8617876258132873203}
   - component: {fileID: 8617876258132873213}
   - component: {fileID: 8617876258132873202}
-  - component: {fileID: 4706397062193467005}
-  - component: {fileID: 8507458032300776268}
-  - component: {fileID: 5088980807160043420}
-  - component: {fileID: 3272996477613417646}
+  - component: {fileID: 9059168407806395615}
+  - component: {fileID: 2841512630359731226}
+  - component: {fileID: 1544160609548062890}
+  - component: {fileID: 9211807821698337268}
   m_Layer: 5
   m_Name: prefab_top_page
   m_TagString: Untagged
@@ -628,7 +628,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!225 &4706397062193467005
+--- !u!225 &9059168407806395615
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -640,7 +640,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &8507458032300776268
+--- !u!114 &2841512630359731226
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1359,7 +1359,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &5088980807160043420
+--- !u!114 &1544160609548062890
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1372,7 +1372,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimScreen
   renderingOrder: 0
---- !u!114 &3272996477613417646
+--- !u!114 &9211807821698337268
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

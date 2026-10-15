@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 9055759737193652636}
   - component: {fileID: 2957446910546967711}
-  - component: {fileID: 2112627220689038426}
-  - component: {fileID: 2768027485492352070}
-  - component: {fileID: 644203570422700419}
+  - component: {fileID: 8864345972377473157}
+  - component: {fileID: 8123520330772632983}
+  - component: {fileID: 134242559797668131}
   m_Layer: 5
   m_Name: prefab_unit_portrait_sheet
   m_TagString: Untagged
@@ -54,7 +54,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Padding: {x: 0, y: 0, z: 0, w: 0}
   m_Softness: {x: 0, y: 0}
---- !u!225 &2112627220689038426
+--- !u!225 &8864345972377473157
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -66,7 +66,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &2768027485492352070
+--- !u!114 &8123520330772632983
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -81,7 +81,7 @@ MonoBehaviour:
   states: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &644203570422700419
+--- !u!114 &134242559797668131
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -116,27 +116,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_AnchorMin.x
-      value: 0.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0.5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 600
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 800
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_LocalPosition.x
@@ -172,7 +172,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -30
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5557095579497047862, guid: 5117aac65dee04639bb4b256f440c0db, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

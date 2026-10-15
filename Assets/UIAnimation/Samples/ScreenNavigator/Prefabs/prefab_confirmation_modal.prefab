@@ -129,10 +129,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2695532600355801009}
-  - component: {fileID: 9048736115642648949}
-  - component: {fileID: 4393638129407367456}
-  - component: {fileID: 5120297631778402660}
-  - component: {fileID: 4059761615930133661}
+  - component: {fileID: 4837486362774344119}
+  - component: {fileID: 6620242003551682232}
+  - component: {fileID: 432463872126462279}
+  - component: {fileID: 1273141192482128664}
   m_Layer: 5
   m_Name: prefab_confirmation_modal
   m_TagString: Untagged
@@ -160,7 +160,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!225 &9048736115642648949
+--- !u!225 &4837486362774344119
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -172,7 +172,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &4393638129407367456
+--- !u!114 &6620242003551682232
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -187,7 +187,7 @@ MonoBehaviour:
   states: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &5120297631778402660
+--- !u!114 &432463872126462279
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -200,7 +200,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimScreen
   renderingOrder: 0
---- !u!114 &4059761615930133661
+--- !u!114 &1273141192482128664
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

@@ -3906,16 +3906,16 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 4609740367533392799, guid: 786432917d114ba4b96bf12fa7dfd624, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1410596743744838886}
+      addedObject: {fileID: 5277500802093928166}
     - targetCorrespondingSourceObject: {fileID: 4609740367533392799, guid: 786432917d114ba4b96bf12fa7dfd624, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 7764438330916918015}
+      addedObject: {fileID: 6731452283220678956}
     - targetCorrespondingSourceObject: {fileID: 4609740367533392799, guid: 786432917d114ba4b96bf12fa7dfd624, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 4193906241685788877}
+      addedObject: {fileID: 8168321362868668211}
     - targetCorrespondingSourceObject: {fileID: 4609740367533392799, guid: 786432917d114ba4b96bf12fa7dfd624, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 4740093820232871387}
+      addedObject: {fileID: 8576005052162913757}
   m_SourcePrefab: {fileID: 100100000, guid: 786432917d114ba4b96bf12fa7dfd624, type: 3}
 --- !u!224 &5797004473743456297 stripped
 RectTransform:
@@ -3927,7 +3927,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 4609740367533392799, guid: 786432917d114ba4b96bf12fa7dfd624, type: 3}
   m_PrefabInstance: {fileID: 6350321197633332234}
   m_PrefabAsset: {fileID: 0}
---- !u!225 &1410596743744838886
+--- !u!225 &5277500802093928166
 CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3939,7 +3939,7 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &7764438330916918015
+--- !u!114 &6731452283220678956
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3954,7 +3954,7 @@ MonoBehaviour:
   states: []
   audioSource: {fileID: 0}
   overrides: []
---- !u!114 &4193906241685788877
+--- !u!114 &8168321362868668211
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -3967,7 +3967,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimScreen
   renderingOrder: 0
---- !u!114 &4740093820232871387
+--- !u!114 &8576005052162913757
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
