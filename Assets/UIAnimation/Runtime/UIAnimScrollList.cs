@@ -358,18 +358,23 @@ namespace SeoBYP.TimelineAnimation
 
         // ---------- item size changes (accordion) ----------
 
-        /// <summary>Changes one item's size along the scroll axis, animated; the items after it move along.</summary>
-        public void ResizeItem(int index, float size, float duration = 0.25f)
+        /// <summary>
+        /// Changes one item's size along the scroll axis, animated; the items after it move along.
+        /// Completes when the item has its new size (e.g. remove the item from the data only then).
+        /// </summary>
+        public Awaitable ResizeItem(int index, float size, float duration = 0.25f)
         {
-            if (index < 0 || index >= _count) return;
+            if (index < 0 || index >= _count) return UIAnimScreen.Completed();
             var from = SizeOf(index);
             if (duration <= 0f)
             {
                 _sizeOverride[index] = size;
                 Relayout();
-                return;
+                return UIAnimScreen.Completed();
             }
-            UIAnimTimer.Start(duration, new Resize(this, index, from, size, duration), static (o, t) => ((Resize)o).At(t));
+            var resize = new Resize(this, index, from, size, duration);
+            UIAnimTimer.Start(duration, resize, static (o, t) => ((Resize)o).At(t));
+            return resize.Done.Awaitable;
         }
 
         sealed class Resize
@@ -381,11 +386,20 @@ namespace SeoBYP.TimelineAnimation
             public Resize(UIAnimScrollList list, int index, float from, float to, float duration) =>
                 (_list, _index, _from, _to, _duration) = (list, index, from, to, duration);
 
+            public readonly AwaitableCompletionSource Done = new();
+            bool _done;
+
             public void At(float t)
             {
-                if (_list == null) return;   // destroyed
-                _list._sizeOverride[_index] = Mathf.LerpUnclamped(_from, _to, UIAnimEasing.OutCubic(t / _duration));
-                _list.Relayout();
+                if (_done) return;
+                if (_list != null)   // not destroyed
+                {
+                    _list._sizeOverride[_index] = Mathf.LerpUnclamped(_from, _to, UIAnimEasing.OutCubic(Mathf.Min(1f, t / _duration)));
+                    _list.Relayout();
+                }
+                if (_list != null && t < _duration) return;
+                _done = true;
+                Done.SetResult();
             }
         }
 

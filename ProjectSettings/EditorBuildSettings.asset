@@ -18,7 +18,7 @@ EditorBuildSettings:
     path: Assets/Reference/ScreenNavigator/Scenes/ScreenNavigatorDemo.unity
     guid: 52fb1ad777760544fa4c5b4050f986ec
   - enabled: 1
-    path: Assets/UIAnimation/Samples/Showcase/Scenes/Showcase.unity
-    guid: bf624b9184339474d9186174f4c0f738
+    path: Assets/UIAnimation/Samples/RPG/Scenes/RPG.unity
+    guid: 005d15ebccec939469cb40b9e86a0801
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
