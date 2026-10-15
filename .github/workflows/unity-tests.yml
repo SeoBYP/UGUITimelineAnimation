@@ -2,15 +2,18 @@
 # Unity Personal can only be activated by signing in to Unity Hub, so CI runs on a machine where that is done
 # once by hand. Setup: Docs/CI-SelfHostedRunner.md
 #
-# Branch protection on main requires the "Unity EditMode Tests" check (the job name, kept as is; it now runs
+# Runs on main (the package alone: no optional library installed, so their integrations must compile away) and on
+# the integration/* branches (main + UniTask / R3 / UIEffect installed). Branch protection on main requires the "Unity EditMode Tests" check (the job name, kept as is; it now runs
 # PlayMode too), so a PR can only merge when both pass.
 name: Unity Tests
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'integration/**']
   push:
-    branches: [main]
+    branches: [main, 'integration/**']
+  # Also run by integration-watch.yml on the version-bump and main-sync branches it opens PRs from
+  # (PRs opened with GITHUB_TOKEN do not start pull_request runs by themselves).
   workflow_dispatch:
 
 # One Unity at a time on the runner; a newer run of the same ref replaces an older one.

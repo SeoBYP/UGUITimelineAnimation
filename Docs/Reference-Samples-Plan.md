@@ -1,6 +1,6 @@
 # 참고 샘플 재현 계획 — UnityScreenNavigator · Unity-AnimationUI
 
-> 작성: 2026-10-15 · 상태: **A·B 완료(`feature/aui-demo`), C·D 완료(`feature/usn-demo`), E부터 남음** · 기준 `main` 487631c (PR #12 머지 시점)
+> 작성: 2026-10-15 · 상태: **A~E, F3, G 완료 — PR #13(A~D, 샘플 재구성, RPG 1차), PR #14(E, F3, G) 머지. 남은 것: F1 UniTask·F2 R3 샘플** · 기준 `main` 2b7cc83 (PR #14 머지 시점)
 > 설계 문서: [`UIAnimation-Design.md`](UIAnimation-Design.md)
 
 ## 1. 목적
@@ -168,13 +168,13 @@ USN은 화면 전환 프레임워크입니다.
 
 | 묶음 | 상태 | 결과 |
 |---|---|---|
-| A + B | ✅ `feature/aui-demo` | 트랙 7종(`CanvasGroupAlpha`, `AnchorMin`, `AnchorMax`, `Pivot`, `CameraBackground`, `CameraOrthoSize`, `Active`), `PlayReversed`, OutBack 이징 4종. AnimationUI 데모는 **원본 씬을 그대로 가져와** 원본 스크립트만 떼고 UIAnimation으로 교체(빌더 `AnimationUISampleBuilder`). 연출 수치는 원본 씬 YAML에서 자동 추출(단계 108개, 버튼 23개, 클릭 연결 21개). 효과음 4개는 직접 합성. EditMode 128/128, PlayMode 24/24 |
-| C + D (D1·D2) | ✅ `feature/usn-demo` | Page·Modal·Sheet 컨테이너(패키지, `Awaitable`), Size Relative 트랙 옵션, 시트 방향별 상태. ScreenNavigator 데모는 **원본 Prefab 8개를 GUID 그대로** 가져와 원본 스크립트·Timeline 오브젝트를 떼고 UIAnimScreen·상태로 교체(빌더 `ScreenNavigatorSampleBuilder`). 전환 수치는 원본 Timeline(UnityUIPlayables 클립)·SimpleTransition 파일에서 추출(이징 번호 2 = OutQuad, UnityUIPlayables 소스로 확인). 그림 43장은 같은 크기·같은 GUID의 대체 그림. EditMode 129/129, PlayMode 33/33 |
-| D3 (모달 4종 + 공유 요소 전환) | ✅ `feature/usn-demo` | 원본 모달 Prefab 8개 추가(GUID 유지). Settings(VOICE·BGM·SE, 바뀐 값만 닫을 때 PlayerPrefs 저장, LOCKED → Confirmation 쌓기), UnitTypeInformation(랭크 썸네일 = 탭, 초상화 시트 3장 기본 페이드), PortraitViewer(공유 요소 전환: 원본 UnitPortraitModalTransitionAnimation 0.3초 QuarticEaseOut). 공유 요소는 패키지 기능 대신 **`Enter`/`Exit` 상태 + 상대 쪽 키 값만 코드로 채움**(샘플 `UsnPortraitViewerModal`). 샘플 폴더는 `Assets/UIAnimation/Samples/`로 이동. EditMode 129/129, PlayMode 35/35 |
+| A + B | ✅ PR #13 | 트랙 7종(`CanvasGroupAlpha`, `AnchorMin`, `AnchorMax`, `Pivot`, `CameraBackground`, `CameraOrthoSize`, `Active`), `PlayReversed`, OutBack 이징 4종. AnimationUI 데모는 **원본 씬을 그대로 가져와** 원본 스크립트만 떼고 UIAnimation으로 교체(빌더 `AnimationUISampleBuilder`). 연출 수치는 원본 씬 YAML에서 자동 추출(단계 108개, 버튼 23개, 클릭 연결 21개). 효과음 4개는 직접 합성. EditMode 128/128, PlayMode 24/24 |
+| C + D (D1·D2) | ✅ PR #13 | Page·Modal·Sheet 컨테이너(패키지, `Awaitable`), Size Relative 트랙 옵션, 시트 방향별 상태. ScreenNavigator 데모는 **원본 Prefab 8개를 GUID 그대로** 가져와 원본 스크립트·Timeline 오브젝트를 떼고 UIAnimScreen·상태로 교체(빌더 `ScreenNavigatorSampleBuilder`). 전환 수치는 원본 Timeline(UnityUIPlayables 클립)·SimpleTransition 파일에서 추출(이징 번호 2 = OutQuad, UnityUIPlayables 소스로 확인). 그림 43장은 같은 크기·같은 GUID의 대체 그림. EditMode 129/129, PlayMode 33/33 |
+| D3 (모달 4종 + 공유 요소 전환) | ✅ PR #13 | 원본 모달 Prefab 8개 추가(GUID 유지). Settings(VOICE·BGM·SE, 바뀐 값만 닫을 때 PlayerPrefs 저장, LOCKED → Confirmation 쌓기), UnitTypeInformation(랭크 썸네일 = 탭, 초상화 시트 3장 기본 페이드), PortraitViewer(공유 요소 전환: 원본 UnitPortraitModalTransitionAnimation 0.3초 QuarticEaseOut). 공유 요소는 패키지 기능 대신 **`Enter`/`Exit` 상태 + 상대 쪽 키 값만 코드로 채움**(샘플 `UsnPortraitViewerModal`). 샘플 폴더는 `Assets/UIAnimation/Samples/`로 이동. EditMode 129/129, PlayMode 35/35 |
 
-| 샘플 재구성 | ✅ `feature/usn-demo` | 원본 재현(AnimationUI·ScreenNavigator)은 **참고·비교용**으로 `Assets/Reference/`에 둠(패키지 밖, 테스트도 `Assets/Reference/Tests`). 패키지에 들어갈 샘플은 **Showcase**: 원본에 없는 화면(하단 탭 인디케이터, 상점 → 상세 공유 요소, 보상 상자, 레벨업, 토스트) × 테마 3종(Casual·SciFi·Fantasy, 코드는 같고 상태만 다름). 공유 요소 키 채우기는 패키지 `UIAnimSharedElement`로. 초상화 뷰어가 돌아올 때 크기가 튀던 문제 수정(시트 초상화를 영역에 맞춤) |
-| RPG 샘플 1차 | ✅ `feature/usn-demo` | Showcase(테마 3종)를 판타지 RPG 하나로 바꿈. 화면 목록 26개 중 1차 9개: 로비·배너, 영웅 목록·상세, 가방, 소환, 스테이지 선택, 승리·패배, 퀘스트. 아이콘·영웅 얼굴은 game-icons.net(CC BY 3.0, 출처 `Art/CREDITS.md`), 틀·배경·효과는 직접 그림. 패키지 보강: `ResizeItem`이 `Awaitable`을 돌려줌(접힘이 끝난 뒤 데이터 삭제). PlayMode `RpgPlayModeTests` 6개 |
-| E 성능 비교 · F3 UIEffect · G 제작 편의 | ✅ `feature/benchmarks` | E: 별도 프로젝트 `Benchmarks/`에서 5가지 방식 + 직접 대입 기준, Mono·IL2CPP 릴리스(시간)와 Mono 개발 빌드(GC). 측정 중 글자 효과(3.7배)·재생 경로(자체 비용 절반) 최적화 → [`Performance.md`](Performance.md), 표 [`Benchmarks.md`](Benchmarks.md). F3: UIEffect 14종을 키프레임 트랙으로(`UIAnimExternalProperties` + 설치 시에만 컴파일되는 연동 asmdef). G: [`Authoring-Comparison.md`](Authoring-Comparison.md). F1 UniTask·F2 R3 샘플은 남음 |
+| 샘플 재구성 | ✅ PR #13 | 원본 재현(AnimationUI·ScreenNavigator)은 **참고·비교용**으로 `Assets/Reference/`에 둠(패키지 밖, 테스트도 `Assets/Reference/Tests`). 패키지에 들어갈 샘플은 **Showcase**: 원본에 없는 화면(하단 탭 인디케이터, 상점 → 상세 공유 요소, 보상 상자, 레벨업, 토스트) × 테마 3종(Casual·SciFi·Fantasy, 코드는 같고 상태만 다름). 공유 요소 키 채우기는 패키지 `UIAnimSharedElement`로. 초상화 뷰어가 돌아올 때 크기가 튀던 문제 수정(시트 초상화를 영역에 맞춤) |
+| RPG 샘플 1차 | ✅ PR #13 | Showcase(테마 3종)를 판타지 RPG 하나로 바꿈. 화면 목록 26개 중 1차 9개: 로비·배너, 영웅 목록·상세, 가방, 소환, 스테이지 선택, 승리·패배, 퀘스트. 아이콘·영웅 얼굴은 game-icons.net(CC BY 3.0, 출처 `Art/CREDITS.md`), 틀·배경·효과는 직접 그림. 패키지 보강: `ResizeItem`이 `Awaitable`을 돌려줌(접힘이 끝난 뒤 데이터 삭제). PlayMode `RpgPlayModeTests` 6개 |
+| E 성능 비교 · F3 UIEffect · G 제작 편의 | ✅ PR #14 | E: 별도 프로젝트 `Benchmarks/`에서 5가지 방식 + 직접 대입 기준, Mono·IL2CPP 릴리스(시간)와 Mono 개발 빌드(GC). 측정 중 글자 효과(3.7배)·재생 경로(자체 비용 절반) 최적화 → [`Performance.md`](Performance.md), 표 [`Benchmarks.md`](Benchmarks.md). F3: UIEffect 14종을 키프레임 트랙으로(`UIAnimExternalProperties` + 설치 시에만 컴파일되는 연동 asmdef). G: [`Authoring-Comparison.md`](Authoring-Comparison.md). F1 UniTask·F2 R3 샘플은 남음 |
 
 **권장 순서**: A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → C3 → C4 → D1 → D2 → D3 → E1 → E2 → F1 → F2 → F3 → G1.
 E1·F1·F2는 다른 작업과 겹치지 않아서 언제든 끼워 넣을 수 있습니다.
