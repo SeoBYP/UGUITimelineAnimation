@@ -18,6 +18,9 @@ namespace SeoBYP.TimelineAnimation
 
         public bool IsActive() => _version != 0 && UIAnimTimer.IsActive(_slot, _version - 1);
 
+        /// <summary>The clock time it started at (elapsed = clock - this).</summary>
+        public double StartTime => UIAnimTimer.StartOf(_slot);
+
         /// <summary>Stops it without completing (its cancel callback runs). Nothing if it already ended.</summary>
         public void TryCancel()
         {
@@ -75,6 +78,8 @@ namespace SeoBYP.TimelineAnimation
             return new UIAnimTimerHandle(slot, s.version);
         }
 
+        internal static double StartOf(int slot) => _slots[slot].start;
+
         internal static bool IsActive(int slot, int version) => slot < _count && _slots[slot].version == version && _slots[slot].active;
 
         internal static void Cancel(int slot, int version)
@@ -104,6 +109,7 @@ namespace SeoBYP.TimelineAnimation
         internal static void Update()
         {
             _now = Now;
+            UIAnimBatch.Run(_now);   // values of every batched playback at _now, before the callbacks write them
             var count = _count;   // timers started during this update tick from the next frame
             for (var i = 0; i < count; i++)
             {
@@ -173,6 +179,7 @@ namespace SeoBYP.TimelineAnimation
             _count = _freeCount = 0;
             _slots = new Slot[64];
             _hooked = false;
+            UIAnimBatch.Clear();
             EnsureHooked();
         }
 
