@@ -1,0 +1,21 @@
+{
+    "name": "SeoBYP.TimelineAnimation.Samples.UniTask",
+    "rootNamespace": "",
+    "references": [
+        "SeoBYP.TimelineAnimation",
+        "UniTask",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UIANIM_UNITASK"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "2.0.0",
+            "define": "UIANIM_UNITASK"
+        }
+    ]
+}
