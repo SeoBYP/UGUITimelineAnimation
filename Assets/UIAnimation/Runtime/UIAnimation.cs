@@ -152,6 +152,7 @@ namespace SeoBYP.TimelineAnimation
         [NonSerialized] internal Vector4 rest;          // value captured on Awake, base for relativeToRest
         [NonSerialized] internal Vector4 startValue;    // value at state start, when startFromCurrent
         [NonSerialized] internal bool released;         // another playing state took this property over
+        [NonSerialized] internal int lane = -1;         // UIAnimBatch slot while its playback runs batched, else -1
 
         public float End
         {
@@ -492,6 +493,7 @@ namespace SeoBYP.TimelineAnimation
             public AwaitableCompletionSource completion;           // made on the first PlayAsync, reused after
             public bool awaited;                                  // a PlayAsync is waiting on completion
             public CancellationTokenRegistration cancelRegistration;
+            public int group = -1;                                // UIAnimBatch group while the timer runs, else -1
 
             public Playback(UIAnimation owner, UIAnimState state)
             {
@@ -754,7 +756,7 @@ namespace SeoBYP.TimelineAnimation
             Finish(playback);
         }
 
-        static void StartMotion(Playback playback)
+        internal static void StartMotion(Playback playback)
         {
             var duration = playback.duration;
             if (duration <= 0f)
@@ -768,6 +770,7 @@ namespace SeoBYP.TimelineAnimation
                 // No end: each lap runs the same resolved values from 0 again, without a gap.
                 playback.handle = UIAnimTimer.Start(float.PositiveInfinity, playback,
                     static (p, elapsed) => Lap((Playback)p, elapsed));
+                UIAnimBatch.Register(playback);
                 return;
             }
 
@@ -778,6 +781,7 @@ namespace SeoBYP.TimelineAnimation
                     Step(playback, playback.reversed ? playback.duration - elapsed : elapsed);
                 },
                 static p => Finish((Playback)p));
+            UIAnimBatch.Register(playback);
         }
 
         // A looping state at elapsed seconds. Passing the end finishes the lap (its remaining events, sounds and child calls)
@@ -800,7 +804,7 @@ namespace SeoBYP.TimelineAnimation
         /// <summary>One frame of a playback: values, then the child calls and animation events passed since the last frame. Internal so tests can drive time.</summary>
         internal static void Step(Playback p, float t)
         {
-            Evaluate(p.state, t);
+            Evaluate(p.state, t, UIAnimBatch.Ready(p, t));
             RaiseEvents(p, t);
         }
 
@@ -859,6 +863,7 @@ namespace SeoBYP.TimelineAnimation
             foreach (var call in p.state.childCalls)
                 if (call.child != null && call.child.IsPlaying(call.state)) call.child.Complete(call.state);
             p.active = false;
+            UIAnimBatch.Unregister(p);
             Release(p)?.TrySetResult();
         }
 
@@ -867,6 +872,7 @@ namespace SeoBYP.TimelineAnimation
         {
             p.handle.TryCancel();
             p.active = false;
+            UIAnimBatch.Unregister(p);
             Release(p)?.TrySetCanceled();
         }
 
@@ -1041,13 +1047,17 @@ namespace SeoBYP.TimelineAnimation
                 if (t >= call.time && call.Target is { } child) EvaluateTree(child, t - call.time, depth + 1);
         }
 
-        /// <summary>Writes the state at time t. Shared by runtime playback, tests and the editor preview.</summary>
-        internal static void Evaluate(UIAnimState state, float t)
+        /// <summary>
+        /// Writes the state at time t. Shared by runtime playback, tests and the editor preview.
+        /// <paramref name="batched"/>: this frame's UIAnimBatch already computed batched tracks at t.
+        /// </summary>
+        internal static void Evaluate(UIAnimState state, float t, bool batched = false)
         {
             foreach (var track in state.tracks)
             {
                 if (track.released || track.target == null || track.keys.Count == 0) continue;
-                if (UIAnimTextChars.IsCharProperty(track.property)) UIAnimTextChars.For((TMP_Text)track.target).Accumulate(track, t);
+                if (batched && track.lane >= 0) Write(track.target, track.property, UIAnimBatch.Value(track.lane));
+                else if (UIAnimTextChars.IsCharProperty(track.property)) UIAnimTextChars.For((TMP_Text)track.target).Accumulate(track, t);
                 else if (track.property == UIAnimProperty.TextReveal && track.scramble != UIAnimScramble.None)
                     UIAnimTextChars.For((TMP_Text)track.target).Scramble(track.Sample(t).x, track.scramble, t);
                 else Write(track.target, track.property, track.Sample(t));

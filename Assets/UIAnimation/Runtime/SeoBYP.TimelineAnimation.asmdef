@@ -5,8 +5,10 @@
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "UniTask",
-        "Unity.Mathematics"
+        "Unity.Mathematics",
+        "Unity.Burst"
     ],
+    "allowUnsafeCode": true,
     "autoReferenced": true,
     "versionDefines": [
         {
