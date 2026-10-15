@@ -87,7 +87,7 @@ public sealed class RpgCapture
         }
     }
 
-    IEnumerator Setup()
+    IEnumerator Setup(bool toLobby = true)
     {
         _dir = System.Environment.GetEnvironmentVariable("UIANIM_CAPTURE");
         if (string.IsNullOrEmpty(_dir)) Assert.Ignore("UIANIM_CAPTURE not set");
@@ -108,6 +108,10 @@ public sealed class RpgCapture
         }
         _pages = Object.FindAnyObjectByType<UIAnimPageContainer>();
         _modals = Object.FindAnyObjectByType<UIAnimModalContainer>();
+        if (!toLobby) yield break;
+        yield return Idle();
+        Click(Page, "TapButton");   // title → loading → lobby
+        while (Page == null || !Page.name.StartsWith("Lobby")) yield return null;
     }
 
     [UnityTest]
@@ -132,6 +136,9 @@ public sealed class RpgCapture
         }
         _pages = Object.FindAnyObjectByType<UIAnimPageContainer>();
         _modals = Object.FindAnyObjectByType<UIAnimModalContainer>();
+        yield return Idle();
+        Click(Page, "TapButton");   // title → loading → lobby
+        while (Page == null || !Page.name.StartsWith("Lobby")) yield return null;
 
         yield return Snaps("01lobby", 0.1f, 0.4f, 0.8f, 1.4f, 4f);
 
@@ -203,5 +210,77 @@ public sealed class RpgCapture
         yield return Idle(0.6f);
         Page.GetComponentsInChildren<Button>().First(b => b.name == "ClaimButton" && b.interactable).onClick.Invoke();
         yield return Snaps("22claim", 0.1f, 0.25f, 0.6f, 0.85f, 1.3f);
+    }
+
+    // The second set of screens: title, loading, shop and purchase, upgrade, formation and battle, mail, attendance.
+    [UnityTest]
+    public IEnumerator CapturePhase2()
+    {
+        yield return Setup(toLobby: false);
+        yield return Snaps("p2_01title", 0.2f, 0.6f, 1.0f, 1.6f, 2.4f);
+        Click(Page, "TapButton");
+        yield return Snaps("p2_02loading", 0.3f, 0.9f, 1.5f, 2.2f);
+        while (!Page.name.StartsWith("Lobby")) yield return null;
+        yield return Snaps("p2_03lobby", 0.5f, 1.6f);
+        yield return Idle();
+
+        Click(Page, "SHOPButton");
+        yield return Snaps("p2_04shop", 0.2f, 0.6f, 1.2f);
+        yield return Idle();
+        Page.GetComponentsInChildren<Button>().First(b => b.name == "Body").onClick.Invoke();
+        yield return Snaps("p2_05purchase", 0.15f, 0.5f);
+        yield return Idle();
+        Click(Modal, "BuyButton");
+        yield return Snaps("p2_06bought", 0.3f, 0.8f);
+        yield return Idle();
+        Click(Page, "BackButton");
+        yield return Idle();
+
+        Click(Page, "HEROESButton");
+        yield return Idle();
+        Page.GetComponentsInChildren<Button>().First(b => b.name == "Body").onClick.Invoke();
+        yield return Idle();
+        Click(Page, "UpgradeButton");
+        yield return Snaps("p2_07upgrade", 0.2f, 0.7f);
+        yield return Idle();
+        Click(Page, "UpgradeButton");
+        yield return Snaps("p2_08levelup", 0.08f, 0.3f, 0.8f);
+        Click(Page, "AutoEquipButton");
+        yield return Snaps("p2_09equip", 0.1f, 0.35f, 0.6f, 1.2f);
+        yield return Idle();
+        Click(Page, "BackButton");
+        yield return Idle();
+        Click(Page, "BackButton");
+        yield return Idle();
+        Click(Page, "BackButton");
+        yield return Idle();
+
+        Click(Page, "ADVENTUREButton");
+        yield return Idle(1.2f);
+        Click(Page, "StartButton");
+        yield return Snaps("p2_10formation", 0.2f, 0.6f);
+        yield return Idle();
+        Click(Page, "Hero3");
+        yield return Snaps("p2_11slotin", 0.1f, 0.25f, 0.5f);
+        Click(Page, "BattleButton");
+        yield return Snaps("p2_12battle", 0.2f, 0.45f, 0.75f, 1.2f, 2.5f);
+        yield return Idle(2.5f);
+        Click(Modal, "LobbyButton");
+        yield return Idle();
+        yield return Idle();
+
+        Click(Page, "MAILButton");
+        yield return Snaps("p2_13mail", 0.3f, 0.8f);
+        yield return Idle(0.5f);
+        Click(Page, "ClaimAllButton");
+        yield return Snaps("p2_14claimall", 0.2f, 0.5f, 1.5f, 4.5f);
+        yield return Idle(0.5f);
+        Click(Page, "BackButton");
+        yield return Idle();
+
+        Click(Page, "DAILYButton");
+        yield return Snaps("p2_15attendance", 0.15f, 0.5f, 1.2f);
+        Click(Modal, "ClaimButton");
+        yield return Snaps("p2_16stamp", 0.05f, 0.2f, 0.6f);
     }
 }

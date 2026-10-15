@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Adventure: a chapter carousel (scroll list, the centered card grows: scrub state "Focus") and the chosen chapter's
-/// ten stages, which pop in along the path ("Stages" on the page) every time the chapter changes. START plays the stage.
+/// ten stages, which pop in along the path ("Stages" on the page) every time the chapter changes. START opens the formation.
 /// </summary>
 public sealed class RpgAdventurePage : MonoBehaviour
 {
@@ -32,7 +32,7 @@ public sealed class RpgAdventurePage : MonoBehaviour
             var stage = i;
             stages[i].GetComponent<Button>().onClick.AddListener(() => Select(stage));
         }
-        start.onClick.AddListener(() => RpgDemo.Instance.StartStage(_chapter, _stage));
+        start.onClick.AddListener(() => RpgDemo.Instance.OpenFormation(_chapter, _stage));
     }
 
     void OnEnable()
