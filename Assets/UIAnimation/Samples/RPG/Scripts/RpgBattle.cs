@@ -121,7 +121,7 @@ public sealed class RpgBattle : MonoBehaviour, IUIAnimScreenLifecycle
 
     void Update() => Bars(false);
 
-    // Health bars ease toward their values (the fill's scale x).
+    // Health bars ease toward their values (the fill's width, so its round ends stay round).
     void Bars(bool snap)
     {
         var k = snap ? 1f : 1f - Mathf.Exp(-10f * Time.deltaTime);
@@ -131,8 +131,8 @@ public sealed class RpgBattle : MonoBehaviour, IUIAnimScreenLifecycle
 
     static void Ease(RectTransform fill, float to, float k)
     {
-        var s = fill.localScale;
-        s.x = Mathf.Lerp(s.x, to, k);
-        fill.localScale = s;
+        var max = fill.anchorMax;
+        max.x = Mathf.Lerp(max.x, to, k);
+        fill.anchorMax = max;
     }
 }

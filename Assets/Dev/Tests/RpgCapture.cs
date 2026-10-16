@@ -189,15 +189,23 @@ public sealed class RpgCapture
         yield return Idle();
         Page.GetComponentInChildren<UIAnimScrollList>().ScrollTo(2, UIAnimScrollList.Alignment.Center, 0.4f);
         yield return Snaps("17chapter3", 0.3f, 0.6f, 1.2f);
-        Click(Page, "StartButton");
+        Click(Page, "StartButton");   // START → formation → BATTLE → the battle page fights by itself → result
+        yield return Idle();
+        Click(Page, "BattleButton");
+        while (Modal == null) yield return null;
         yield return Snaps("18victory", 0.3f, 0.8f, 1.2f, 1.7f, 2.4f, 3.2f);
         yield return Idle();
         Click(Modal, "ContinueButton");
+        yield return Idle();
+        Click(Page, "BackButton");   // formation → adventure
         yield return Idle();
         Page.GetComponentInChildren<UIAnimScrollList>().ScrollTo(0, UIAnimScrollList.Alignment.Center, 0.3f);
         yield return new WaitForSeconds(1.2f);
         Click(Page, "Stage10");
         Click(Page, "StartButton");
+        yield return Idle();
+        Click(Page, "BattleButton");
+        while (Modal == null) yield return null;
         yield return Snaps("19defeat", 0.3f, 0.8f, 1.5f, 2.2f, 3.2f);
         yield return Idle();
         Click(Modal, "LobbyButton");
@@ -212,26 +220,26 @@ public sealed class RpgCapture
         yield return Snaps("22claim", 0.1f, 0.25f, 0.6f, 0.85f, 1.3f);
     }
 
-    // The second set of screens: title, loading, shop and purchase, upgrade, formation and battle, mail, attendance.
+    // Title and loading, shop and purchase, upgrade, formation and battle, mail, attendance.
     [UnityTest]
-    public IEnumerator CapturePhase2()
+    public IEnumerator CaptureTitleShopUpgradeMail()
     {
         yield return Setup(toLobby: false);
-        yield return Snaps("p2_01title", 0.2f, 0.6f, 1.0f, 1.6f, 2.4f);
+        yield return Snaps("s_01title", 0.2f, 0.6f, 1.0f, 1.6f, 2.4f);
         Click(Page, "TapButton");
-        yield return Snaps("p2_02loading", 0.3f, 0.9f, 1.5f, 2.2f);
+        yield return Snaps("s_02loading", 0.3f, 0.9f, 1.5f, 2.2f);
         while (!Page.name.StartsWith("Lobby")) yield return null;
-        yield return Snaps("p2_03lobby", 0.5f, 1.6f);
+        yield return Snaps("s_03lobby", 0.5f, 1.6f);
         yield return Idle();
 
         Click(Page, "SHOPButton");
-        yield return Snaps("p2_04shop", 0.2f, 0.6f, 1.2f);
+        yield return Snaps("s_04shop", 0.2f, 0.6f, 1.2f);
         yield return Idle();
         Page.GetComponentsInChildren<Button>().First(b => b.name == "Body").onClick.Invoke();
-        yield return Snaps("p2_05purchase", 0.15f, 0.5f);
+        yield return Snaps("s_05purchase", 0.15f, 0.5f);
         yield return Idle();
         Click(Modal, "BuyButton");
-        yield return Snaps("p2_06bought", 0.3f, 0.8f);
+        yield return Snaps("s_06bought", 0.3f, 0.8f);
         yield return Idle();
         Click(Page, "BackButton");
         yield return Idle();
@@ -241,12 +249,12 @@ public sealed class RpgCapture
         Page.GetComponentsInChildren<Button>().First(b => b.name == "Body").onClick.Invoke();
         yield return Idle();
         Click(Page, "UpgradeButton");
-        yield return Snaps("p2_07upgrade", 0.2f, 0.7f);
+        yield return Snaps("s_07upgrade", 0.2f, 0.7f);
         yield return Idle();
         Click(Page, "UpgradeButton");
-        yield return Snaps("p2_08levelup", 0.08f, 0.3f, 0.8f);
+        yield return Snaps("s_08levelup", 0.08f, 0.3f, 0.8f);
         Click(Page, "AutoEquipButton");
-        yield return Snaps("p2_09equip", 0.1f, 0.35f, 0.6f, 1.2f);
+        yield return Snaps("s_09equip", 0.1f, 0.35f, 0.6f, 1.2f);
         yield return Idle();
         Click(Page, "BackButton");
         yield return Idle();
@@ -258,49 +266,50 @@ public sealed class RpgCapture
         Click(Page, "ADVENTUREButton");
         yield return Idle(1.2f);
         Click(Page, "StartButton");
-        yield return Snaps("p2_10formation", 0.2f, 0.6f);
+        yield return Snaps("s_10formation", 0.2f, 0.6f);
         yield return Idle();
         Click(Page, "Hero3");
-        yield return Snaps("p2_11slotin", 0.1f, 0.25f, 0.5f);
+        yield return Snaps("s_11slotin", 0.1f, 0.25f, 0.5f);
         Click(Page, "BattleButton");
-        yield return Snaps("p2_12battle", 0.2f, 0.45f, 0.75f, 1.2f, 2.5f);
+        yield return Snaps("s_12battle", 0.2f, 0.45f, 0.75f, 1.2f, 2.5f);
+        while (Modal == null) yield return null;
         yield return Idle(2.5f);
         Click(Modal, "LobbyButton");
         yield return Idle();
         yield return Idle();
 
         Click(Page, "MAILButton");
-        yield return Snaps("p2_13mail", 0.3f, 0.8f);
+        yield return Snaps("s_13mail", 0.3f, 0.8f);
         yield return Idle(0.5f);
         Click(Page, "ClaimAllButton");
-        yield return Snaps("p2_14claimall", 0.2f, 0.5f, 1.5f, 4.5f);
+        yield return Snaps("s_14claimall", 0.2f, 0.5f, 1.5f, 4.5f);
         yield return Idle(0.5f);
         Click(Page, "BackButton");
         yield return Idle();
 
         Click(Page, "DAILYButton");
-        yield return Snaps("p2_15attendance", 0.15f, 0.5f, 1.2f);
+        yield return Snaps("s_15attendance", 0.15f, 0.5f, 1.2f);
         Click(Modal, "ClaimButton");
-        yield return Snaps("p2_16stamp", 0.05f, 0.2f, 0.6f);
+        yield return Snaps("s_16stamp", 0.05f, 0.2f, 0.6f);
     }
 
-    // The third set: settings and confirm and toast, quantity wheel, battle HUD, guild chat, ranking, story.
+    // Settings with the confirm popup and a toast, the quantity wheel, the battle HUD, guild chat, ranking, story.
     [UnityTest]
-    public IEnumerator CapturePhase3()
+    public IEnumerator CaptureBattleGuildStory()
     {
         yield return Setup();
         yield return Idle(1f);
         // The toast canvas is an overlay too: put it on the camera as well.
         Click(Page, "SETTINGSButton");
-        yield return Snaps("p3_01settings", 0.15f, 0.5f);
+        yield return Snaps("b_01settings", 0.15f, 0.5f);
         yield return Idle();
         Click(Modal, "MusicSwitch");
-        yield return Snaps("p3_02switch", 0.1f, 0.3f);
+        yield return Snaps("b_02switch", 0.1f, 0.3f);
         Click(Modal, "ResetButton");
-        yield return Snaps("p3_03confirm", 0.15f, 0.5f);
+        yield return Snaps("b_03confirm", 0.15f, 0.5f);
         yield return Idle();
         Click(Modal, "OkButton");
-        yield return Snaps("p3_04toast", 0.2f, 0.5f, 1.5f, 2.4f);
+        yield return Snaps("b_04toast", 0.2f, 0.5f, 1.5f, 2.4f);
         yield return Idle();
         Click(Modal, "CloseButton");
         yield return Idle();
@@ -310,12 +319,12 @@ public sealed class RpgCapture
         Page.GetComponentsInChildren<Button>().First(b => b.transform.Find("Icon")?.GetComponent<Image>().sprite?.name == "helm").onClick.Invoke();
         yield return Idle();
         Click(Modal, "UseButton");
-        yield return Snaps("p3_05quantity", 0.15f, 0.5f);
+        yield return Snaps("b_05quantity", 0.15f, 0.5f);
         yield return Idle();
         Modal.GetComponentInChildren<UIAnimScrollList>().ScrollTo(1, UIAnimScrollList.Alignment.Center, 0.4f);
-        yield return Snaps("p3_06wheel", 0.15f, 0.3f, 0.6f);
+        yield return Snaps("b_06wheel", 0.15f, 0.3f, 0.6f);
         Click(Modal, "UseButton");
-        yield return Snaps("p3_07used", 0.3f, 0.6f);
+        yield return Snaps("b_07used", 0.3f, 0.6f);
         yield return Idle(2f);
         Click(Page, "BackButton");
         yield return Idle();
@@ -327,44 +336,45 @@ public sealed class RpgCapture
         Click(Page, "StartButton");
         yield return Idle();
         Click(Page, "BattleButton");
-        yield return Snaps("p3_08battle", 0.5f, 1.2f, 1.6f, 2.0f);
+        yield return Snaps("b_08battle", 0.5f, 1.2f, 1.6f, 2.0f);
         Click(Page, "Skill0");
-        yield return Snaps("p3_09skill", 0.05f, 0.2f, 0.5f);
+        yield return Snaps("b_09skill", 0.05f, 0.2f, 0.5f);
         while (Modal == null) yield return null;
-        yield return Snaps("p3_10won", 0.1f, 1.5f);
+        yield return Snaps("b_10won", 0.1f, 1.5f);
         yield return Idle(2.5f);
         Click(Modal, "LobbyButton");
         yield return Idle();
         yield return Idle();
 
         Click(Page, "GUILDButton");
-        yield return Snaps("p3_11guild", 0.3f, 0.8f);
+        yield return Snaps("b_11guild", 0.3f, 0.8f);
         yield return Idle(0.5f);
-        Click(Page, "Quick0");
-        yield return Snaps("p3_12chat", 0.1f, 0.3f, 1.0f, 1.5f, 1.8f);
+        Page.GetComponentInChildren<TMPro.TMP_InputField>().text = "On my way!";
+        Click(Page, "SendButton");
+        yield return Snaps("b_12chat", 0.1f, 0.3f, 1.0f, 1.5f, 1.8f);
         yield return Idle(1f);
         Click(Page, "BackButton");
         yield return Idle();
 
         Click(Page, "RANKButton");
-        yield return Snaps("p3_13ranking", 0.3f, 0.7f, 1.1f, 1.6f);
+        yield return Snaps("b_13ranking", 0.3f, 0.7f, 1.1f, 1.6f);
         yield return Idle();
         Click(Page, "MyRankButton");
-        yield return Snaps("p3_14myrank", 0.3f, 0.7f, 1.0f);
+        yield return Snaps("b_14myrank", 0.3f, 0.7f, 1.0f);
         yield return Idle(0.5f);
         Click(Page, "BackButton");
         yield return Idle();
 
         Click(Page, "STORYButton");
-        yield return Snaps("p3_15story", 0.2f, 0.6f, 1.2f, 2.0f);
+        yield return Snaps("b_15story", 0.2f, 0.6f, 1.2f, 2.0f);
         Click(Page, "NextButton");
         Click(Page, "NextButton");
-        yield return Snaps("p3_16story2", 0.15f, 0.5f, 1.0f);
-        Click(Page, "NextButton");
-        yield return null;
+        yield return Snaps("b_16story2", 0.15f, 0.5f, 1.0f);
         Click(Page, "NextButton");
         yield return null;
         Click(Page, "NextButton");
-        yield return Snaps("p3_17choices", 0.1f, 0.4f);
+        yield return null;
+        Click(Page, "NextButton");
+        yield return Snaps("b_17choices", 0.1f, 0.4f);
     }
 }

@@ -11,6 +11,9 @@ public sealed class RpgLobby : MonoBehaviour
 {
     public Button heroes, bag, summon, adventure, quests, shop, mail, attendance, guild, ranking, story, settings;
     public UIAnimScrollList banners;
+    [Tooltip("Badges: the number of letters, and \"!\" while today's attendance is unclaimed.")]
+    public TMP_Text mailBadge;
+    public GameObject attendanceBadge;
 
     static readonly (string title, string text, string icon)[] Events =
     {
@@ -40,5 +43,23 @@ public sealed class RpgLobby : MonoBehaviour
             row.text.text = e.text;
             row.icon.sprite = demo.Sprite(e.icon);
         });
+    }
+
+    // Shown again (a page popped) or paid out under a popup (attendance, mail): the badges follow.
+    void OnEnable()
+    {
+        RpgDemo.Instance.CurrencyChanged += Refresh;
+        Refresh();
+    }
+
+    void OnDisable() => RpgDemo.Instance.CurrencyChanged -= Refresh;
+
+    public void Refresh()
+    {
+        var demo = RpgDemo.Instance;
+        var letters = demo.Mails.Count;
+        mailBadge.text = letters.ToString();
+        mailBadge.transform.parent.gameObject.SetActive(letters > 0);
+        attendanceBadge.SetActive(!demo.AttendanceClaimed);
     }
 }
