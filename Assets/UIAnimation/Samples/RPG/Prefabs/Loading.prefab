@@ -59,7 +59,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.6}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.16}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -75,7 +75,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2.1333334
 --- !u!1 &1634767406357890206
 GameObject:
   m_ObjectHideFlags: 0
@@ -288,13 +288,13 @@ RectTransform:
   m_GameObject: {fileID: 2573375487685503867}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 1, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 9140058519607298371}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0.5}
@@ -319,14 +319,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.87058824, b: 0.54901963, a: 1}
+  m_Color: {r: 1, g: 0.8, b: 0.27450982, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: ae77f97bbacb3d74290503f1cc66c274, type: 3}
+  m_Sprite: {fileID: 21300000, guid: aabfe1f0bb86bf7419b817ac8c0cba3d, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -335,7 +335,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2.1333334
 --- !u!1 &2599967029062817010
 GameObject:
   m_ObjectHideFlags: 0
@@ -970,7 +970,7 @@ MonoBehaviour:
     loop: 0
     tracks:
     - target: {fileID: 1773813663924923867}
-      property: 0
+      property: 17
       start: 0
       relativeToRest: 0
       sizeRelative: 0
@@ -979,7 +979,7 @@ MonoBehaviour:
       scramble: 0
       keys:
       - time: 0
-        value: {x: 0, y: 1, z: 1, w: 0}
+        value: {x: 0, y: 1, z: 0, w: 0}
         curveType: 0
         ease: 0
         curve:
@@ -1009,7 +1009,7 @@ MonoBehaviour:
         frequency: 10
         damping: 1
       - time: 0.5
-        value: {x: 0.35, y: 1, z: 1, w: 0}
+        value: {x: 0.35, y: 1, z: 0, w: 0}
         curveType: 0
         ease: 2
         curve:
@@ -1039,7 +1039,7 @@ MonoBehaviour:
         frequency: 10
         damping: 1
       - time: 1.1
-        value: {x: 0.55, y: 1, z: 1, w: 0}
+        value: {x: 0.55, y: 1, z: 0, w: 0}
         curveType: 0
         ease: 3
         curve:
@@ -1069,7 +1069,7 @@ MonoBehaviour:
         frequency: 10
         damping: 1
       - time: 1.8
-        value: {x: 1, y: 1, z: 1, w: 0}
+        value: {x: 1, y: 1, z: 0, w: 0}
         curveType: 0
         ease: 3
         curve:

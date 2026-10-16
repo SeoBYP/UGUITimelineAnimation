@@ -80,6 +80,7 @@ namespace SeoBYP.TimelineAnimation.Tests
             var b = pages.Current;
             Assert.IsTrue(UIAnimScreenContainer.AnyInTransition, "전환 중");
             Assert.IsFalse(pages.GetComponent<CanvasGroup>().blocksRaycasts, "전환 중 입력 막힘");
+            Assert.IsTrue(pages.GetComponent<CanvasGroup>().interactable, "버튼 모양은 그대로(비활성 색으로 바뀌지 않음)");
             Assert.Greater(X(b), 0f, "B는 오른쪽에서 들어옴");
             Assert.LessOrEqual(X(b), width + 0.5f, "한 화면 폭 이내");
             Assert.Less(X(a), 0.5f, "A는 왼쪽으로 나감");

@@ -111,7 +111,7 @@ def frame(kind):
     elif kind == 'button_dark':
         rr(0, 26, fill=GOLD); rr(4, 22, fill=(92, 56, 30)); rr(8, 18, fill=(120, 74, 40))
     elif kind == 'pill':         # resource counters
-        rr(0, 30, fill=GOLD_DARK); rr(4, 26, fill=(30, 20, 18, 235))
+        rr(0, 30, fill=GOLD_DARK); rr(4, 26, fill=(30, 20, 18, 255))   # opaque: the sky's stars must not show through
     elif kind == 'slot':         # white, tinted by rarity
         rr(0, 16, fill=(255, 255, 255)); rr(6, 12, fill=(60, 60, 60)); rr(9, 10, fill=(40, 34, 30))
     elif kind == 'card':         # hero card edge, white, tinted by rarity
@@ -121,6 +121,58 @@ def frame(kind):
     elif kind == 'header':       # top bar of sub pages
         d.rectangle([0, 0, w, h], fill=(30, 20, 16, 240)); d.rectangle([0, h - 6 * S, w, h], fill=GOLD)
     return small(img, 128, 128)
+
+
+# ---------- gauges ----------
+# A pill 128 x 64 (round ends of radius 32), sliced left/right only: the builder scales the ends to the bar's height
+# (Image.pixelsPerUnitMultiplier), so they stay half circles at any thickness.
+def bar_track():
+    img = big(128, 64); d = ImageDraw.Draw(img); w, h = 128 * S - 1, 64 * S - 1
+    d.rounded_rectangle([0, 0, w, h], radius=32 * S, fill=(255, 255, 255, 255))
+    shade = big(128, 64)   # a soft inner shadow along the top edge: the track reads as a groove
+    ImageDraw.Draw(shade).rounded_rectangle([0, 0, w, 22 * S], radius=16 * S, fill=(0, 0, 0, 50))
+    img = Image.composite(Image.alpha_composite(img, shade), img, img.split()[3])
+    return small(img, 128, 64)
+
+
+def bar_fill():
+    # Bright on the left, deeper on the right (tinted by the bar's color), with a highlight along the top.
+    img = big(128, 64); w, h = 128 * S, 64 * S
+    grad = Image.new('RGBA', (w, h))
+    px = grad.load()
+    for x in range(w):
+        v = int(255 - 60 * x / (w - 1))
+        for y in range(h): px[x, y] = (v, v, v, 255)
+    mask = big(128, 64); ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=32 * S, fill=(255, 255, 255, 255))
+    img = Image.composite(grad, img, mask.split()[3])
+    hl = big(128, 64); ImageDraw.Draw(hl).rounded_rectangle([10 * S, 6 * S, w - 10 * S, 24 * S], radius=9 * S, fill=(255, 255, 255, 70))
+    img = Image.composite(Image.alpha_composite(img, hl), img, mask.split()[3])
+    return small(img, 128, 64)
+
+
+def badge():
+    # A notification badge: a red pill (a circle when it holds one character) with a white rim and a top highlight,
+    # sliced left/right like the gauges.
+    img = big(128, 64); w, h = 128 * S, 64 * S
+    d = ImageDraw.Draw(img); d.rounded_rectangle([0, 0, w - 1, h - 1], radius=32 * S, fill=(255, 255, 255, 255))
+    red = vgradient(128 * S, 64 * S, (255, 92, 72), (196, 28, 32))
+    inner = big(128, 64); ImageDraw.Draw(inner).rounded_rectangle([5 * S, 5 * S, w - 1 - 5 * S, h - 1 - 5 * S], radius=27 * S, fill=(255, 255, 255, 255))
+    img = Image.composite(red, img, inner.split()[3])
+    hl = big(128, 64); ImageDraw.Draw(hl).rounded_rectangle([14 * S, 9 * S, w - 14 * S, 26 * S], radius=8 * S, fill=(255, 255, 255, 80))
+    img = Image.composite(Image.alpha_composite(img, hl), img, inner.split()[3])
+    return small(img, 128, 64)
+
+
+def bubble():
+    # A chat bubble body: white rounded square (tinted per sender), sliced 34 px on every side.
+    img = big(96, 96); ImageDraw.Draw(img).rounded_rectangle([0, 0, 96 * S - 1, 96 * S - 1], radius=28 * S, fill=(255, 255, 255, 255))
+    return small(img, 96, 96)
+
+
+def bubble_tail():
+    # The bubble's tail, pointing up-left at the speaker (mirrored for the player's own messages).
+    img = big(32, 32); ImageDraw.Draw(img).polygon([(0, 0), (32 * S, 6 * S), (12 * S, 32 * S)], fill=(255, 255, 255, 255))
+    return small(img, 32, 32)
 
 
 # ---------- effects ----------
@@ -242,7 +294,9 @@ if __name__ == '__main__':
         bg = fn()
         assert bg.getextrema()[3][0] == 255, name + ' must be opaque'
         save(bg, 'Backgrounds', name + '.png')
-    for kind in ('panel', 'dark', 'button', 'button_dark', 'pill', 'slot', 'card', 'bar', 'header'): save(frame(kind), 'Frames', kind + '.png')
+    for kind in ('panel', 'dark', 'button', 'button_dark', 'pill', 'slot', 'card', 'header'): save(frame(kind), 'Frames', kind + '.png')
+    save(bar_track(), 'Frames', 'bar.png'); save(bar_fill(), 'Frames', 'bar_fill.png'); save(badge(), 'Frames', 'badge.png')
+    save(bubble(), 'Frames', 'bubble.png'); save(bubble_tail(), 'Effects', 'bubble_tail.png')
     save(circle_sprite(64, (255, 255, 255, 255)), 'Effects', 'dot.png')
     save(rays(), 'Effects', 'rays.png'); save(glow(), 'Effects', 'glow.png'); save(summon_circle(), 'Effects', 'summon_circle.png'); save(card_back(), 'Effects', 'card_back.png')
     credits = {}
