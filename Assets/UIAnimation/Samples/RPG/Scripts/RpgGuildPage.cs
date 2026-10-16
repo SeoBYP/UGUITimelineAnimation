@@ -5,59 +5,72 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Guild chat: a scroll list of bubbles (two prefabs, others / mine), each measured to its text and appearing as it
-/// arrives ("Appear"); the list stays at the newest message (Stick To End). The quick replies send a message, the
-/// "is typing" line blinks (a looping state), and a guild member answers.
+/// Guild chat: a scroll list of bubbles (two prefabs, others / mine), each as wide as its text and measured to its
+/// height, appearing as it arrives ("Appear"); the list stays at the newest message (Stick To End). Type in the input
+/// field and SEND (or Enter): the message goes in, a guild member's typing bubble bounces (a looping state) and their
+/// answer follows.
 /// </summary>
 public sealed class RpgGuildPage : MonoBehaviour
 {
     public UIAnimScrollList list;
-    public Button[] quick;
-    public TMP_Text typing;
+    public TMP_InputField input;
+    public Button send;
+    [Tooltip("The typing bubble (shown while a member is answering) and the name next to it.")]
+    public GameObject typing;
+    public TMP_Text typingName;
     [Min(0)] public float answerSeconds = 1.2f;
 
     readonly List<(bool mine, string who, string hero, string text)> _messages = new();
-    UIAnimation _typing;
+    int _replies;
+    bool _waiting;
 
     public int MessageCount => _messages.Count;
 
     void Awake()
     {
-        _typing = typing.GetComponent<UIAnimation>();
         foreach (var (who, hero, text) in RpgData.GuildChat) _messages.Add((false, who, hero, text));
         list.prefabOf = i => _messages[i].mine ? 1 : 0;
-        list.SetCount(_messages.Count, (RpgRow row, int i) => Bind(row, i));
-        for (var i = 0; i < quick.Length; i++)
-        {
-            var reply = RpgData.QuickChat[i];
-            quick[i].GetComponentInChildren<TMP_Text>().text = reply.mine;
-            quick[i].onClick.AddListener(() => Send(reply));
-        }
-        typing.gameObject.SetActive(false);
+        list.SetCount(_messages.Count, (RpgChatBubble b, int i) => Bind(b, i));
+        send.onClick.AddListener(SendTyped);
+        input.onSubmit.AddListener(_ => SendTyped());
+        typing.SetActive(false);
     }
 
-    void Bind(RpgRow row, int i)
+    // A clock that moves a minute per message, so the times read like a conversation.
+    static string Time(int i) => $"21:{4 + i:00}";
+
+    void Bind(RpgChatBubble b, int i)
     {
         var m = _messages[i];
-        row.text.text = m.text;
-        if (row.title != null) row.title.text = m.who;
-        if (row.icon != null) row.icon.sprite = RpgDemo.Instance.Sprite(m.hero);
+        b.Set(m.mine ? null : m.who, Time(i), m.text, m.mine ? null : RpgDemo.Instance.Sprite(m.hero));
     }
 
-    async void Send((string mine, string who, string hero, string answer) reply)
+    void SendTyped()
     {
-        foreach (var b in quick) b.interactable = false;
-        Add(true, "COMMANDER", "aria", reply.mine);
-        typing.text = $"{reply.who} is typing...";
-        typing.gameObject.SetActive(true);
-        _typing.Play("Blink");
+        var text = input.text.Trim();
+        if (text.Length == 0 || _waiting) return;
+        input.text = "";
+        var (who, hero, answer) = RpgData.ChatReplies[_replies++ % RpgData.ChatReplies.Length];
+        Send(text, who, hero, answer);
+    }
+
+    async void Send(string mine, string who, string hero, string answer)
+    {
+        if (_waiting) return;
+        _waiting = true;
+        Interactable(false);
+        Add(true, "COMMANDER", "aria", mine);
+        typingName.text = $"{who} is typing";
+        typing.SetActive(true);   // its "Bounce" plays on enable
         await Awaitable.WaitForSecondsAsync(answerSeconds);
         if (this == null) return;
-        _typing.Stop("Blink");
-        typing.gameObject.SetActive(false);
-        Add(false, reply.who, reply.hero, reply.answer);
-        foreach (var b in quick) b.interactable = true;
+        typing.SetActive(false);
+        Add(false, who, hero, answer);
+        Interactable(true);
+        _waiting = false;
     }
+
+    void Interactable(bool on) => send.interactable = on;
 
     void Add(bool mine, string who, string hero, string text)
     {

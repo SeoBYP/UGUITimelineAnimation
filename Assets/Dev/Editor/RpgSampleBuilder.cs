@@ -29,6 +29,8 @@ static class RpgSampleBuilder
     static readonly Color Dim = new Color32(190, 172, 146, 255);
     static readonly Color Purple = new Color32(190, 110, 255, 255);
     static readonly Color Legend = new Color32(255, 196, 70, 255);
+    static readonly Color Track = new Color(1, 1, 1, 0.16f);            // gauge groove on dark panels
+    static readonly Color FillGold = new Color32(255, 204, 70, 255);    // gauge fill (bar_fill shades it left to right)
 
     [MenuItem("Tools/UIAnimation Dev/Rebuild RPG Sample")]
     public static void Build()
@@ -102,7 +104,8 @@ static class RpgSampleBuilder
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.mipmapEnabled = false;
             importer.alphaIsTransparency = true;
-            importer.spriteBorder = path.Contains("/Frames/") ? new Vector4(44, 44, 44, 44) : Vector4.zero;
+            // Gauges are pills sliced left/right only (their ends are scaled to the bar's height in Img); other frames on all sides.
+            importer.spriteBorder = path.Contains("/Frames/bar") || path.Contains("/Frames/badge") ? new Vector4(32, 0, 32, 0) : path.Contains("/Frames/") ? new Vector4(44, 44, 44, 44) : Vector4.zero;
             importer.SaveAndReimport();
         }
     }
@@ -153,6 +156,8 @@ static class RpgSampleBuilder
         image.sprite = sprite;
         image.color = color ?? Color.white;
         image.type = sprite != null && sprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
+        // A gauge pill: its round ends are as high as the sprite; scale them to this bar's height so they stay half circles.
+        if (sprite != null && (sprite.name.StartsWith("bar") || sprite.name == "badge") && rt.rect.height > 0) image.pixelsPerUnitMultiplier = sprite.rect.height / rt.rect.height;
         image.raycastTarget = raycast;
         return image;
     }
@@ -277,7 +282,7 @@ static class RpgSampleBuilder
     {
         var pill = Node(kind + "Pill", parent, anchor, anchor, position, new Vector2(260, 72), pivot);
         Img(pill, Frame("pill"));
-        Pic("Icon", pill, Icon(kind switch { RpgCurrency.Kind.Gold => "gold", RpgCurrency.Kind.Gems => "gem", _ => "stamina" }), -100, 2, 72, 72);
+        Pic("Icon", pill, Icon(kind switch { RpgCurrency.Kind.Gold => "gold", RpgCurrency.Kind.Gems => "gem", _ => "stamina" }), -96, 0, 56, 56);
         var currency = pill.gameObject.AddComponent<RpgCurrency>();
         currency.kind = kind;
         currency.text = Label(pill, "Value", "0", 24, 0, 170, 60, 40, Light, TextAlignmentOptions.Right);
@@ -285,6 +290,33 @@ static class RpgSampleBuilder
             Keys(pill, UIAnimProperty.Scale, K(0, S(1)), Vibrate(UIAnimCurveType.Punch, 0.4f, S(0.12f, 0.12f), 5, 0.6f)),
             Keys(currency.text, UIAnimProperty.GraphicColor, K(0, Gold), K(0.4f, (Vector4)Light, UIAnimEase.InOutSine))));
         return pill;
+    }
+
+    // A notification badge: red pill with white text, as wide as its text (a circle for one character), pinned by its
+    // center to a corner of its parent. Every badge looks and pulses the same ("Pulse", looping while it is shown).
+    static TMP_Text Badge(Transform parent, string name, string text, Vector2 corner, Vector2 offset, float height = 44, bool pulse = true)
+    {
+        var rt = Node(name, parent, corner, corner, offset, new Vector2(height, height));
+        // The picture is a child outside the layout: a sliced Image reports its unscaled ends (64) as a preferred width.
+        var background = Img(Fill("Background", rt), Frame("badge"));
+        background.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        var layout = rt.gameObject.AddComponent<HorizontalLayoutGroup>();
+        var pad = Mathf.RoundToInt(height * 0.32f);
+        layout.padding = new RectOffset(pad, pad, 0, 0);
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = layout.childControlHeight = true;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+        var fit = rt.gameObject.AddComponent<ContentSizeFitter>();
+        fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var label = Text(Node("Label", rt, Half, Half, Vector2.zero, Vector2.zero), text, height * 0.66f, Color.white);
+        label.rectTransform.gameObject.AddComponent<LayoutElement>().minWidth = height - pad * 2;   // never narrower than a circle
+        if (pulse)
+        {
+            rt.gameObject.AddComponent<UIAnimation>().states.Add(State("Pulse",
+                Keys(rt, UIAnimProperty.Scale, K(0, S(1)), K(0.25f, S(1.18f), UIAnimEase.OutSine), K(0.6f, S(1), UIAnimEase.OutBack), K(1.6f, S(1)))));
+            Loop(rt, "Pulse", playOnEnable: true);
+        }
+        return label;
     }
 
     static GameObject[] StarRow(Transform parent, float y, float size, float spacing, int count = 5)
@@ -455,9 +487,9 @@ static class RpgSampleBuilder
         row.icon = Pic("Icon", body, null, -420, 0, 64, 64);
         row.title = Label(body, "Name", "ATK", -280, 0, 160, 60, 40, Dim, TextAlignmentOptions.Left);
         var bar = Center("Bar", body, 90, 0, 520, 24);
-        Img(bar, Frame("bar"), new Color(0, 0, 0, 0.5f));
+        Img(bar, Frame("bar"), Track);
         row.fill = Node("Fill", bar, Vector2.zero, new Vector2(0.6f, 1), Vector2.zero, Vector2.zero, new Vector2(0, 0.5f));
-        Img(row.fill, Frame("bar"), Gold);
+        Img(row.fill, Frame("bar_fill"), FillGold);
         row.value = Label(body, "Value", "0", 400, 0, 160, 60, 42, Light, TextAlignmentOptions.Right);
         States(root, RowShow(body, Go(row.fill, UIAnimProperty.Scale, S(0, 1), S(1), 0.15f, 0.6f, UIAnimEase.OutCubic)));
         return root;
@@ -501,8 +533,8 @@ static class RpgSampleBuilder
         body.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
         var slot = root.AddComponent<RpgItemSlot>();
         slot.frame = Img(body, Frame("slot"), raycast: true);
-        slot.icon = Pic("Icon", body, null, 0, 4, 140, 140);
-        slot.count = Label(body, "Count", "", 30, -60, 110, 40, 32, Light, TextAlignmentOptions.Right);
+        slot.icon = Pic("Icon", body, null, 0, 16, 118, 118);
+        slot.count = Label(body, "Count", "", 30, -66, 110, 34, 28, Light, TextAlignmentOptions.Right);
         Pressable(body);
         States(root, State("Show", Fade(Group(body), 0, 1, 0, 0.2f), Go(body, UIAnimProperty.Scale, S(0.6f), S(1), 0, 0.35f, UIAnimEase.OutBack)));
         return root;
@@ -533,8 +565,8 @@ static class RpgSampleBuilder
         var row = root.AddComponent<RpgRow>();
         Pic("Glow", body, Fx("glow"), 0, 30, 300, 300, new Color(1, 0.8f, 0.4f, 0.35f));
         row.icon = Pic("Icon", body, null, 0, 30, 150, 150);
-        row.title = Label(body, "Name", "Chapter", 0, -78, 360, 50, 40, Gold);
-        row.text = Label(body, "Progress", "0/10", 0, -114, 200, 40, 30, Light);
+        row.title = Label(body, "Name", "Chapter", 0, -70, 360, 46, 36, Gold);
+        row.text = Label(body, "Progress", "0/10", 0, -114, 200, 36, 28, Light);
         States(root, State("Focus", Scrub(body, UIAnimProperty.Scale, S(0.78f), S(1)), Scrub(Group(body), UIAnimProperty.CanvasGroupAlpha, A(0.45f), A(1))));
         return root;
     }
@@ -547,13 +579,13 @@ static class RpgSampleBuilder
         Img(frame, Frame("dark"));
         var q = root.AddComponent<RpgQuestRow>();
         Img(Node("Slot", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(70, 0), new Vector2(96, 96)), Frame("slot"), Gold);
-        q.rewardIcon = Img(Node("Reward", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(70, 8), new Vector2(70, 70)), null);
-        q.reward = Text(Node("Amount", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(70, -32), new Vector2(110, 34)), "0", 28, Light);
+        q.rewardIcon = Img(Node("Reward", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(70, 14), new Vector2(56, 56)), null);
+        q.reward = Text(Node("Amount", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(70, -30), new Vector2(110, 30)), "0", 24, Light);
         q.title = Text(Node("Title", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(150, 22), new Vector2(800, 54), new Vector2(0, 0.5f)), "Quest", 44, Light, TextAlignmentOptions.Left);
         var bar = Node("Bar", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(150, -28), new Vector2(560, 22), new Vector2(0, 0.5f));
-        Img(bar, Frame("bar"), new Color(0, 0, 0, 0.5f));
+        Img(bar, Frame("bar"), Track);
         q.fill = Node("Fill", bar, Vector2.zero, new Vector2(0.5f, 1), Vector2.zero, Vector2.zero, new Vector2(0, 0.5f));
-        Img(q.fill, Frame("bar"), Gold);
+        Img(q.fill, Frame("bar_fill"), FillGold);
         q.progress = Text(Node("Progress", body, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(730, -28), new Vector2(240, 40), new Vector2(0, 0.5f)), "0/1", 32, Dim, TextAlignmentOptions.Left);
         q.claim = Btn(body, "ClaimButton", null, 0, 0, 220, 84);
         var claimRt = (RectTransform)q.claim.transform;
@@ -587,11 +619,11 @@ static class RpgSampleBuilder
         Img(player, Frame("dark"));
         Img(Center("Avatar", player, -200, 0, 110, 110), Frame("slot"), Gold);
         Pic("Crown", player, Icon("crown"), -200, 2, 86, 86);
-        Label(player, "Name", "COMMANDER", 60, 30, 340, 50, 44, Gold, TextAlignmentOptions.Left);
-        Label(player, "Level", "Lv. 27", 60, -6, 340, 40, 34, Light, TextAlignmentOptions.Left);
+        Label(player, "Name", "COMMANDER", 60, 36, 340, 50, 40, Gold, TextAlignmentOptions.Left);
+        Label(player, "Level", "Lv. 27", 60, -8, 340, 40, 30, Light, TextAlignmentOptions.Left);
         var exp = Center("Exp", player, 60, -42, 340, 20);
-        Img(exp, Frame("bar"), new Color(0, 0, 0, 0.5f));
-        Img(Node("Fill", exp, Vector2.zero, new Vector2(0.62f, 1), Vector2.zero, Vector2.zero, new Vector2(0, 0.5f)), Frame("bar"), Gold);
+        Img(exp, Frame("bar"), Track);
+        Img(Node("Fill", exp, Vector2.zero, new Vector2(0.62f, 1), Vector2.zero, Vector2.zero, new Vector2(0, 0.5f)), Frame("bar_fill"), FillGold);
 
         // Currencies
         var pills = new[] { RpgCurrency.Kind.Stamina, RpgCurrency.Kind.Gold, RpgCurrency.Kind.Gems }
@@ -657,6 +689,8 @@ static class RpgSampleBuilder
                 return b;
             }).ToArray();
         (lobby.shop, lobby.mail, lobby.attendance) = (side[0], side[1], side[2]);
+        lobby.mailBadge = Badge(side[1].transform, "Badge", "0", new Vector2(1, 1), new Vector2(-10, -10), 40);
+        lobby.attendanceBadge = Badge(side[2].transform, "Badge", "!", new Vector2(1, 1), new Vector2(-10, -10), 40).transform.parent.gameObject;
         var right = new[] { ("GUILD", "crown"), ("RANK", "trophy"), ("STORY", "book") }
             .Select((m, i) =>
             {
@@ -669,12 +703,7 @@ static class RpgSampleBuilder
         (lobby.guild, lobby.ranking, lobby.story) = (right[0], right[1], right[2]);
         lobby.settings = Btn(content, "SETTINGSButton", "SETTINGS", -240, 470, 200, 70, gold: false);
         lobby.settings.GetComponentInChildren<TMP_Text>().fontSize = 30;
-        var badge = Center("Badge", menu[4].transform, 74, 74, 48, 48);
-        Img(badge, Fx("dot"), new Color32(230, 60, 50, 255));
-        Text(Fill("Mark", badge), "!", 36, Color.white);
-        badge.gameObject.AddComponent<UIAnimation>().states.Add(State("Pulse",
-            Keys(badge, UIAnimProperty.Scale, K(0, S(1)), K(0.25f, S(1.3f), UIAnimEase.OutSine), K(0.6f, S(1), UIAnimEase.OutBack), K(1.4f, S(1)))));
-        Loop(badge, "Pulse", playOnEnable: true);
+        Badge(menu[4].transform, "Badge", "!", new Vector2(1, 1), new Vector2(-14, -14), 48);
 
         // Intro: the world fades in, the panels slide in from their edges, the hero steps in, the menu rises one by one.
         var enter = new List<UIAnimTrack>
@@ -801,7 +830,10 @@ static class RpgSampleBuilder
                 Move(info, new Vector2(500, -60), 0.1f, 0.7f),
                 Move(header, new Vector2(0, 130), 0.1f, 0.5f),
             })),
-            State("PopExit", Travel(0.05f, 0.45f).Concat(new[] { Fade(group, 1, 0, 0, 0.35f) })));
+            State("PopExit", Travel(0.05f, 0.45f).Concat(new[] { Fade(group, 1, 0, 0, 0.35f) })),
+            // To / from the upgrade page: this page stays where it is (the upgrade page fades in and out on top of it).
+            State("PushExit", Hold(screen.Rect, UIAnimProperty.Scale, S(1))),
+            State("PopEnter", Hold(screen.Rect, UIAnimProperty.Scale, S(1))));
         return go;
     }
 
@@ -854,8 +886,8 @@ static class RpgSampleBuilder
         {
             var b = Btn(content, name, null, x, -420, 400, 130, gold);
             Label(b.transform, "Label", label, 0, 20, 380, 60, 52, gold ? Ink : Gold);
-            Pic("Gem", b.transform, Icon("gem"), -60, -32, 44, 44);
-            Label(b.transform, "Cost", cost, 30, -32, 160, 44, 36, gold ? Ink : Light, TextAlignmentOptions.Left);
+            Pic("Gem", b.transform, Icon("gem"), -70, -32, 44, 44);
+            Label(b.transform, "Cost", cost, 50, -32, 160, 44, 36, gold ? Ink : Light, TextAlignmentOptions.Left);
             b.GetComponent<UIAnimation>().states.Add(State("Deny", Keys(b.transform, UIAnimProperty.Rotation, K(0, Rot(0, 0, 0)), Vibrate(UIAnimCurveType.Shake, 0.4f, Rot(0, 0, 6), 25, 0.6f))));
             return b;
         }
@@ -1089,9 +1121,9 @@ static class RpgSampleBuilder
         Pic("Rune", rewards, Icon("rune"), 120, -20, 100, 100);
         Label(rewards, "RuneCount", "x2", 240, -20, 120, 60, 54, Ink, TextAlignmentOptions.Left);
         var exp = Center("Exp", go.transform, 0, -330, 760, 28);
-        Img(exp, Frame("bar"), new Color(0, 0, 0, 0.6f));
+        Img(exp, Frame("bar"), Track);
         var fill = Node("Fill", exp, Vector2.zero, new Vector2(0.78f, 1), Vector2.zero, Vector2.zero, new Vector2(0, 0.5f));
-        Img(fill, Frame("bar"), Gold);
+        Img(fill, Frame("bar_fill"), FillGold);
         var expLabel = Label(go.transform, "ExpLabel", "Lv. 27  ·  EXP +120", 0, -290, 600, 44, 36, Light);
         result.primary = Btn(go.transform, "ContinueButton", "CONTINUE", 190, -440, 320, 100);
         result.lobby = Btn(go.transform, "LobbyButton", "LOBBY", -190, -440, 320, 100, gold: false);
@@ -1110,7 +1142,7 @@ static class RpgSampleBuilder
             Move(rewards, new Vector2(0, -230), 1.6f, 0.5f),
             Fade(expLabel, 0, 1, 1.9f, 0.3f),
             Fade(Group(exp), 0, 1, 1.9f, 0.3f),
-            Go(fill, UIAnimProperty.Scale, S(0.6f, 1), S(1), 2.0f, 0.8f, UIAnimEase.OutCubic),
+            Go(fill, UIAnimProperty.AnchorMax, V(0.47f, 1), V(0.78f, 1), 2.0f, 0.8f, UIAnimEase.OutCubic),   // the width (not the scale): the round ends stay round
         };
         for (var i = 0; i < 3; i++)
         {
@@ -1212,15 +1244,15 @@ static class RpgSampleBuilder
         Loop(rune, "Spin", playOnEnable: true);
         Label(content, "Title", "LOADING", 0, -170, 600, 70, 56, Gold);
         var bar = Center("Bar", content, 0, -260, 1000, 30);
-        Img(bar, Frame("bar"), new Color(0, 0, 0, 0.6f));
+        Img(bar, Frame("bar"), Track);
         loading.fill = Node("Fill", bar, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(0, 0.5f));
-        Img(loading.fill, Frame("bar"), Gold);
-        loading.fill.localScale = new Vector3(0, 1, 1);
+        Img(loading.fill, Frame("bar_fill"), FillGold);
+        loading.fill.anchorMax = new Vector2(0, 1);
         loading.percent = Label(content, "Percent", "0%", 0, -320, 300, 60, 44, Light);
         loading.tip = Label(content, "Tip", "", 0, -420, 1400, 60, 38, Dim);
         States(go, FadePage(content.GetComponent<CanvasGroup>()).Append(State("Progress",
-            Keys(loading.fill, UIAnimProperty.Scale, K(0, S(0, 1)), K(0.5f, S(0.35f, 1), UIAnimEase.OutSine), K(1.1f, S(0.55f, 1), UIAnimEase.InOutSine),
-                K(1.8f, S(1), UIAnimEase.InOutSine)))).ToArray());
+            Keys(loading.fill, UIAnimProperty.AnchorMax, K(0, V(0, 1)), K(0.5f, V(0.35f, 1), UIAnimEase.OutSine), K(1.1f, V(0.55f, 1), UIAnimEase.InOutSine),
+                K(1.8f, V(1, 1), UIAnimEase.InOutSine)))).ToArray());
         return go;
     }
 
@@ -1228,15 +1260,17 @@ static class RpgSampleBuilder
     {
         var (go, screen) = NewScreen("Upgrade");
         var content = Content(go, "hall");
-        var header = Header(content, "UPGRADE", RpgCurrency.Kind.Gold, RpgCurrency.Kind.Gems);
+        Header(content, "UPGRADE", RpgCurrency.Kind.Gold, RpgCurrency.Kind.Gems);
         var page = go.AddComponent<RpgUpgradePage>();
 
-        var card = Center("Card", content, -500, -50, 440, 572);
+        // The card and the panel sit exactly where the hero page has its portrait and its info: opening this page over
+        // it only changes what is inside them (no slide, no second portrait).
+        var card = Center("Card", content, -540, -60, 460, 598);
         var glow = Pic("Glow", card, Fx("glow"), 0, 0, 900, 900, new Color(1, 0.85f, 0.4f, 0));
         page.portrait = Img(Fill("Portrait", card), null);
         Img(Fill("Frame", card, -10), Frame("card"), Legend);
 
-        var panel = Center("Panel", content, 330, -50, 960, 800);
+        var panel = Center("Panel", content, 300, -60, 1000, 840);
         Img(panel, Frame("dark"));
         page.heroName = Label(panel, "Name", "Hero", -150, 330, 600, 90, 80, Gold, TextAlignmentOptions.Left);
         page.level = Label(panel, "Level", "Lv. 1", 300, 330, 300, 90, 70, Light, TextAlignmentOptions.Right);
@@ -1253,10 +1287,10 @@ static class RpgSampleBuilder
         Label(panel, "GearTitle", "EQUIPMENT", -270, -60, 300, 50, 40, Dim, TextAlignmentOptions.Left);
         page.slotIcons = Enumerable.Range(0, 3).Select(i =>
         {
-            var slot = Center("GearSlot" + i, panel, -310 + i * 190, -170, 160, 160);
+            var slot = Center("GearSlot" + i, panel, -330 + i * 170, -170, 150, 150);
             Img(slot, Frame("slot"), Gold);
             var ring = Pic("Ring", slot, Fx("glow"), 0, 0, 340, 340, new Color(1, 0.85f, 0.4f, 0));
-            var icon = Pic("Icon", slot, null, 0, 0, 130, 130);
+            var icon = Pic("Icon", slot, null, 0, 0, 120, 120);
             icon.color = new Color(1, 1, 1, 0);
             slot.gameObject.AddComponent<UIAnimation>().states.Add(State("Equip",
                 Keys(icon, UIAnimProperty.GraphicAlpha, K(0, A(0)), K(0.06f, A(1))),
@@ -1265,12 +1299,12 @@ static class RpgSampleBuilder
                 Keys(slot, UIAnimProperty.Scale, K(0.22f, S(1)), Vibrate(UIAnimCurveType.Punch, 0.6f, S(0.12f, 0.12f), 5, 0.5f))));
             return icon;
         }).ToArray();
-        page.autoEquip = Btn(panel, "AutoEquipButton", "AUTO EQUIP", 290, -170, 300, 96, gold: false);
+        page.autoEquip = Btn(panel, "AutoEquipButton", "AUTO EQUIP", 310, -170, 260, 96, gold: false);
 
         page.upgrade = Btn(panel, "UpgradeButton", null, 220, -320, 420, 120);
-        Label(page.upgrade.transform, "Label", "UPGRADE", 0, 18, 400, 60, 52, Ink);
-        Pic("Coin", page.upgrade.transform, Icon("gold"), -60, -30, 44, 44);
-        page.cost = Label(page.upgrade.transform, "Cost", "0", 40, -30, 200, 44, 36, Ink, TextAlignmentOptions.Left);
+        Label(page.upgrade.transform, "Label", "UPGRADE", 0, 24, 400, 56, 46, Ink);
+        Pic("Coin", page.upgrade.transform, Icon("gold"), -60, -30, 40, 40);
+        page.cost = Label(page.upgrade.transform, "Cost", "0", 70, -30, 200, 40, 32, Ink, TextAlignmentOptions.Left);
         page.upgrade.GetComponent<UIAnimation>().states.Add(Deny(page.upgrade));
         Label(panel, "Hint", "Each level costs more gold.", -200, -320, 420, 50, 32, Dim, TextAlignmentOptions.Left);
 
@@ -1283,11 +1317,11 @@ static class RpgSampleBuilder
             Keys(card, UIAnimProperty.Scale, K(0, S(1)), Vibrate(UIAnimCurveType.Punch, 0.5f, S(0.06f, 0.06f), 4, 0.5f)),
         };
         levelUp.AddRange(page.stats.Select((t, i) => Keys(t, UIAnimProperty.GraphicColor, K(0, Gold), K(0.1f + i * 0.08f, Gold), K(0.6f + i * 0.08f, (Vector4)Light, UIAnimEase.InOutSine))));
-        States(go, PageStates(screen, content.GetComponent<CanvasGroup>(), header, new[]
-        {
-            Move(card, new Vector2(-900, -50), 0.1f, 0.6f),
-            Move(panel, new Vector2(800, -50), 0.15f, 0.6f),
-        }).Append(State("LevelUp", levelUp)).ToArray());
+        var group = content.GetComponent<CanvasGroup>();
+        States(go,
+            State("PushEnter", Fade(group, 0, 1, 0, 0.35f)),
+            State("PopExit", Fade(group, 1, 0, 0, 0.3f)),
+            State("LevelUp", levelUp));
         return go;
     }
 
@@ -1306,7 +1340,7 @@ static class RpgSampleBuilder
         Img(price, Frame("pill"));
         card.currency = Pic("Currency", price, null, -80, 2, 50, 50);
         card.price = Label(price, "Value", "0", 30, 0, 160, 50, 38, Light);
-        card.stock = Label(body, "Stock", "", 90, 125, 140, 36, 28, Dim, TextAlignmentOptions.Right);
+        card.stock = Badge(body, "Stock", "1 LEFT", new Vector2(1, 1), new Vector2(-46, -6), 40, pulse: false);
         var stamp = Label(body, "Stamp", "SOLD OUT", 0, 30, 300, 90, 64, new Color32(220, 70, 50, 255));
         stamp.rectTransform.localEulerAngles = new Vector3(0, 0, -14);
         States(root,
@@ -1405,7 +1439,7 @@ static class RpgSampleBuilder
             Img(slot, Frame("dark"), raycast: true);
             f.slots[i] = slot.gameObject.AddComponent<Button>();
             f.slots[i].transition = Selectable.Transition.None;
-            Label(slot, "Empty", "+", 0, 0, 200, 120, 110, new Color(1, 1, 1, 0.15f));
+            var empty = Label(slot, "Empty", "+", 0, 0, 200, 120, 110, new Color(1, 1, 1, 0.15f));
             var portrait = Fill("Portrait", slot, 10);
             f.slotPortraits[i] = Img(portrait, null);
             var frame = Img(Fill("Frame", slot, -4), Frame("card"), Gold);
@@ -1413,7 +1447,8 @@ static class RpgSampleBuilder
             anim.states.Add(State("In",
                 Go(Group(portrait), UIAnimProperty.CanvasGroupAlpha, A(0), A(1), 0, 0.12f, UIAnimEase.Linear),
                 Go(portrait, UIAnimProperty.AnchoredPosition, V(0, 180), V(0, 0), 0, 0.4f, UIAnimEase.OutBounce),
-                Go(frame, UIAnimProperty.GraphicAlpha, A(0), A(1), 0.2f, 0.2f, UIAnimEase.Linear)));
+                Go(frame, UIAnimProperty.GraphicAlpha, A(0), A(1), 0.2f, 0.2f, UIAnimEase.Linear),
+                Go(empty, UIAnimProperty.GraphicAlpha, A(0.15f), A(0), 0, 0.1f, UIAnimEase.Linear)));
             Group(portrait).alpha = 0;
             frame.color = new Color(frame.color.r, frame.color.g, frame.color.b, 0);
         }
@@ -1495,8 +1530,10 @@ static class RpgSampleBuilder
         page.list = list;
         var empty = Label(content, "Empty", "No letters. The guild will write soon.", 0, 0, 1200, 70, 48, Dim);
         Group(empty).alpha = 0;
+        // CLAIM ALL (together): after every row's Claim, the whole list fades away at once (no row folds, so nothing squeezes).
+        var clearAll = State("ClearAll", Fade(list, 1, 0, 0, 0.3f), Go(list.transform, UIAnimProperty.Scale, S(1), S(0.96f), 0, 0.3f, UIAnimEase.InSine));
         States(go, PageStates(screen, content.GetComponent<CanvasGroup>(), header).Append(State("Empty",
-            Fade(empty, 0, 1, 0.1f, 0.5f), Go(empty.rectTransform, UIAnimProperty.Scale, S(0.9f), S(1), 0.1f, 0.5f, UIAnimEase.OutBack))).ToArray());
+            Fade(empty, 0, 1, 0.1f, 0.5f), Go(empty.rectTransform, UIAnimProperty.Scale, S(0.9f), S(1), 0.1f, 0.5f, UIAnimEase.OutBack))).Append(clearAll).ToArray());
         return go;
     }
 
@@ -1560,9 +1597,9 @@ static class RpgSampleBuilder
     static RectTransform Gauge(string name, Transform parent, float x, float y, float w, float h, Color color)
     {
         var bar = Center(name, parent, x, y, w, h);
-        Img(bar, Frame("bar"), new Color(0, 0, 0, 0.6f));
+        Img(bar, Frame("bar"), Track);
         var fill = Node("Fill", bar, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, new Vector2(0, 0.5f));
-        Img(fill, Frame("bar"), color);
+        Img(fill, Frame("bar_fill"), color);
         return fill;
     }
 
@@ -1651,35 +1688,50 @@ static class RpgSampleBuilder
         return go;
     }
 
-    // A chat bubble, sized by its text (the list measures it): others on the left with a portrait, mine on the right.
+    // A chat message: sender and time above a rounded bubble (others' with a tail toward the portrait). The bubble is as wide as its text up to a
+    // limit (RpgChatBubble sets it), so short lines get short bubbles; the list measures the height. Others are on the
+    // left in parchment with a portrait, the player's own on the right in gold.
     static GameObject ChatItem(bool mine)
     {
         var root = Node(mine ? "ChatMine" : "ChatOther", null, Half, Half, Vector2.zero, new Vector2(1600, 120));
         var rows = root.gameObject.AddComponent<VerticalLayoutGroup>();
-        rows.padding = mine ? new RectOffset(560, 20, 8, 8) : new RectOffset(130, 560, 8, 8);
+        rows.padding = mine ? new RectOffset(420, 24, 6, 10) : new RectOffset(130, 420, 6, 10);
+        rows.spacing = 4;
+        rows.childAlignment = mine ? TextAnchor.UpperRight : TextAnchor.UpperLeft;
         rows.childControlWidth = rows.childControlHeight = true;
-        rows.childForceExpandHeight = false;
-        var row = root.gameObject.AddComponent<RpgRow>();
+        rows.childForceExpandWidth = rows.childForceExpandHeight = false;
+        var view = root.gameObject.AddComponent<RpgChatBubble>();
         if (!mine)
         {
-            var avatar = Node("Avatar", root, new Vector2(0, 1), new Vector2(0, 1), new Vector2(60, -60), new Vector2(96, 96));
+            var avatar = Node("Avatar", root, new Vector2(0, 1), new Vector2(0, 1), new Vector2(64, -52), new Vector2(84, 84));
             avatar.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             Img(avatar, Frame("slot"), Gold);
-            row.icon = Img(Fill("Portrait", avatar, 8), null);
+            view.portrait = Img(Fill("Portrait", avatar, 7), null);
         }
+        view.meta = Text(Node("Meta", root, Half, Half, Vector2.zero, Vector2.zero), "Name", 28, Gold, mine ? TextAlignmentOptions.Right : TextAlignmentOptions.Left);
+        view.meta.richText = true;
         var bubble = Node("Bubble", root, Half, Half, Vector2.zero, Vector2.zero);
-        // The image is a child outside the layout: a sliced Image reports its border size as a preferred height.
-        var image = Img(Fill("Background", bubble), Frame(mine ? "button" : "dark"));
-        image.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        view.bubble = bubble.gameObject.AddComponent<LayoutElement>();
+        view.bubble.flexibleWidth = 0;   // only as wide as the text (RpgChatBubble), never stretched to the row
+        var fill = mine ? Gold : Light;
+        // The pictures are children outside the layout: a sliced Image reports its border size as a preferred size.
+        var background = Img(Fill("Background", bubble), Frame("bubble"), fill);
+        background.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        if (!mine)   // a tail toward the speaker's portrait; the player's own bubbles have none
+        {
+            var tail = Node("Tail", bubble, new Vector2(0, 1), new Vector2(0, 1), new Vector2(-4, -2), new Vector2(26, 26), new Vector2(0, 1));
+            tail.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            Img(tail, Fx("bubble_tail"), fill);
+        }
         var inside = bubble.gameObject.AddComponent<VerticalLayoutGroup>();
-        inside.padding = new RectOffset(34, 34, 18, 22);
+        inside.padding = new RectOffset(28, 28, 14, 18);
         inside.childControlWidth = inside.childControlHeight = true;
-        inside.childForceExpandHeight = false;
-        if (!mine) row.title = Text(Node("Name", bubble, Half, Half, Vector2.zero, Vector2.zero), "Name", 30, Gold, TextAlignmentOptions.TopLeft);
-        row.text = Text(Node("Text", bubble, Half, Half, Vector2.zero, Vector2.zero), "Message", 38, mine ? Ink : Light, mine ? TextAlignmentOptions.TopRight : TextAlignmentOptions.TopLeft);
+        inside.childForceExpandWidth = inside.childForceExpandHeight = false;
+        view.message = Text(Node("Text", bubble, Half, Half, Vector2.zero, Vector2.zero), "Message", 36, Ink, TextAlignmentOptions.TopLeft);
         root.gameObject.AddComponent<UIAnimation>().states.Add(State("Appear",
-            Go(bubble, UIAnimProperty.Scale, S(0.85f), S(1), 0, 0.3f, UIAnimEase.OutBack),
-            Go(Group(bubble), UIAnimProperty.CanvasGroupAlpha, A(0), A(1), 0, 0.2f, UIAnimEase.Linear)));
+            Go(bubble, UIAnimProperty.Scale, S(0.6f), S(1), 0, 0.35f, UIAnimEase.OutBack),
+            Go(Group(root), UIAnimProperty.CanvasGroupAlpha, A(0), A(1), 0, 0.15f, UIAnimEase.Linear)));
+        bubble.pivot = new Vector2(mine ? 1 : 0, 1);   // grows out of its tail
         return root.gameObject;
     }
 
@@ -1694,29 +1746,57 @@ static class RpgSampleBuilder
         Pic("Emblem", banner, Icon("crown"), -720, 0, 70, 70);
         Label(banner, "Name", "SILVER LIONS", -360, 0, 600, 70, 52, Gold, TextAlignmentOptions.Left);
         Label(banner, "Info", "Lv. 12  ·  18/30 online", 440, 0, 600, 60, 38, Light, TextAlignmentOptions.Right);
-        var list = ScrollList("Chat", Stretch("Chat", content, 160, 160, 255, 210), chatOther);
+        var list = ScrollList("Chat", Stretch("Chat", content, 160, 160, 255, 230), chatOther);
         list.extraPrefabs.Add(chatMine);
         list.layout = UIAnimScrollList.LayoutType.Vertical;
         list.controlChildSize = true;
         list.measureItems = true;
-        list.spacing = 6;
+        list.spacing = 10;
         list.stickToEnd = true;
         list.childAlignment = TextAnchor.LowerCenter;
         list.appearState = "Appear";
         list.playEntryOnFill = false;
         page.list = list;
-        page.typing = Label(content, "Typing", "", -520, -350, 700, 50, 34, Dim, TextAlignmentOptions.Left);
-        page.typing.gameObject.AddComponent<UIAnimation>().states.Add(State("Blink",
-            Keys(page.typing, UIAnimProperty.GraphicAlpha, K(0, A(1)), K(0.5f, A(0.3f), UIAnimEase.InOutSine), K(1f, A(1), UIAnimEase.InOutSine))));
-        Loop(page.typing, "Blink", playOnEnable: false);
-        page.quick = Enumerable.Range(0, RpgData.QuickChat.Length).Select(i =>
+
+        // The typing bubble: three dots bouncing one after another while a member answers.
+        var typing = Center("Typing", content, -660, -345, 130, 56);
+        Img(Fill("Background", typing), Frame("bubble"), Light);
+        var dots = Enumerable.Range(0, 3).Select(i => Pic("Dot" + i, typing, Fx("dot"), -32 + i * 32, 0, 18, 18, Dim)).ToArray();
+        typing.gameObject.AddComponent<UIAnimation>().states.Add(State("Bounce", dots.Select((d, i) =>
+            Keys(d.rectTransform, UIAnimProperty.AnchoredPosition, K(0, V(-32 + i * 32, 0)), K(0.12f * i, V(-32 + i * 32, 0)),
+                K(0.12f * i + 0.18f, V(-32 + i * 32, 12), UIAnimEase.OutSine), K(0.12f * i + 0.36f, V(-32 + i * 32, 0), UIAnimEase.InSine), K(0.9f, V(-32 + i * 32, 0))))));
+        Loop(typing, "Bounce", playOnEnable: true);
+        page.typing = typing.gameObject;
+        page.typingName = Label(typing, "TypingName", "", 330, 0, 460, 44, 30, Dim, TextAlignmentOptions.Left);   // shown and hidden with the bubble
+
+        // The input bar: a text field and SEND.
+        var bar = Center("InputBar", content, -120, -445, 1360, 96);
+        var field = Img(bar, Frame("pill"), raycast: true);
+        page.input = bar.gameObject.AddComponent<TMP_InputField>();
+        var area = Stretch("Text Area", bar, 36, 36, 12, 12);
+        area.gameObject.AddComponent<RectMask2D>();
+        var placeholder = Text(Fill("Placeholder", area), "Message the guild...", 38, new Color(1, 1, 1, 0.35f), TextAlignmentOptions.Left);
+        placeholder.fontStyle = FontStyles.Italic;
+        var typed = Text(Fill("Text", area), "", 38, Light, TextAlignmentOptions.Left);
+        typed.textWrappingMode = TextWrappingModes.NoWrap;
+        page.input.textViewport = area;
+        page.input.textComponent = typed;
+        page.input.placeholder = placeholder;
+        page.input.targetGraphic = field;
+        page.input.lineType = TMP_InputField.LineType.SingleLine;
+        page.input.characterLimit = 80;
+        page.input.customCaretColor = true;
+        page.input.caretColor = Gold;
+        page.input.caretWidth = 3;
+        page.input.selectionColor = new Color(1, 0.85f, 0.4f, 0.35f);
+        page.send = Btn(content, "SendButton", "SEND", 700, -445, 220, 96);
+
+        var enter = new List<UIAnimTrack>
         {
-            var q = Btn(content, "Quick" + i, "...", -500 + i * 500, -440, 460, 90, gold: false);
-            q.GetComponentInChildren<TMP_Text>().fontSize = 36;
-            return q;
-        }).ToArray();
-        States(go, PageStates(screen, content.GetComponent<CanvasGroup>(), header,
-            page.quick.Select((q, i) => Move((RectTransform)q.transform, new Vector2(-500 + i * 500, -640), 0.2f + i * 0.06f, 0.5f, UIAnimEase.OutBack))));
+            Move(bar, new Vector2(-120, -640), 0.2f, 0.5f, UIAnimEase.OutBack),
+            Move((RectTransform)page.send.transform, new Vector2(700, -640), 0.25f, 0.5f, UIAnimEase.OutBack),
+        };
+        States(go, PageStates(screen, content.GetComponent<CanvasGroup>(), header, enter));
         return go;
     }
 
@@ -1744,7 +1824,7 @@ static class RpgSampleBuilder
     {
         var pillar = Node("Pillar" + place, parent, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(x, 0), new Vector2(260, height), new Vector2(0.5f, 0));
         Img(pillar, Frame("dark"), color);
-        Text(Node("Place", pillar, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -50), new Vector2(200, 90)), place.ToString(), 90, Gold);
+        Text(Node("Place", pillar, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -60), new Vector2(200, 110)), place.ToString(), 90, Gold);
         var top = Node("Hero" + place, parent, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(x, height + 10), new Vector2(240, 300), new Vector2(0.5f, 0));
         var row = top.gameObject.AddComponent<RpgRow>();
         Img(Center("Frame", top, 0, 60, 190, 190), Frame("slot"), color);
@@ -1873,15 +1953,23 @@ static class RpgSampleBuilder
 
     static Slider VolumeSlider(Transform parent, string name, float x, float y)
     {
-        var rt = Center(name, parent, x, y, 460, 40);
+        // The groove and the fill start at the same left edge; the fill ends under the handle's center (the handle
+        // travels between its own radius from each end). The handle: a soft shadow, a white ring, a gold center.
+        const float knob = 48;
+        var rt = Center(name, parent, x, y, 460, knob);
         var slider = rt.gameObject.AddComponent<Slider>();
-        Img(Stretch("Background", rt, 0, 0, 10, 10), Frame("bar"), new Color(0, 0, 0, 0.5f));
-        var area = Stretch("Fill Area", rt, 10, 10, 10, 10);
+        Img(Stretch("Background", rt, 0, 0, 15, 15), Frame("bar"), new Color(0.27f, 0.17f, 0.09f, 0.22f));
+        var area = Stretch("Fill Area", rt, 0, knob / 2, 15, 15);
         var fill = Node("Fill", area, Vector2.zero, new Vector2(0, 1), Vector2.zero, Vector2.zero);
-        Img(fill, Frame("bar"), Gold);
-        var handleArea = Stretch("Handle Slide Area", rt, 20, 20, 0, 0);
-        var handle = Node("Handle", handleArea, Vector2.zero, new Vector2(0, 1), Vector2.zero, new Vector2(48, 0));
-        var handleImage = Img(handle, Fx("dot"), Light, raycast: true);
+        Img(fill, Frame("bar_fill"), FillGold);
+        var handleArea = Stretch("Handle Slide Area", rt, knob / 2, knob / 2, 0, 0);
+        // The slider stretches the handle over the slide area's height (its anchors become 0..1 on y), so only the width is set.
+        var handle = Node("Handle", handleArea, Vector2.zero, new Vector2(0, 1), Vector2.zero, new Vector2(knob, 0));
+        Pic("Shadow", handle, Fx("dot"), 0, -3, knob + 6, knob + 6, new Color(0, 0, 0, 0.28f));
+        var ring = Pic("Ring", handle, Fx("dot"), 0, 0, knob, knob, Color.white);
+        ring.raycastTarget = true;
+        Pic("Center", handle, Fx("dot"), 0, 0, knob - 18, knob - 18, new Color32(235, 150, 40, 255));
+        var handleImage = ring;
         slider.fillRect = fill;
         slider.handleRect = handle;
         slider.targetGraphic = handleImage;
@@ -2011,7 +2099,9 @@ static class RpgSampleBuilder
         demo.pages = Fill("Pages", Canvas("PageCanvas", 0)).gameObject.AddComponent<UIAnimPageContainer>();
         demo.modals = Fill("Modals", Canvas("ModalCanvas", 10)).gameObject.AddComponent<UIAnimModalContainer>();
         demo.toast = Toast(Canvas("ToastCanvas", 20));
-        new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+        // One pointer for every finger: two buttons can't be pressed at the same time (e.g. UPGRADE and Back).
+        new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule))
+            .GetComponent<InputSystemUIInputModule>().pointerBehavior = UIPointerBehavior.SingleUnifiedPointer;
         foreach (var field in typeof(RpgDemo).GetFields().Where(f => f.FieldType == typeof(UIAnimScreen)))
             field.SetValue(demo, screens[field.Name]);
         demo.sprites = AssetDatabase.FindAssets("t:Sprite", new[] { Root + "Art/Icons", Root + "Art/Heroes" })

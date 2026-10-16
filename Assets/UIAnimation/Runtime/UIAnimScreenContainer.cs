@@ -4,7 +4,7 @@ using UnityEngine;
 namespace SeoBYP.TimelineAnimation
 {
     /// <summary>
-    /// Shared by the page, modal and sheet containers: input is off on every container while any of them is in a
+    /// Shared by the page, modal and sheet containers: taps are off on every container while any of them is in a
     /// transition (so a second tap cannot start another one), and screens get their default transitions from here.
     /// </summary>
     [RequireComponent(typeof(RectTransform), typeof(CanvasGroup))]
@@ -41,8 +41,9 @@ namespace SeoBYP.TimelineAnimation
 
         void ApplyInput()
         {
-            var group = GetComponent<CanvasGroup>();
-            group.interactable = group.blocksRaycasts = _transitions == 0;
+            // Raycasts only: turning `interactable` off would draw every Selectable in its disabled color for the
+            // length of each transition (all buttons flash grey whenever a popup opens or closes).
+            GetComponent<CanvasGroup>().blocksRaycasts = _transitions == 0;
         }
 
         protected UIAnimScreen Spawn(UIAnimScreen prefab)
