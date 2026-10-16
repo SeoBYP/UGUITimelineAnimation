@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Mailbox: a list of letters. CLAIM on one plays its "Claim" (the reward lifts off, the letter fades), pays and folds the
-/// row away (ResizeItem, then RemoveItem). CLAIM ALL does that to every letter, one after another. When the box is
-/// empty, the empty note fades in ("Empty" on the page).
+/// row away (ResizeItem, then RemoveItem). CLAIM ALL plays every letter's Claim at the same time and fades the whole
+/// list away ("ClearAll"); with Claim All Together off it claims one letter after another instead. When the box is empty, the empty note fades in ("Empty" on the page).
 /// </summary>
 public sealed class RpgMailPage : MonoBehaviour
 {
@@ -16,6 +16,8 @@ public sealed class RpgMailPage : MonoBehaviour
     public Button claimAll;
     public TMP_Text count;
     [Min(0)] public float foldSeconds = 0.25f;
+    [Tooltip("CLAIM ALL: every letter plays its Claim and folds at the same time. Off: one letter after another.")]
+    public bool claimAllTogether = true;
 
     List<RpgData.Mail> _mails;
     bool _claiming;
@@ -62,9 +64,34 @@ public sealed class RpgMailPage : MonoBehaviour
         if (_claiming) return;
         _claiming = true;
         Refresh();
-        while (_mails.Count > 0) await Claim(_mails[0]);
+        if (claimAllTogether) await ClaimEverything();
+        else while (_mails.Count > 0) await Claim(_mails[0]);
         _claiming = false;
         Refresh();
+    }
+
+    // Every row in view plays Claim at once, everything is paid, then the whole list fades away ("ClearAll") and empties.
+    async Awaitable ClaimEverything()
+    {
+        var plays = new List<Awaitable>();
+        for (var i = 0; i < _mails.Count; i++)
+            if (list.GetItem(i) is { } item) plays.Add(item.GetComponent<UIAnimation>().PlayAsync("Claim"));
+        foreach (var play in plays)
+        {
+            try { await play; }
+            catch (OperationCanceledException) { }   // a row was reused or the page closed: pay anyway
+        }
+        var gold = 0; var gems = 0; var stamina = 0;
+        foreach (var m in _mails) (gold, gems, stamina) = (gold + m.gold, gems + m.gems, stamina + m.stamina);
+        RpgDemo.Instance.Add(gold, gems, stamina);
+        var anim = GetComponent<UIAnimation>();
+        try { await anim.PlayAsync("ClearAll"); }
+        catch (OperationCanceledException) { }
+        _mails.Clear();
+        list.SetCount(0);
+        anim.Sample("ClearAll", 0f);   // the (now empty) list is back to normal for the next letters
+        Refresh();
+        anim.Play("Empty");
     }
 
     async Awaitable Claim(RpgData.Mail mail)

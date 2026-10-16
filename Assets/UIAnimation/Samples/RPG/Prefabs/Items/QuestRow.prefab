@@ -345,8 +345,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 70, y: -32}
-  m_SizeDelta: {x: 110, y: 34}
+  m_AnchoredPosition: {x: 70, y: -30}
+  m_SizeDelta: {x: 110, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2151487134356108584
 CanvasRenderer:
@@ -403,8 +403,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 28
-  m_fontSizeBase: 28
+  m_fontSize: 24
+  m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -482,8 +482,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 70, y: 8}
-  m_SizeDelta: {x: 70, y: 70}
+  m_AnchoredPosition: {x: 70, y: 14}
+  m_SizeDelta: {x: 56, y: 56}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3650837403202070472
 CanvasRenderer:
@@ -913,7 +913,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.5}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.16}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -929,7 +929,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2.909091
 --- !u!1 &3217626774011528877
 GameObject:
   m_ObjectHideFlags: 0
@@ -2002,14 +2002,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.87058824, b: 0.54901963, a: 1}
+  m_Color: {r: 1, g: 0.8, b: 0.27450982, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: ae77f97bbacb3d74290503f1cc66c274, type: 3}
+  m_Sprite: {fileID: 21300000, guid: aabfe1f0bb86bf7419b817ac8c0cba3d, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2018,4 +2018,4 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2.909091

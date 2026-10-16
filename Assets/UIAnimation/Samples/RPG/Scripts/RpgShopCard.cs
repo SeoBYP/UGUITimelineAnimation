@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>An offer in the shop grid: icon, name, price, stock. Sold out shows a stamp and can't be tapped.</summary>
+/// <summary>An offer in the shop grid: icon, name, price, a badge with the stock left. Sold out shows a stamp and can't be tapped.</summary>
 public sealed class RpgShopCard : MonoBehaviour
 {
     public Image icon, currency;
@@ -22,7 +22,8 @@ public sealed class RpgShopCard : MonoBehaviour
         currency.sprite = demo.Sprite(o.currency);
         title.text = o.name;
         price.text = o.price.ToString("N0");
-        stock.text = o.stock < 0 ? "" : $"{o.stock} left";
+        stock.transform.parent.gameObject.SetActive(o.stock > 0);   // the "N LEFT" badge: limited offers only
+        stock.text = $"{o.stock} LEFT";
         buy.interactable = o.stock != 0;
         GetComponent<UIAnimation>().Sample("SoldOut", o.stock == 0 ? 1f : 0f);   // a reused card may show another offer's stamp
     }
