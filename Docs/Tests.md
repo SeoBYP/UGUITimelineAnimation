@@ -7,7 +7,7 @@
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
 | EditMode (패키지) | 139 | `Assets/UIAnimation/Tests/Editor` |
-| PlayMode (패키지) | 51 | `Assets/UIAnimation/Tests/PlayMode` |
+| PlayMode (패키지) | 56 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
 | PlayMode (개발용 캡처) | 4 | `Assets/Dev/Tests` |
 
@@ -228,7 +228,7 @@ UIEffect values as keyframe tracks (compiled only when UIEffect is installed).
 1. UIEffect 값을 키프레임 트랙으로 움직인다
 2. UIEffect가 있는 오브젝트는 트랙 고르기에 14가지가 나온다
 
-## PlayMode (패키지) — 51개
+## PlayMode (패키지) — 56개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.PlayMode` · CI에서 실행
 
@@ -259,27 +259,19 @@ The R3 sample scene (Samples/R3): button streams → states, animation events �
 
 1. Open 연타는 한 번만 재생되고 이벤트와 끝이 로그에 남는다
 
-### `RpgPhase2PlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPhase2PlayModeTests.cs`
+### `RpgBannerPlayModeTests` (3개) — `Assets/UIAnimation/Tests/PlayMode/RpgBannerPlayModeTests.cs`
 
-The RPG sample's second set of screens (title, loading, upgrade, shop, formation, mail, attendance) in Play mode.
+The lobby's event banner (loop + one per swipe + auto scroll) never stays between two pages.
 
-1. 타이틀은 탭하면 로딩을 거쳐 로비로 가고 기록에 남지 않는다
-2. 강화는 골드를 쓰고 레벨이 오르며 장비가 차례로 들어간다
-3. 상점은 구매 팝업을 거쳐 재화가 바뀌고 다 사면 품절이 찍힌다
-4. 편성은 영웅을 넣고 빼면 전투력이 바뀐다
-5. 우편은 모두 받기로 한 통씩 접히고 빈 안내가 뜬다
-6. 출석은 오늘 칸에 도장을 찍고 보상을 준다
+1. 넘어가는 중에 다른 화면으로 갔다 오면 배너가 페이지에 멈춘다
+2. 넘어가는 중에 목록이 꺼지면 가던 페이지에 도착한다
+3. 끄는 중에 화면이 바뀌어도 자동 넘김이 계속된다
 
-### `RpgPhase3PlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPhase3PlayModeTests.cs`
+### `RpgLayoutPlayModeTests` (1개) — `Assets/UIAnimation/Tests/PlayMode/RpgLayoutPlayModeTests.cs`
 
-The RPG sample's third set (settings, confirm, toast, quantity wheel, battle HUD, guild chat, ranking, story) in Play mode.
+The RPG sample's layout: on every screen (with its real data), no label's letters run into an icon or another label next to it, and no label spills out of its own box.
 
-1. 설정 스위치는 손잡이가 옮겨가고 초기화는 확인 후 토스트로 알린다
-2. 수량 휠을 돌리면 개수가 바뀌고 사용하면 토스트와 보유량이 줄어든다
-3. 전투는 자동 공격과 스킬로 적을 쓰러뜨리고 승리 팝업이 뜬다
-4. 길드 채팅은 빠른 답장을 보내면 내 말풍선과 답장이 붙는다
-5. 랭킹은 단상이 솟고 내 순위로 스크롤하면 그 줄이 빛난다
-6. 스토리는 글자가 타자처럼 나오고 탭하면 한번에 끝나며 마지막에 선택지가 뜬다
+1. 모든 화면에서 글자가 아이콘이나 다른 글자와 겹치지 않는다
 
 ### `RpgPlayModeTests` (6개) — `Assets/UIAnimation/Tests/PlayMode/RpgPlayModeTests.cs`
 
@@ -291,6 +283,24 @@ The RPG sample (Assets/UIAnimation/Samples/RPG) in Play mode: each screen opens,
 4. 소환 10회는 카드가 떨어지고 모두 앞면으로 뒤집힌다
 5. 모험은 챕터를 고르고 편성과 전투를 거쳐 승리와 패배 결과가 뜬다
 6. 퀘스트 보상을 받으면 도장이 찍히고 그 줄만 접혀 사라진다
+
+### `RpgScreensPlayModeTests` (13개) — `Assets/UIAnimation/Tests/PlayMode/RpgScreensPlayModeTests.cs`
+
+The RPG sample's screens beyond the lobby menu in Play mode: title and loading, upgrade, shop and purchase, formation and battle, mail, attendance, settings with the confirm popup and toasts, the quantity wheel, guild chat, ranking, story.
+
+1. 타이틀은 탭하면 로딩을 거쳐 로비로 가고 기록에 남지 않는다
+2. 강화는 골드를 쓰고 레벨이 오르며 장비가 차례로 들어간다
+3. 두 버튼을 동시에 눌러도 하나만 실행되고 손가락은 하나로 합쳐진다
+4. 상점은 구매 팝업을 거쳐 재화가 바뀌고 다 사면 품절이 찍힌다
+5. 편성은 영웅을 넣고 빼면 전투력이 바뀐다
+6. 우편은 모두 받기를 누르면 전부 동시에 받고 접히며 로비 배지가 사라진다
+7. 출석은 오늘 칸에 도장을 찍고 보상을 준다
+8. 설정 스위치는 손잡이가 옮겨가고 초기화는 확인 후 토스트로 알린다
+9. 수량 휠을 돌리면 개수가 바뀌고 사용하면 토스트와 보유량이 줄어든다
+10. 전투는 자동 공격과 스킬로 적을 쓰러뜨리고 승리 팝업이 뜬다
+11. 길드 채팅은 입력해서 보내면 내 말풍선과 답장이 붙는다
+12. 랭킹은 단상이 솟고 내 순위로 스크롤하면 그 줄이 빛난다
+13. 스토리는 글자가 타자처럼 나오고 탭하면 한번에 끝나며 마지막에 선택지가 뜬다
 
 ### `ScreenContainerPlayModeTests` (7개) — `Assets/UIAnimation/Tests/PlayMode/ScreenContainerPlayModeTests.cs`
 
@@ -366,5 +376,5 @@ Dev-only: plays the RPG sample and saves frames as PNG, to look at the motion wi
 
 1. CaptureDense
 2. Capture
-3. CapturePhase2
-4. CapturePhase3
+3. CaptureTitleShopUpgradeMail
+4. CaptureBattleGuildStory

@@ -132,7 +132,33 @@ namespace SeoBYP.TimelineAnimation
         {
             Scroll.onValueChanged.RemoveListener(OnScrolled);
             _entryMotion.TryCancel();
+            var moving = _scrollMotion.IsActive();
             _scrollMotion.TryCancel();
+            if (moving) SetOffset(_scrollTarget);   // land where it was going, not between two items
+            if (_dragging) EndDragNow();
+        }
+
+        // The window lost focus mid-drag (alt-tab, the pointer left the Game view): the end of the drag may never come.
+        void OnApplicationFocus(bool focus)
+        {
+            if (!focus && _dragging) EndDragNow();
+        }
+
+        // A drag that never got its OnEndDrag (the list went inactive, the app lost focus). Left as it is, the list
+        // would keep "dragging": no snap and no auto scroll, so it stayed between two items. Settle it instead.
+        void EndDragNow()
+        {
+            _dragging = false;
+            if (_routingToParent)
+            {
+                _routingToParent = false;
+                Scroll.enabled = true;
+            }
+            Scroll.StopMovement();
+            if (snap == SnapMode.None || _count == 0) return;
+            var slot = CurrentSlot();
+            if (!loop) slot = Mathf.Clamp(slot, 0, _count - 1);
+            ScrollToSlot(slot, snapAlignment, isActiveAndEnabled ? snapDuration : 0f);
         }
 
         void OnScrolled(Vector2 _) => UpdateVisible();

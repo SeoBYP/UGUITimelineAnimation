@@ -159,12 +159,11 @@ public static class RpgData
         ("Durin", "durin", "Guardians up front, please. Last time was a mess."),
     };
 
-    /// <summary>Quick replies the player can send, and what a guild member answers to each.</summary>
-    public static readonly (string mine, string who, string hero, string answer)[] QuickChat =
+    /// <summary>Who answers a typed message, and how (in turn).</summary>
+    public static readonly (string who, string hero, string answer)[] ChatReplies =
     {
-        ("On my way!", "Merlin", "merlin", "Good. The portal closes in ten minutes."),
-        ("Need a healer?", "Leon", "leon", "Always. I'll bring the Holy Light."),
-        ("GG everyone", "Borg", "borg", "GG! Same time tomorrow?"),
+        ("Merlin", "merlin", "Good. The portal closes in ten minutes."), ("Aria", "aria", "Ha! Good one."), ("Durin", "durin", "Noted, Commander."),
+        ("Leon", "leon", "For the crown!"),
     };
 
     public sealed class Rank
