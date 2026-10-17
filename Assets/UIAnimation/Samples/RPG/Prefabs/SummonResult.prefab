@@ -2876,6 +2876,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card6
 --- !u!1 &561041966532998794
 GameObject:
   m_ObjectHideFlags: 0
@@ -6262,6 +6263,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card10
 --- !u!1 &2126584087354010713
 GameObject:
   m_ObjectHideFlags: 0
@@ -8545,6 +8547,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card4
 --- !u!1 &2610390301364601938
 GameObject:
   m_ObjectHideFlags: 0
@@ -11666,6 +11669,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card7
 --- !u!1 &3394914896728387041
 GameObject:
   m_ObjectHideFlags: 0
@@ -13793,6 +13797,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/
 --- !u!114 &7259274058518590873
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16265,6 +16270,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card1
 --- !u!1 &4563180381144055211
 GameObject:
   m_ObjectHideFlags: 0
@@ -17349,6 +17355,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/OkButton
 --- !u!114 &3294513281686215997
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20339,6 +20346,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card9
 --- !u!1 &5775992383987929512
 GameObject:
   m_ObjectHideFlags: 0
@@ -22648,6 +22656,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card3
 --- !u!1 &5995260703109949901
 GameObject:
   m_ObjectHideFlags: 0
@@ -24519,6 +24528,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/SingleCard
 --- !u!1 &6065161674453264333
 GameObject:
   m_ObjectHideFlags: 0
@@ -27999,6 +28009,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card8
 --- !u!1 &7284394748140698827
 GameObject:
   m_ObjectHideFlags: 0
@@ -30194,6 +30205,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card2
 --- !u!1 &7653150612833226048
 GameObject:
   m_ObjectHideFlags: 0
@@ -33917,6 +33929,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: b0bc171adaa33674b9a47d470ffaa119/Card5
 --- !u!1 &9070929571172267941
 GameObject:
   m_ObjectHideFlags: 0

@@ -915,6 +915,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 13add337f01a22947907d5b88853f178/Panel/BuyButton
 --- !u!114 &1407801535333102836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1301,6 +1302,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 13add337f01a22947907d5b88853f178/Panel/CancelButton
 --- !u!114 &5085122400039329406
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1924,6 +1926,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 13add337f01a22947907d5b88853f178/
 --- !u!114 &6350343981499938458
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -152,12 +152,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Typewriter
-    actions: []
+    loop: 0
     tracks:
     - target: {fileID: 475085887404644091}
       property: 6
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -228,12 +229,13 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Scramble
-    actions: []
+    loop: 0
     tracks:
     - target: {fileID: 475085887404644091}
       property: 6
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 2
@@ -304,12 +306,13 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Flip
-    actions: []
+    loop: 0
     tracks:
     - target: {fileID: 475085887404644091}
       property: 9
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0.05
       durationPerChar: 0
       scramble: 0
@@ -380,12 +383,13 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: PopUp
-    actions: []
+    loop: 0
     tracks:
     - target: {fileID: 475085887404644091}
       property: 7
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0.05
       durationPerChar: 0
       scramble: 0
@@ -452,8 +456,9 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 475085887404644091}
       property: 8
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0.05
       durationPerChar: 0
       scramble: 0
@@ -520,8 +525,9 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 475085887404644091}
       property: 10
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0.05
       durationPerChar: 0
       scramble: 0
@@ -622,12 +628,13 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Punch
-    actions: []
+    loop: 0
     tracks:
     - target: {fileID: 475085887404644091}
       property: 7
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0.025
       durationPerChar: 0
       scramble: 0
@@ -698,12 +705,13 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Shake
-    actions: []
+    loop: 0
     tracks:
     - target: {fileID: 475085887404644091}
       property: 10
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0.025
       durationPerChar: 0
       scramble: 0
@@ -770,8 +778,9 @@ MonoBehaviour:
         damping: 1
     - target: {fileID: 475085887404644091}
       property: 8
-      startFromCurrent: 0
+      start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0.035
       scramble: 0
@@ -843,3 +852,4 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 668e9eca7aa4c9748a5cdfe40ad3938e/

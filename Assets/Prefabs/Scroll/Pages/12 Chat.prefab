@@ -655,6 +655,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Button Send
       objectReference: {fileID: 0}
+    - target: {fileID: 6153986863182936725, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
+      propertyPath: source
+      value: 661ae88da0bb0494cb521f64e4539744/Demo/Button Send
+      objectReference: {fileID: 0}
     - target: {fileID: 7380946740394984183, guid: a187e00ff97d8c7498011221ef259ac4, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
       value: 1

@@ -203,11 +203,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Wheel
+    loop: 0
     tracks:
     - target: {fileID: 7606007914567904306}
       property: 14
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -306,6 +308,7 @@ MonoBehaviour:
       property: 4
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -404,6 +407,7 @@ MonoBehaviour:
       property: 0
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -505,3 +509,4 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 06044ed1cd0149b4ea8a68edbab69fd4/

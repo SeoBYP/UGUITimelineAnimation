@@ -780,6 +780,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Header/GoldPill/Value
 --- !u!1 &329014278640763048
 GameObject:
   m_ObjectHideFlags: 0
@@ -1485,6 +1486,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Header/StaminaPill/Value
 --- !u!1 &979762850976310000
 GameObject:
   m_ObjectHideFlags: 0
@@ -2375,6 +2377,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage3
 --- !u!1 &1744059898117228751
 GameObject:
   m_ObjectHideFlags: 0
@@ -2781,6 +2784,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Header/StaminaPill
 --- !u!1 &2121850290071840422
 GameObject:
   m_ObjectHideFlags: 0
@@ -3044,6 +3048,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage10
 --- !u!1 &2127296223352119566
 GameObject:
   m_ObjectHideFlags: 0
@@ -3795,6 +3800,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage1
 --- !u!1 &2771863983806576627
 GameObject:
   m_ObjectHideFlags: 0
@@ -7240,6 +7246,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/
 --- !u!114 &4478579840009207293
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7806,6 +7813,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage8
 --- !u!1 &4192136270201342188
 GameObject:
   m_ObjectHideFlags: 0
@@ -8499,6 +8507,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Header/GoldPill
 --- !u!1 &4533122232938799526
 GameObject:
   m_ObjectHideFlags: 0
@@ -9091,6 +9100,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Header/BackButton
 --- !u!114 &1373804323881649690
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9600,6 +9610,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage5
 --- !u!1 &4858818071055798867
 GameObject:
   m_ObjectHideFlags: 0
@@ -10816,6 +10827,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage7
 --- !u!1 &5678131433181080427
 GameObject:
   m_ObjectHideFlags: 0
@@ -11884,6 +11896,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage4
 --- !u!1 &6580365132746038976
 GameObject:
   m_ObjectHideFlags: 0
@@ -14156,6 +14169,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/StartButton
 --- !u!114 &1448544710105646579
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14626,6 +14640,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage6
 --- !u!1 &8302539966263730945
 GameObject:
   m_ObjectHideFlags: 0
@@ -15264,6 +15279,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage2
 --- !u!1 &8773711769762596705
 GameObject:
   m_ObjectHideFlags: 0
@@ -15677,6 +15693,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: fd33a72589fed1a48bd34ffa7c0b634a/Content/Stage9
 --- !u!1 &8956348904699483751
 GameObject:
   m_ObjectHideFlags: 0

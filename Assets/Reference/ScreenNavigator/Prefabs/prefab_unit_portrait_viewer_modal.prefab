@@ -76,6 +76,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Enter
+    loop: 0
     tracks:
     - target: {fileID: 377354729301887821}
       property: 2
@@ -221,6 +222,7 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Exit
+    loop: 0
     tracks:
     - target: {fileID: 377354729301887821}
       property: 2
@@ -367,6 +369,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 8f167764463a048ff940a7ca52a4baf5/
 --- !u!114 &375224439846141187
 MonoBehaviour:
   m_ObjectHideFlags: 0

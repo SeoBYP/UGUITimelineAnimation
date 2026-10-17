@@ -146,6 +146,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: PushEnter
+    loop: 0
     tracks:
     - target: {fileID: 2245201809904586190}
       property: 15
@@ -222,6 +223,7 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: PushExit
+    loop: 0
     tracks:
     - target: {fileID: 2245201809904586190}
       property: 15
@@ -466,6 +468,7 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: PopEnter
+    loop: 0
     tracks:
     - target: {fileID: 2245201809904586190}
       property: 15
@@ -680,6 +683,7 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: PopExit
+    loop: 0
     tracks:
     - target: {fileID: 2245201809904586190}
       property: 15
@@ -757,6 +761,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ff4464df59e5fb5419fe330a2515b135/
 --- !u!114 &3908526694210731640
 MonoBehaviour:
   m_ObjectHideFlags: 0

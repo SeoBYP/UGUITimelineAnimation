@@ -292,6 +292,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 31ac53f56a714be4dbff4fca26c79cc2/Panel/CancelButton
 --- !u!114 &1237539916417457639
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -541,6 +542,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 31ac53f56a714be4dbff4fca26c79cc2/Panel/Amount
 --- !u!1 &2957770801235319348
 GameObject:
   m_ObjectHideFlags: 0
@@ -1346,6 +1348,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 31ac53f56a714be4dbff4fca26c79cc2/
 --- !u!114 &2928728467446119699
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2053,6 +2056,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 31ac53f56a714be4dbff4fca26c79cc2/Panel/UseButton
 --- !u!114 &4340343846235341046
 MonoBehaviour:
   m_ObjectHideFlags: 0

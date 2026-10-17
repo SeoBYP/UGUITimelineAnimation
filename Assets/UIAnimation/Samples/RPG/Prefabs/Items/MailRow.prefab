@@ -687,6 +687,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2ce8941485c0b3d48a69180552e7ddcd/
 --- !u!114 &6435762786971253280
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1434,6 +1435,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2ce8941485c0b3d48a69180552e7ddcd/Body/ClaimButton
 --- !u!114 &6286071793769035488
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -240,11 +240,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Parallax
+    loop: 0
     tracks:
     - target: {fileID: 1898633796989301016}
       property: 2
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -343,6 +345,7 @@ MonoBehaviour:
       property: 4
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -444,6 +447,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 3720d27a483690f47bc8a85d728894e3/
 --- !u!1 &6437395738113815845
 GameObject:
   m_ObjectHideFlags: 0

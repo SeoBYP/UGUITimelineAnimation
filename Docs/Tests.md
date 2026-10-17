@@ -6,12 +6,12 @@
 
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
-| EditMode (패키지) | 142 | `Assets/UIAnimation/Tests/Editor` |
+| EditMode (패키지) | 150 | `Assets/UIAnimation/Tests/Editor` |
 | PlayMode (패키지) | 56 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
 | PlayMode (개발용 캡처) | 4 | `Assets/Dev/Tests` |
 
-## EditMode (패키지) — 142개
+## EditMode (패키지) — 150개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.Editor` · CI에서 실행
 
@@ -35,6 +35,20 @@ Measures the laid-out UI Animation Editor (real window, a few editor frames) ins
 
 1. Project에서 고른 Prefab을 재생하면 Prefab 모드로 열어 미리본다
 2. Play 모드에서도 미리보고 멈추면 원래 값으로 돌아온다
+
+### `EditorSaveTests` (10개) — `Assets/UIAnimation/Tests/Editor/EditorSaveTests.cs`
+
+창의 Auto Save / Save: Prefab 모드는 Prefab에, Play 중 Prefab 복사본(Instantiate)은 원본 Prefab에(다른 복사본도 바로 같은 값), Play 중 씬 오브젝트는 Play가 끝날 때 그 오브젝트에 남는다. 편집 모드의 씬 오브젝트는 Auto Save·Save가 꺼지고 씬 저장으로 저장된다.
+
+1. Play 중 수정은 다른 복사본과 원본 Prefab에 반영된다
+2. 자동 저장을 끄면 저장 버튼을 눌러야 남는다
+3. Prefab 모드에서 고치면 Prefab에 자동 저장된다
+4. Play 중 씬 오브젝트 수정은 Play가 끝나면 씬에 남는다 (Play 시작 시 씬을 다시 불러오지 않음 / 다시 불러옴, 2개)
+5. 편집 모드의 씬 오브젝트는 저장 버튼이 꺼지고 씬 저장으로 저장된다
+6. 중첩 Prefab의 부분은 바깥 Prefab에 오버라이드로 저장되고 안쪽 Prefab은 그대로다
+7. Play 중 Play On 연결과 되돌리기도 Prefab에 저장된다
+8. Project에서 고른 Prefab 원본을 고치면 파일에 자동 저장된다
+9. 창의 Ctrl+S는 UI Animation/Save에 연결되어 있다
 
 ### `EditorWorkflowTests` (4개) — `Assets/UIAnimation/Tests/Editor/EditorWorkflowTests.cs`
 
