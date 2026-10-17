@@ -6,12 +6,12 @@
 
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
-| EditMode (패키지) | 150 | `Assets/UIAnimation/Tests/Editor` |
+| EditMode (패키지) | 158 | `Assets/UIAnimation/Tests/Editor` |
 | PlayMode (패키지) | 56 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
 | PlayMode (개발용 캡처) | 4 | `Assets/Dev/Tests` |
 
-## EditMode (패키지) — 150개
+## EditMode (패키지) — 158개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.Editor` · CI에서 실행
 
@@ -35,6 +35,19 @@ Measures the laid-out UI Animation Editor (real window, a few editor frames) ins
 
 1. Project에서 고른 Prefab을 재생하면 Prefab 모드로 열어 미리본다
 2. Play 모드에서도 미리보고 멈추면 원래 값으로 돌아온다
+
+### `EditorRecordTests` (8개) — `Assets/UIAnimation/Tests/Editor/EditorRecordTests.cs`
+
+녹화(●): 인스펙터·Scene 뷰에서 바꾼 값이 재생 막대의 키가 된다(트랙이 없으면 새 트랙). 오브젝트 자체는 원래 값.
+
+1. 트랙이 없는 속성을 바꾸면 새 트랙에 0초와 재생 막대 키가 생긴다
+2. 트랙이 있는 속성을 바꾸면 재생 막대에 키가 들어간다
+3. 색 알파 회전 활성은 그 트랙으로 가고 바꾸기 전 값을 되찾는다
+4. Prefab 모드에서 녹화하면 키가 Prefab에 저장되고 오브젝트 값은 그대로다
+5. 원래 값 기준 트랙은 원래 값과의 차이로 녹화된다
+6. 시작이 현재 값인 트랙에 0초로 녹화하면 그 값에서 시작하게 된다
+7. 녹화한 키는 Ctrl+Z 한 번으로 되돌린다
+8. Play 중 녹화하면 키가 원본 Prefab에 저장된다
 
 ### `EditorSaveTests` (10개) — `Assets/UIAnimation/Tests/Editor/EditorSaveTests.cs`
 

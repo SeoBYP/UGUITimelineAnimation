@@ -95,7 +95,11 @@ namespace SeoBYP.TimelineAnimation.Editor
         Label _targetLabel, _timeLabel, _status;
         Toggle _autoSave;
         Button _saveButton;
-        Button _play, _loop;
+        Button _play, _loop, _record;
+        bool _recording;
+        // Record mode: changed (target, property) -> the changed fields' previous values, applied once per editor frame.
+        readonly Dictionary<(Component target, UIAnimProperty property), Dictionary<string, string>> _recorded = new();
+        bool _applyQueued;
         UIAnimTimelineView _timeline;
 
         // Tests drive the window through the same entry points as its UI.
@@ -105,6 +109,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         internal UIAnimPreview Preview => _preview;
         internal Button SaveButton => _saveButton;
         internal Toggle AutoSaveToggle => _autoSave;
+        internal bool Recording => _recording;
 
         UIAnimState CurrentState => _target != null && _state < _target.states.Count ? _target.states[_state] : null;
         UIAnimTrack CurrentTrack => _selTrack as UIAnimTrack;
@@ -129,6 +134,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             Undo.undoRedoPerformed += OnUndoRedo;
             UIAnimSave.Saving += OnSaving;
             UIAnimSave.Saved += OnSaved;
+            Undo.postprocessModifications += OnModifications;
         }
 
         void OnDisable()
@@ -137,6 +143,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             Undo.undoRedoPerformed -= OnUndoRedo;
             UIAnimSave.Saving -= OnSaving;
             UIAnimSave.Saved -= OnSaved;
+            Undo.postprocessModifications -= OnModifications;
             _preview.Dispose();
         }
 
@@ -162,6 +169,8 @@ namespace SeoBYP.TimelineAnimation.Editor
                 _loop.EnableInClassList("uia-iconbtn--accent", _preview.Loop);
             });
             topbar.Add(_loop);
+            _record = IconButton("●", "Record: what you change in the Scene view or Inspector becomes a key at the playhead", ToggleRecord);
+            topbar.Add(_record);
             var speed = new ToolbarMenu { text = "1x", style = { marginLeft = 6 } };
             foreach (var s in new[] { 0.1f, 0.25f, 0.5f, 1f })
                 speed.menu.AppendAction($"{s}x", _ => { _preview.Speed = s; speed.text = $"{s}x"; });
@@ -1458,6 +1467,111 @@ namespace SeoBYP.TimelineAnimation.Editor
             var l = new Label(text);
             l.AddToClassList("uia-hint");
             return l;
+        }
+
+        // ---------- record ----------
+
+        internal void ToggleRecord()
+        {
+            _recording = !_recording;
+            _record.EnableInClassList("uia-iconbtn--record", _recording);
+            _record.tooltip = _recording ? "Recording (click to stop): what you change in the Scene view or Inspector becomes a key at the playhead"
+                : "Record: what you change in the Scene view or Inspector becomes a key at the playhead";
+            // Changes are shown through the preview: it holds the original values and shows the state at the playhead.
+            if (_recording && CurrentState != null && (!_preview.IsActive || _preview.State != CurrentState))
+                _preview.Begin(_target, CurrentState, _timeline.Time);
+            OnPreviewChanged();
+        }
+
+        UndoPropertyModification[] OnModifications(UndoPropertyModification[] modifications)
+        {
+            var state = CurrentState;
+            if (!_recording || state == null) return modifications;
+            foreach (var m in modifications)
+            {
+                var change = m.currentValue;
+                var obj = change?.target;
+                var transform = obj switch { GameObject go => go.transform, Component c => c.transform, _ => null };
+                if (transform == null || !transform.IsChildOf(_target.transform)) continue;
+                if (!UIAnimRecorder.TryMap(obj, change.propertyPath, state, out var target, out var property)) continue;
+                if (!_recorded.TryGetValue((target, property), out var previous)) _recorded[(target, property)] = previous = new Dictionary<string, string>();
+                if (!previous.ContainsKey(change.propertyPath)) previous[change.propertyPath] = m.previousValue?.value;   // the first one: before the drag
+            }
+            if (_recorded.Count > 0 && !_applyQueued)
+            {
+                _applyQueued = true;
+                EditorApplication.delayCall += ApplyRecorded;   // after the change is applied to the object
+            }
+            return modifications;
+        }
+
+        // The recorded changes become keys at the playhead (new tracks for properties without one). The object itself goes
+        // back to its original value; the preview shows the new key.
+        internal void ApplyRecorded()
+        {
+            _applyQueued = false;
+            var state = CurrentState;
+            var changes = _recorded.ToList();
+            _recorded.Clear();
+            if (!_recording || state == null) return;
+            var previewing = _preview.IsActive && _preview.State == state;
+            var t = previewing ? _preview.Time : _timeline.Time;
+            var keys = new List<(UIAnimTrack track, Component target, UIAnimProperty property, Vector4 now, Vector4 before)>();
+            foreach (var ((target, property), previous) in changes)
+            {
+                if (target == null) continue;
+                var now = UIAnimation.Read(target, property);
+                var before = UIAnimRecorder.Previous(now, property, previous);
+                var track = state.tracks.Find(x => x.target == target && x.property == property);
+                // A previewed track is put back by the preview itself; anything else would keep the change for real.
+                if (track == null || !previewing) UIAnimation.Write(target, property, before);
+                keys.Add((track, target, property, now, before));
+            }
+            if (keys.Count == 0) return;
+
+            Modify("Record", () =>
+            {
+                _selection.Clear();
+                foreach (var (existing, target, property, now, before) in keys)
+                {
+                    var track = existing;
+                    if (track == null)
+                    {
+                        // Like a picked track: a key at 0 with the value it had, and the new value at the playhead.
+                        track = new UIAnimTrack { target = target, property = property, startFromCurrent = !IsTextProperty(property) };
+                        if (t > 1e-3f) track.keys.Add(new UIAnimKey { time = 0f, value = before });
+                        state.tracks.Add(track);
+                    }
+                    var key = RecordKey(track, t, now, previewing ? track.rest : before);
+                    if (key != null) _selection.Add(key);
+                    _selTrack = track;
+                }
+            });
+            if (!previewing) _preview.Begin(_target, state, t);
+        }
+
+        // Puts the value at time t: the key there, or a new one. Pointer tracks (offsets from a press) are not recorded.
+        static UIAnimKey RecordKey(UIAnimTrack track, float t, Vector4 now, Vector4 rest)
+        {
+            if (track.start == UIAnimStart.Pointer) return null;
+            var value = track.relativeToRest ? now - rest : now;
+            if (track.sizeRelative && UIAnimation.SizeRelativeApplies(track.property) && track.target != null)
+            {
+                var size = ((RectTransform)track.target.transform).rect.size;
+                if (size.x != 0f) value.x /= size.x;
+                if (size.y != 0f) value.y /= size.y;
+            }
+            var key = track.keys.Find(k => Mathf.Abs(k.time - t) < 1e-3f);
+            if (key == null)
+            {
+                key = new UIAnimKey { time = t, value = value };
+                var i = track.keys.FindIndex(k => k.time > t);
+                track.keys.Insert(i < 0 ? track.keys.Count : i, key);
+            }
+            else key.value = value;
+            // A pose recorded at 0 is the start: the first key keeps it instead of the live value.
+            if (t <= 1e-3f && track.startFromCurrent) track.start = UIAnimStart.KeyValue;
+            return key;
         }
 
         // ---------- preview ----------
