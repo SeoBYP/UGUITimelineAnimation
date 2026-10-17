@@ -12,6 +12,7 @@ namespace SeoBYP.TimelineAnimation.Editor
     /// Plays a UIAnimation state in edit mode without entering Play mode.
     /// Values are driven through AnimationMode, so Unity reverts them on Stop and never saves them;
     /// a snapshot restore and stop-before-save hooks back that up.
+    /// In Play mode the values are written directly (nothing is saved there) and the snapshot puts them back on Stop.
     /// </summary>
     internal sealed class UIAnimPreview : IDisposable
     {
@@ -32,6 +33,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         double _lastTick;
         float _soundCursor;   // sounds after this time play on the next tick
         bool _inPrefabStage;
+        bool _live;   // Play mode: no AnimationMode
 
         public UIAnimPreview()
         {
@@ -61,7 +63,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         public void Begin(UIAnimation target, UIAnimState state, float t = 0f)
         {
             Stop();
-            if (target == null || state == null || EditorApplication.isPlayingOrWillChangePlaymode) return;
+            _live = EditorApplication.isPlaying;
+            if (target == null || state == null || EditorApplication.isPlayingOrWillChangePlaymode != _live) return;   // not while switching modes
 
             Target = target;
             State = state;
@@ -81,9 +84,9 @@ namespace SeoBYP.TimelineAnimation.Editor
             // Prefab Mode only redraws values written inside a sampling block (as the Animation window samples), and
             // there EndSampling would revert registered properties; so nothing is registered and the snapshot restore
             // below (plus stop-before-save) is what keeps the asset untouched.
-            _inPrefabStage = PrefabStageUtility.GetPrefabStage(target.gameObject) != null;
-            AnimationMode.StartAnimationMode(_driver);
-            if (!_inPrefabStage)
+            _inPrefabStage = !_live && PrefabStageUtility.GetPrefabStage(target.gameObject) != null;
+            if (!_live) AnimationMode.StartAnimationMode(_driver);
+            if (!_live && !_inPrefabStage)
             {
                 AnimationMode.BeginSampling();
                 foreach (var (track, _) in _snapshot) Register(target, track);
@@ -281,7 +284,7 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         void OnPlayModeChanged(PlayModeStateChange change)
         {
-            if (change == PlayModeStateChange.ExitingEditMode) Stop();
+            if (change is PlayModeStateChange.ExitingEditMode or PlayModeStateChange.ExitingPlayMode) Stop();
         }
 
         void OnSceneSaving(UnityEngine.SceneManagement.Scene scene, string path) => Stop();
@@ -327,6 +330,9 @@ namespace SeoBYP.TimelineAnimation.Editor
                 case UIAnimProperty.TextReveal:
                     Add(root, target, "m_maxVisibleCharacters");
                     Add(root, target, "m_text");   // scramble rewrites the text itself
+                    break;
+                case UIAnimProperty.TextNumber:
+                    Add(root, target, "m_text");
                     break;
                 case UIAnimProperty.FontSize:
                     Add(root, target, "m_fontSize");

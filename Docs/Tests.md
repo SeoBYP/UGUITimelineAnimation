@@ -6,12 +6,12 @@
 
 | 묶음 | 개수 | 폴더 |
 |---|---|---|
-| EditMode (패키지) | 139 | `Assets/UIAnimation/Tests/Editor` |
+| EditMode (패키지) | 142 | `Assets/UIAnimation/Tests/Editor` |
 | PlayMode (패키지) | 56 | `Assets/UIAnimation/Tests/PlayMode` |
 | PlayMode (참고 데모, 패키지 밖) | 9 | `Assets/Reference/Tests` |
 | PlayMode (개발용 캡처) | 4 | `Assets/Dev/Tests` |
 
-## EditMode (패키지) — 139개
+## EditMode (패키지) — 142개
 
 asmdef `SeoBYP.TimelineAnimation.Tests.Editor` · CI에서 실행
 
@@ -28,6 +28,13 @@ Measures the laid-out UI Animation Editor (real window, a few editor frames) ins
 1. Popup1 Open의 자식 트랙을 화면 값으로 잰다
 2. 바깥 Prefab이 같은 트랙을 오버라이드하면 안쪽 팝업 에디터에서 어떻게 보이는지 잰다
 3. 전체 되돌리기는 가장 바깥 단계만 되돌린다
+
+### `EditorPreviewTests` (2개) — `Assets/UIAnimation/Tests/Editor/EditorPreviewTests.cs`
+
+창의 미리보기를 시작하는 곳: Project 창에서 고른 Prefab 원본(어디에도 그려지지 않아 Prefab 모드로 먼저 엶)과 Play 모드(값을 바로 쓰고 멈추면 되돌림).
+
+1. Project에서 고른 Prefab을 재생하면 Prefab 모드로 열어 미리본다
+2. Play 모드에서도 미리보고 멈추면 원래 값으로 돌아온다
 
 ### `EditorWorkflowTests` (4개) — `Assets/UIAnimation/Tests/Editor/EditorWorkflowTests.cs`
 
@@ -205,7 +212,7 @@ The scroll forms beyond a plain list: sizes, prefab types, masonry, loop, pages,
 42. 상태 복사본은 참조는 같고 값은 독립적이다
 43. 예전 형식의 이벤트와 사운드는 불러올 때 트랙으로 옮겨진다
 
-### `UIAnimationTextTests` (13개) — `Assets/UIAnimation/Tests/Editor/UIAnimationTextTests.cs`
+### `UIAnimationTextTests` (14개) — `Assets/UIAnimation/Tests/Editor/UIAnimationTextTests.cs`
 
 1. 공개 비율만큼 글자가 보인다
 2. 글자 효과 중에 상자가 넓어지면 줄바꿈을 다시 한다
@@ -220,6 +227,7 @@ The scroll forms beyond a plain list: sizes, prefab types, masonry, loop, pages,
 11. 스크램블 텍스트를 바꾸고 다시 재생하면 새 텍스트로 공개된다
 12. 스크램블 재생 중에 텍스트를 바꾸면 새 텍스트를 덮어쓰지 않는다
 13. CharacterSpacing 트랙은 자간을 움직이고 원래 값으로 돌아온다
+14. 숫자 트랙은 글자의 첫 숫자를 세고 끝값은 코드가 정한다
 
 ### `UIAnimUIEffectTests` (2개) — `Assets/UIAnimation/Tests/Editor/UIEffect/UIAnimUIEffectTests.cs`
 

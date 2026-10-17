@@ -89,6 +89,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         // Tests drive the window through the same entry points as its UI.
         internal UIAnimTimelineView Timeline => _timeline;
         internal VisualElement Inspector => _inspector;
+        internal UIAnimation Target => _target;
+        internal UIAnimPreview Preview => _preview;
 
         UIAnimState CurrentState => _target != null && _state < _target.states.Count ? _target.states[_state] : null;
         UIAnimTrack CurrentTrack => _selTrack as UIAnimTrack;
@@ -262,6 +264,7 @@ namespace SeoBYP.TimelineAnimation.Editor
         {
             _timeline.Scrubbed = t =>
             {
+                PreviewInPrefabMode();
                 if (_preview.IsActive && _preview.State == CurrentState) _preview.Seek(t);
                 else _preview.Begin(_target, CurrentState, t);
             };
@@ -1431,12 +1434,21 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         // ---------- preview ----------
 
-        void TogglePlay()
+        internal void TogglePlay()
         {
             if (CurrentState == null) return;
+            PreviewInPrefabMode();
             if (!_preview.IsActive || _preview.State != CurrentState) _preview.Begin(_target, CurrentState);
             if (_preview.IsPlaying) _preview.Pause();
             else _preview.Play();
+        }
+
+        // A prefab asset picked in the Project window is not drawn anywhere: open it in Prefab Mode (same state) and
+        // preview that copy, as Edit Animation does.
+        void PreviewInPrefabMode()
+        {
+            if (_target == null || !EditorUtility.IsPersistent(_target) || CurrentState == null) return;
+            OpenState(_target, CurrentState.name);
         }
 
         void OnPreviewChanged()

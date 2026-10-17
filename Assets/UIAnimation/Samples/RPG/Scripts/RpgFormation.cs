@@ -18,8 +18,6 @@ public sealed class RpgFormation : MonoBehaviour, IUIAnimScreenLifecycle
     public Button battle;
 
     readonly int[] _team = { -1, -1, -1, -1, -1 };
-    int _shown, _target, _from;
-    float _count = 1f;
     bool _charging;
 
     public int TeamSize => _team.Count(h => h >= 0);
@@ -53,9 +51,8 @@ public sealed class RpgFormation : MonoBehaviour, IUIAnimScreenLifecycle
             if (_team[i] >= 0) slotPortraits[i].sprite = demo.Sprite(RpgData.Heroes[_team[i]].id);
             slots[i].GetComponent<UIAnimation>().Sample("In", _team[i] >= 0 ? 1f : 0f);
         }
+        power.text = Power().ToString("N0");
         RefreshRoster();
-        _shown = _target = Power();
-        power.text = _shown.ToString("N0");
         return UIAnimScreen.Completed();
     }
 
@@ -78,9 +75,10 @@ public sealed class RpgFormation : MonoBehaviour, IUIAnimScreenLifecycle
             roster[i].GetComponent<CanvasGroup>().alpha = inTeam ? 0.35f : 1f;
         }
         battle.interactable = TeamSize > 0;
-        _from = _shown;
-        _target = Power();
-        _count = 0f;
+        // The power counts to the new total (the label's "Count").
+        var count = power.GetComponent<UIAnimation>();
+        count.SetEndValue("Count", power, UIAnimProperty.TextNumber, Power());
+        count.Play("Count");
     }
 
     void Add(int hero)
@@ -99,14 +97,6 @@ public sealed class RpgFormation : MonoBehaviour, IUIAnimScreenLifecycle
         _team[slot] = -1;
         slots[slot].GetComponent<UIAnimation>().PlayReversed("In");
         RefreshRoster();
-    }
-
-    void Update()
-    {
-        if (_count >= 1f) return;
-        _count = Mathf.Min(1f, _count + Time.deltaTime / 0.5f);
-        _shown = Mathf.RoundToInt(Mathf.Lerp(_from, _target, 1f - (1f - _count) * (1f - _count)));
-        power.text = _shown.ToString("N0");
     }
 
     async void Battle()

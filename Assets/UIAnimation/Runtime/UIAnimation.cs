@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using TMPro;
 using UnityEngine;
@@ -50,6 +52,7 @@ namespace SeoBYP.TimelineAnimation
         UIEffectGradationScale,
         UIEffectDetailIntensity,
         UIEffectDetailColor,
+        TextNumber,         // TMP_Text: the first number in the text, counted (the rest stays, e.g. "21/100", "Lv. 3")
     }
 
     /// <summary>How a new state treats states that are still playing on the same properties.</summary>
@@ -153,6 +156,8 @@ namespace SeoBYP.TimelineAnimation
         [NonSerialized] internal Vector4 startValue;    // value at state start, when startFromCurrent
         [NonSerialized] internal bool released;         // another playing state took this property over
         [NonSerialized] internal int lane = -1;         // UIAnimBatch slot while its playback runs batched, else -1
+        [NonSerialized] internal bool hasEndValue;      // the last key's value was set from code (UIAnimation.SetEndValue)
+        [NonSerialized] internal Vector4 endValue;
 
         public float End
         {
@@ -963,6 +968,28 @@ namespace SeoBYP.TimelineAnimation
             return false;
         }
 
+        /// <summary>
+        /// Sets where a track ends from code, for values known only at runtime: e.g. a "Count" state counting a gold label
+        /// (Text Number, Start = Current) from what it shows to the new amount. Replaces the last key's value (read the
+        /// same way, so relative tracks stay relative) on every play from now on. Call before playing the state.
+        /// </summary>
+        public void SetEndValue(string stateName, Component target, UIAnimProperty property, Vector4 value)
+        {
+            EnsureInitialized();
+            var track = FindPlayback(stateName)?.state.tracks.Find(t => t.target == target && t.property == property);
+            if (track == null)
+            {
+                Debug.LogWarning($"[UIAnimation] '{name}' has no {property} track on '{(target != null ? target.name : "null")}' in state '{stateName}'.", this);
+                return;
+            }
+            track.hasEndValue = true;
+            track.endValue = value;
+        }
+
+        /// <summary><see cref="SetEndValue(string, Component, UIAnimProperty, Vector4)"/> for one-number properties (x).</summary>
+        public void SetEndValue(string stateName, Component target, UIAnimProperty property, float value) =>
+            SetEndValue(stateName, target, property, new Vector4(value, 0, 0, 0));
+
         /// <summary>Whether this animation has a state of that name.</summary>
         public bool HasState(string stateName) => states.Exists(s => s.name == stateName);
 
@@ -1009,9 +1036,11 @@ namespace SeoBYP.TimelineAnimation
                     ? pressed : Read(track.target, track.property);
                 // Pointer: keys are offsets from the press point (0 = stay there), the only base known for them.
                 var size = track.sizeRelative && SizeRelativeApplies(track.property) ? ((RectTransform)track.target.transform).rect.size : Vector2.one;
+                var last = track.keys[track.keys.Count - 1];
                 foreach (var key in track.keys)
                 {
-                    var value = new Vector4(key.value.x * size.x, key.value.y * size.y, key.value.z, key.value.w);
+                    var raw = key == last && track.hasEndValue ? track.endValue : key.value;
+                    var value = new Vector4(raw.x * size.x, raw.y * size.y, raw.z, raw.w);
                     key.resolved = track.start == UIAnimStart.Pointer ? track.startValue + value
                         : track.relativeToRest ? track.rest + value : value;
                 }
@@ -1108,6 +1137,7 @@ namespace SeoBYP.TimelineAnimation
             UIAnimProperty.CameraOrthoSize => new Vector4(((Camera)target).orthographicSize, 0, 0, 0),
             UIAnimProperty.Active => new Vector4(target.gameObject.activeSelf ? 1f : 0f, 0, 0, 0),
             UIAnimProperty.CharacterSpacing => new Vector4(((TMP_Text)target).characterSpacing, 0, 0, 0),
+            UIAnimProperty.TextNumber => new Vector4(NumberOf((TMP_Text)target), 0, 0, 0),
             _ when UIAnimExternalProperties.TryGet(property, out var external) => external.read(target),
             _ when UIAnimExternalProperties.IsExternal(property) => Vector4.zero,   // its package is not installed
             _ => throw new ArgumentOutOfRangeException(nameof(property)),
@@ -1120,6 +1150,26 @@ namespace SeoBYP.TimelineAnimation
         {
             var count = text.textInfo?.characterCount ?? 0;
             return count == 0 || text.maxVisibleCharacters >= count ? 1f : (float)text.maxVisibleCharacters / count;
+        }
+
+        // The first whole number, with or without group commas ("1,234/9,999" → 1,234).
+        static readonly Regex Number = new(@"-?(\d{1,3}(,\d{3})+|\d+)", RegexOptions.Compiled);
+
+        static float NumberOf(TMP_Text text)
+        {
+            var m = Number.Match(text.text ?? "");
+            return m.Success && long.TryParse(m.Value.Replace(",", ""), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var n) ? n : 0f;
+        }
+
+        // Replaces that number, keeping the rest of the label; a label without one becomes the number.
+        // ponytail: whole numbers with "N0" commas only; add a format to the track when decimals or local separators are needed.
+        static void WriteNumber(TMP_Text text, float value)
+        {
+            var s = text.text ?? "";
+            var number = Mathf.RoundToInt(value).ToString("N0", CultureInfo.InvariantCulture);
+            var m = Number.Match(s);
+            var next = m.Success ? s.Substring(0, m.Index) + number + s.Substring(m.Index + m.Length) : number;
+            if (next != s) text.text = next;
         }
 
         // Tracks usually target the Transform itself: skip the native .transform lookup then (it runs every frame).
@@ -1153,6 +1203,7 @@ namespace SeoBYP.TimelineAnimation
                     if (target.gameObject.activeSelf != active) target.gameObject.SetActive(active);
                     break;
                 case UIAnimProperty.CharacterSpacing: ((TMP_Text)target).characterSpacing = v.x; break;
+                case UIAnimProperty.TextNumber: WriteNumber((TMP_Text)target, v.x); break;
                 case UIAnimProperty.TextReveal:
                     var text = (TMP_Text)target;
                     // 1 = everything (also covers text that grows later); below that, a share of the current characters.
