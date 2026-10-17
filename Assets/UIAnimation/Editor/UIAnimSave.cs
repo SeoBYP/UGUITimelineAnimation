@@ -206,6 +206,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             var renamed = new List<string>();
             for (var i = 0; i < ids.Length; i++)
             {
+                if (ids[i].targetObjectId == 0) continue;   // no id (a scene never saved): nothing to find again after Play
                 var play = PlayForm(ids[i]);
                 if (objects[i] is UIAnimation) animations.Add(play);
                 if (ids[i].targetPrefabId != 0) renamed.Add(play + "=" + ids[i]);

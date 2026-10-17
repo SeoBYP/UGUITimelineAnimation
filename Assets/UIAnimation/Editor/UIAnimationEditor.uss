@@ -36,6 +36,8 @@
 .uia-iconbtn:hover { background-color: rgb(74, 77, 84); }
 .uia-iconbtn--accent { background-color: rgb(52, 105, 178); color: white; }
 .uia-iconbtn--accent:hover { background-color: rgb(64, 122, 204); }
+.uia-iconbtn--record { background-color: rgb(200, 52, 52); color: white; }
+.uia-iconbtn--record:hover { background-color: rgb(222, 70, 70); }
 .uia-time {
     margin-left: 10px;
     padding: 3px 8px;

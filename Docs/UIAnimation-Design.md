@@ -277,7 +277,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 ### 6.1 창 구성
 | 영역 | 내용 |
 |---|---|
-| 상단 바 | 재생/정지/반복, 속도(0.1x~1x), 현재 시간/전체 길이, 미리보기 상태 표시 |
+| 상단 바 | 재생/정지/반복, 녹화(●), 속도(0.1x~1x), 현재 시간/전체 길이, 미리보기 상태 표시 |
 | 상태 탭 | 상태 선택·추가. 탭 툴팁에 Play On |
 | 타임라인 (왼쪽) | 오브젝트 계층으로 묶인 트랙 줄, 눈금자, 상태 끝(`End`) 표시 |
 | 인스펙터 (오른쪽) | 상태 / 트랙 / 키 / 이벤트 / 사운드 / 자식 호출 |
@@ -323,6 +323,11 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
   - 미리보기 후 Prefab에 '수정됨'(`*`) 표시가 생깁니다. 값은 정확히 복원되므로 저장해도 내용은 같습니다.
 - **Project 창에서 고른 Prefab 원본**: 원본은 어느 화면에도 그려지지 않으므로, 재생하거나 눈금자를 끌면 그 Prefab을 Prefab 모드로 열고 같은 상태를 미리봅니다(Edit Animation과 같은 동작).
 - **Play 모드**: `AnimationMode` 없이 값을 바로 쓰고, 멈추면 시작 시점의 스냅샷으로 되돌립니다. Hierarchy에서 고른 실행 중인 오브젝트에 그대로 보입니다. Play 모드를 끝낼 때도 멈춥니다.
+- **사운드**: 재생 중에 지나간 사운드를 에디터 오디오로 들려줍니다. 눈금자를 끌 때는 재생하지 않습니다.
+- **시작 상태 자동 결정**: 어떤 상태는 다른 상태가 끝난 모습에서 시작해야 움직임이 보입니다.
+  1. 트리거 이벤트 짝: Exit←Enter, Up←Down, Deselect←Select, ToggleOff←ToggleOn
+  2. 이름 짝 (코드로 재생하는 상태): Open↔Close, Show↔Hide, In↔Out
+- **자동 정지·복원 시점**: 정지 버튼, 다른 `UIAnimation` 선택, 씬/Prefab 저장 직전, 씬 닫기·되돌리기, Play 모드 진입, 스크립트 리로드, 창 닫기.
 
 ### 6.7 저장 (Auto Save · Save)
 상단 바의 **Auto Save**(기본 켜짐)와 **Save**(창에 포커스가 있을 때 Ctrl+S)는 창에서 고친 내용을 그 UIAnimation이 사는 곳에 저장합니다. 어디에 저장되는지는 두 컨트롤의 툴팁에 나옵니다. 상단 바 오른쪽에는 글자 없이 주황색 점(●)만, 씬의 "*"처럼 화면 값이 저장되지 않은 동안(미리보기 중, 또는 저장 안 한 수정이 있을 때) 보이고, 무엇인지는 점의 툴팁에 나옵니다. Save는 고친 게 없어도 그곳을 저장합니다.
@@ -342,8 +347,18 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 - **중첩 Prefab**: 화면 Prefab 안에 든 다른 Prefab의 부분을 Play 중 고치면, 출처가 바깥 Prefab이므로 바깥 Prefab에 **오버라이드**로 저장되고 안쪽 Prefab은 그대로입니다(R6 "현재 Prefab에서만"과 같음).
 - **Prefab에 없는 컴포넌트**: Play 중 Play On을 처음 정하면 `UIAnimTrigger`가 새로 붙습니다. Prefab 원본은 그 자리에서 컴포넌트를 받을 수 없어서, 이때만 Prefab을 열어(`LoadPrefabContents`) 붙이고 저장합니다. 이 방식은 Awake가 돌아 Unity가 불러올 때 채우는 값 몇 개가 함께 저장될 수 있어서, 이미 있는 컴포넌트는 Prefab 파일을 직접 고칩니다.
 - **씬 오브젝트**: Play 중 고친 값을 `GlobalObjectId`로 기억했다가 Play가 끝나면 씬의 같은 오브젝트에 넣습니다. Play에 들어갈 때 씬을 다시 불러오는 설정이든 아니든 같습니다.
-- **씬 오브젝트인지 복사본인지**: Play 직전에 열린 씬들의 오브젝트 id를 적어 두고(스크립트를 다시 불러와도 남게 `SessionState`), Play 중에는 그 목록에 있으면 씬 오브젝트, 없으면 실행 중에 만든 복사본으로 봅니다. id만으로는 구분이 안 되고(저장된 씬에서는 복사본도 씬 id를 받음), Prefab 연결도 Play 중에는 보이지 않기 때문입니다. 씬에 놓인 Prefab 인스턴스의 부분은 Play 중 id가 (Prefab 안 id XOR 인스턴스 id) 하나로 바뀌므로 두 형태를 함께 적어 둡니다.
+- **씬 오브젝트인지 복사본인지**: Play 직전에 열린 씬들의 오브젝트 id를 적어 두고(스크립트를 다시 불러와도 남게 `SessionState`), Play 중에는 그 목록에 있으면 씬 오브젝트, 없으면 실행 중에 만든 복사본으로 봅니다. id만으로는 구분이 안 되고(저장된 씬에서는 복사본도 씬 id를 받음), Prefab 연결도 Play 중에는 보이지 않기 때문입니다. 씬에 놓인 Prefab 인스턴스의 부분은 Play 중 id가 (Prefab 안 id XOR 인스턴스 id) 하나로 바뀌므로 두 형태를 함께 적어 둡니다. 한 번도 저장하지 않은 씬의 오브젝트는 id가 비어(번호 0) 모두 같으므로 적지 않습니다(Play가 끝난 뒤 다시 찾을 수도 없음).
 - 코드로 새로 만든 오브젝트(Prefab도 씬도 아님)는 저장할 곳이 없어서, Save 툴팁에 "nowhere"로 알려 줍니다.
+
+### 6.8 녹화
+Unity Animation 창의 녹화와 같습니다. 상단 바의 ●를 켜고 재생 막대를 원하는 시간에 둔 뒤, Scene 뷰나 인스펙터에서 오브젝트를 움직이면 그 값이 키가 됩니다.
+- **트랙이 있는 속성**: 재생 막대 위치에 키를 넣습니다(그 시간에 키가 있으면 값만 바꿈). Relative To Rest·Size Relative 트랙은 그 기준에 맞춘 값으로 넣고, Pointer 트랙(누른 자리 기준)은 녹화하지 않습니다. 0초에 녹화하면 첫 키가 그 값을 쓰도록 Start가 Key Value로 바뀝니다.
+- **트랙이 없는 속성**: 그 속성의 트랙을 새로 만들고, 0초 키(바꾸기 전 값)와 재생 막대 키(바꾼 값)를 넣습니다. 트랙 고르기로 만든 트랙과 같은 설정입니다.
+- **녹화되는 속성**: Scale, Rotation, Position, Size, Anchor Min/Max, Pivot, Color(알파만 바꾸고 Alpha 트랙이 있으면 Alpha), Group Alpha, Fill Amount, Font Size, Character Spacing, Active. 대상 Prefab(창의 UIAnimation 아래) 밖의 오브젝트는 무시합니다.
+- **오브젝트 자체**는 바꾸기 전 값을 유지하고, 화면은 미리보기로 새 키를 보여 줍니다. 녹화를 켜면 미리보기도 재생 막대 시간으로 켜집니다. 키 추가는 한 번의 Undo입니다.
+- Inspector·Scene 뷰 변경은 Undo 시스템이 알려 주는 값(`Undo.postprocessModifications`)으로 받습니다. 끌기 중의 여러 변경은 한 프레임에 한 번 모아서 넣습니다.
+- 녹화로 넣은 키도 다른 편집과 같이 Auto Save · Save(§6.7)로 저장됩니다. Play 중에도 녹화되고, 실행 중 복사본이면 원본 Prefab에 남습니다. 저장할 때 미리보기를 잠깐 멈추므로 Prefab에는 오브젝트의 원래 값이 저장됩니다.
+- 녹화 중인지는 ● 버튼이 빨갛게 바뀌는 것으로 보이고, 설명은 버튼 툴팁에 있습니다(상단 바에 글자를 띄우지 않음).
 
 ## 7. 클라이언트 API
 
@@ -703,7 +718,8 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 | ✅ | 글자 효과 최적화 | 배치 정점을 저장해 두고 변형만 적용 → 텍스트 100개 3.64 → 0.98ms ([`Performance.md`](Performance.md) §4.1) |
 | ✅ | Burst 일괄 계산 (PR #17) | 재생 중 이징 트랙 값을 Burst 함수 한 번에 계산. 맥박 2,000개 자체 비용 IL2CPP +0.33 → +0.27ms, Mono +0.80 → +0.50ms ([`Performance.md`](Performance.md) §4.5) |
 | ✅ | 숫자 카운트 트랙 (PR #27) | `TextNumber`(글자 안의 첫 숫자를 셈), 끝 값은 코드에서 `SetEndValue`. RPG 재화·전투력에 적용 (§3.4). 미리보기: Project에서 고른 Prefab은 Prefab 모드로 열어서, Play 모드에서도 동작 |
-| ✅ | Play 중 수정 저장 | Auto Save · Save(창 Ctrl+S): 고친 내용을 Prefab·Play 중 복사본의 원본 Prefab·씬 오브젝트(Play가 끝날 때)에 저장, 다른 실행 중 복사본도 바로 반영. 화면 값이 저장되지 않은 동안 주황 점(설명은 툴팁) (§6.7) |
+| ✅ | 녹화 | 창의 ●: Scene 뷰·Inspector에서 바꾼 값이 재생 막대의 키가 됨(트랙이 없으면 새 트랙), 오브젝트는 원래 값 유지, Play 중에도 동작 (§6.8) |
+| ✅ | Play 중 수정 저장 (PR #28) | Auto Save · Save(창 Ctrl+S): 고친 내용을 Prefab·Play 중 복사본의 원본 Prefab·씬 오브젝트(Play가 끝날 때)에 저장, 다른 실행 중 복사본도 바로 반영. 화면 값이 저장되지 않은 동안 주황 점(설명은 툴팁) (§6.7) |
 | ✅ | 연동 브랜치 자동 최신화 (PR #21, #23) | `main`이 바뀌거나 라이브러리 새 버전이 나오면 `integration/*`에 반영하고 테스트, 통과하면 자동 머지 ([`Branches.md`](Branches.md)) |
 
 ### 13.1 다음: 배포 `0.1.0`
