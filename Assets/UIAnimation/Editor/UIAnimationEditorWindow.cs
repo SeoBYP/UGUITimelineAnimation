@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using TMPro;
 using UnityEditor;
+using UnityEditor.ShortcutManagement;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -13,6 +14,15 @@ namespace SeoBYP.TimelineAnimation.Editor
 {
     public sealed class UIAnimationEditorWindow : EditorWindow
     {
+        // Ctrl+S (Cmd+S) while this window has focus: the Save button (this animation's prefab or scene).
+        [Shortcut("UI Animation/Save", typeof(UIAnimationEditorWindow), KeyCode.S, ShortcutModifiers.Action)]
+        static void SaveShortcut(ShortcutArguments args)
+        {
+            var target = (args.context as UIAnimationEditorWindow)?._target;
+            if (UIAnimSave.SceneFileOf(target) != null) EditorApplication.ExecuteMenuItem("File/Save");   // a scene object: Unity's own save
+            else UIAnimSave.SaveNow(target);
+        }
+
         [MenuItem("Window/UI Animation Editor")]
         public static void Open() => GetWindow<UIAnimationEditorWindow>("UI Animation");
 
@@ -83,6 +93,8 @@ namespace SeoBYP.TimelineAnimation.Editor
 
         VisualElement _tabs, _body, _inspector;
         Label _targetLabel, _timeLabel, _status;
+        Toggle _autoSave;
+        Button _saveButton;
         Button _play, _loop;
         UIAnimTimelineView _timeline;
 
@@ -91,6 +103,8 @@ namespace SeoBYP.TimelineAnimation.Editor
         internal VisualElement Inspector => _inspector;
         internal UIAnimation Target => _target;
         internal UIAnimPreview Preview => _preview;
+        internal Button SaveButton => _saveButton;
+        internal Toggle AutoSaveToggle => _autoSave;
 
         UIAnimState CurrentState => _target != null && _state < _target.states.Count ? _target.states[_state] : null;
         UIAnimTrack CurrentTrack => _selTrack as UIAnimTrack;
@@ -113,12 +127,16 @@ namespace SeoBYP.TimelineAnimation.Editor
             _preview.Changed += OnPreviewChanged;
             Selection.selectionChanged += OnSelectionChanged;
             Undo.undoRedoPerformed += OnUndoRedo;
+            UIAnimSave.Saving += OnSaving;
+            UIAnimSave.Saved += OnSaved;
         }
 
         void OnDisable()
         {
             Selection.selectionChanged -= OnSelectionChanged;
             Undo.undoRedoPerformed -= OnUndoRedo;
+            UIAnimSave.Saving -= OnSaving;
+            UIAnimSave.Saved -= OnSaved;
             _preview.Dispose();
         }
 
@@ -152,6 +170,13 @@ namespace SeoBYP.TimelineAnimation.Editor
             _timeLabel.AddToClassList("uia-time");
             topbar.Add(_timeLabel);
             topbar.Add(new VisualElement { style = { flexGrow = 1 } });
+            // Auto Save / Save: edits go where this animation lives (its prefab or scene), in every mode.
+            _autoSave = new Toggle("Auto Save") { value = UIAnimSave.AutoSave };
+            _autoSave.AddToClassList("uia-autosave");
+            _autoSave.RegisterValueChangedCallback(e => UIAnimSave.AutoSave = e.newValue);
+            topbar.Add(_autoSave);
+            _saveButton = new Button(() => UIAnimSave.SaveNow(_target)) { text = "Save" };
+            topbar.Add(_saveButton);
             _status = new Label();
             _status.AddToClassList("uia-status");
             topbar.Add(_status);
@@ -175,6 +200,7 @@ namespace SeoBYP.TimelineAnimation.Editor
 
             if (_target == null) OnSelectionChanged();
             Rebuild();
+            root.schedule.Execute(UpdateStatus).Every(250);   // Play mode starts/ends and auto saves land without an event here
         }
 
         StyleSheet LoadStyleSheet()
@@ -216,6 +242,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             _selection.Clear();   // undo deserializes new key objects; old references are stale
             _marker = null;
             _selTrack = null;
+            if (_target != null) UIAnimSave.Changed(_target.GetComponentsInParent<UIAnimation>(true));
             Rebuild();
             RefreshPreview();
         }
@@ -233,6 +260,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 PrefabUtility.RecordPrefabInstancePropertyModifications(owner);
                 EditorUtility.SetDirty(owner);
             }
+            UIAnimSave.Changed(owners);   // saved where they live (auto save); in Play mode the other running copies too
             if (rebuild) Rebuild();
             else _timeline.Refresh(_selTrack);
             RefreshPreview();
@@ -1451,6 +1479,43 @@ namespace SeoBYP.TimelineAnimation.Editor
             OpenState(_target, CurrentState.name);
         }
 
+        // The top bar's right side: a dot while something on screen is not saved (details in its tooltip).
+        internal void UpdateStatus()
+        {
+            if (_status == null) return;
+            var destination = UIAnimSave.Destination(_target);
+            // A scene object in edit mode is saved with its scene (Ctrl+S), like any scene change: off here, with that reason.
+            var scene = UIAnimSave.SceneFileOf(_target);
+            var reason = scene != null ? $"A scene object: edits are on it already and saved with scene '{scene}' (Ctrl+S)." : null;
+            _autoSave.SetEnabled(reason == null);
+            _saveButton.SetEnabled(reason == null);
+            _autoSave.tooltip = reason ?? $"Save edits as you make them, to {destination}.";
+            _saveButton.tooltip = reason ?? $"Save to {destination} now (Ctrl+S in this window).";
+            // Like a scene's "*": one orange dot while something on screen is not saved; what, in its tooltip.
+            var notes = new List<string>();
+            if (_preview.IsActive) notes.Add("Previewing: the values on screen are not saved.");
+            if (scene == null && !UIAnimSave.AutoSave && UIAnimSave.HasPending) notes.Add($"Unsaved edits: Save writes them to {destination}.");
+            _status.text = notes.Count > 0 ? "●" : "";
+            _status.tooltip = string.Join("\n", notes);
+        }
+
+        // A save that writes a whole prefab or scene would also write the previewed values: stop the preview around it.
+        (UIAnimState state, float time, bool playing)? _previewBeforeSave;
+
+        void OnSaving()
+        {
+            _previewBeforeSave = _preview.IsActive ? (_preview.State, _preview.Time, _preview.IsPlaying) : null;
+            _preview.Stop();
+        }
+
+        void OnSaved()
+        {
+            if (_previewBeforeSave is not { } p || _target == null) return;
+            _previewBeforeSave = null;
+            _preview.Begin(_target, p.state, p.time);
+            if (p.playing) _preview.Play();
+        }
+
         void OnPreviewChanged()
         {
             if (_timeLabel == null) return;
@@ -1459,7 +1524,7 @@ namespace SeoBYP.TimelineAnimation.Editor
             var t = _preview.IsActive && _preview.State == state ? _preview.Time : _timeline.Time;
             _timeLabel.text = $"{t:0.00} / {duration:0.00}s";
             _play.text = _preview.IsPlaying ? "❚❚" : "▶";
-            _status.text = _preview.IsActive ? "● Previewing — values are not saved" : "";
+            UpdateStatus();
             _timeline.SetTime(t);
         }
     }

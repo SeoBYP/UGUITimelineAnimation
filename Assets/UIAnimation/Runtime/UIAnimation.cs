@@ -483,6 +483,9 @@ namespace SeoBYP.TimelineAnimation
         public AudioSource audioSource;
         [Tooltip("Nested UIAnimations' states replaced inside this prefab only (edited from the UI Animation Editor).")]
         public List<UIAnimOverride> overrides = new();
+        // Written by the editor on every prefab import: "<prefab asset GUID>/<path from its root>". Runtime copies
+        // (Instantiate) keep it, so edits made to one in Play mode can be saved back to the prefab.
+        [SerializeField, HideInInspector] internal string source;
 
         internal sealed class Playback
         {
@@ -600,6 +603,29 @@ namespace SeoBYP.TimelineAnimation
         {
             foreach (var p in _playbacks) Stop(p);
         }
+
+        /// <summary>
+        /// Editor, Play mode: the states were replaced or added (edits saved from another copy). Stops what is playing and
+        /// rebuilds the playbacks, keeping the rest values captured on Awake.
+        /// </summary>
+        internal void Reinitialize()
+        {
+            var rest = new Dictionary<(Component, UIAnimProperty), Vector4>();
+            foreach (var p in _playbacks)
+            {
+                if (p.active) Stop(p);
+                foreach (var t in p.state.tracks)
+                    if (t.target != null) rest[(t.target, t.property)] = t.rest;
+            }
+            _initialized = false;
+            EnsureInitialized();
+            foreach (var p in _playbacks)
+            foreach (var t in p.state.tracks)
+                if (t.target != null && rest.TryGetValue((t.target, t.property), out var r)) t.rest = r;
+        }
+
+        /// <summary>A state has no playback yet (added or renamed after the first play).</summary>
+        internal bool HasUnplayableState => _initialized && states.Exists(s => FindPlayback(s.name) == null);
 
         internal void EnsureInitialized()
         {

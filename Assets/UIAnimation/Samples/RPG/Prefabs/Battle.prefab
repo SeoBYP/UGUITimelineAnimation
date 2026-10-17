@@ -2315,6 +2315,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Enemy
 --- !u!1 &4118081334750473153
 GameObject:
   m_ObjectHideFlags: 0
@@ -2760,6 +2761,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Skill2
 --- !u!114 &5085265970906631736
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4697,6 +4699,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/
 --- !u!114 &7026990791782391315
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5169,6 +5172,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/GiveUpButton
 --- !u!114 &4932995509681321703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5558,6 +5562,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Skill0
 --- !u!114 &3356603475318192864
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6199,6 +6204,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Skill1
 --- !u!114 &2781768778842318829
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6616,6 +6622,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Enemy/Number1/Value
 --- !u!1 &5626012686380273785
 GameObject:
   m_ObjectHideFlags: 0
@@ -7089,6 +7096,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Enemy/Number0/Value
 --- !u!1 &6185330274512621924
 GameObject:
   m_ObjectHideFlags: 0
@@ -7638,6 +7646,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Enemy/Number2/Value
 --- !u!1 &7075604894048457239
 GameObject:
   m_ObjectHideFlags: 0
@@ -8409,3 +8418,4 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 2f25066459b06ff408b2453af76569bd/Content/Enemy/Number3/Value

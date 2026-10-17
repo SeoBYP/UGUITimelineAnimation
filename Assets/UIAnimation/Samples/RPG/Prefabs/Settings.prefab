@@ -1725,6 +1725,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 3f45dd8f9d020f14daa6fbdaa5713c81/Panel/VibrationSwitch
 --- !u!1 &3314787815530046511
 GameObject:
   m_ObjectHideFlags: 0
@@ -2229,6 +2230,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 3f45dd8f9d020f14daa6fbdaa5713c81/Panel/CloseButton
 --- !u!114 &3591462239727944016
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2677,6 +2679,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 3f45dd8f9d020f14daa6fbdaa5713c81/Panel/ResetButton
 --- !u!114 &5532900510677916800
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3443,6 +3446,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 3f45dd8f9d020f14daa6fbdaa5713c81/
 --- !u!114 &788198263929790115
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4782,3 +4786,4 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 3f45dd8f9d020f14daa6fbdaa5713c81/Panel/MusicSwitch

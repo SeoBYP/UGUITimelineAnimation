@@ -310,11 +310,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: Pull
+    loop: 0
     tracks:
     - target: {fileID: 2684116109678517036}
       property: 12
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -383,6 +385,7 @@ MonoBehaviour:
       property: 14
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -451,6 +454,7 @@ MonoBehaviour:
       property: 4
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -521,11 +525,13 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Refreshing
+    loop: 0
     tracks:
     - target: {fileID: 5735889059249190837}
       property: 14
       start: 0
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -597,6 +603,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 5e691817f45db1c43aaf5a18a9ee6bcb/Demo/Spinner
 --- !u!1 &6050814426046180609
 GameObject:
   m_ObjectHideFlags: 0

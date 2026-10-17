@@ -429,6 +429,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Header/BackButton
 --- !u!114 &1825345909614591254
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -678,6 +679,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/PowerBox/Value
 --- !u!1 &347472340818127466
 GameObject:
   m_ObjectHideFlags: 0
@@ -1046,6 +1048,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Hero2
 --- !u!114 &3962834998419114915
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1864,6 +1867,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Header/GoldPill/Value
 --- !u!1 &2044195742206326637
 GameObject:
   m_ObjectHideFlags: 0
@@ -2467,6 +2471,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Slot3
 --- !u!1 &2537062255672792395
 GameObject:
   m_ObjectHideFlags: 0
@@ -2760,6 +2765,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Hero5
 --- !u!114 &4290450822527821836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3244,6 +3250,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Slot1
 --- !u!1 &2729575942483090990
 GameObject:
   m_ObjectHideFlags: 0
@@ -3697,6 +3704,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Slot4
 --- !u!1 &2758575371019793979
 GameObject:
   m_ObjectHideFlags: 0
@@ -4142,6 +4150,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Hero1
 --- !u!114 &2174456733654217038
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4616,6 +4625,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Hero4
 --- !u!114 &965154327916716856
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4877,6 +4887,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Header/StaminaPill/Value
 --- !u!1 &4248971088331904055
 GameObject:
   m_ObjectHideFlags: 0
@@ -5458,6 +5469,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/BattleButton
 --- !u!114 &1564052568147607516
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6080,6 +6092,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Header/StaminaPill
 --- !u!1 &6418715361586077744
 GameObject:
   m_ObjectHideFlags: 0
@@ -6670,6 +6683,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Slot0
 --- !u!1 &6576761474702240170
 GameObject:
   m_ObjectHideFlags: 0
@@ -7436,6 +7450,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Slot2
 --- !u!1 &7098854148755582324
 GameObject:
   m_ObjectHideFlags: 0
@@ -9325,6 +9340,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/
 --- !u!114 &6000728550054209963
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9983,6 +9999,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Hero3
 --- !u!114 &7493224276598373387
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10431,6 +10448,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Header/GoldPill
 --- !u!1 &7987111032204978126
 GameObject:
   m_ObjectHideFlags: 0
@@ -10874,6 +10892,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 69ffc0de84067854ab918bfeab240815/Content/Hero0
 --- !u!114 &1126999129277696612
 MonoBehaviour:
   m_ObjectHideFlags: 0

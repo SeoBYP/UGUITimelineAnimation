@@ -50,6 +50,8 @@
     color: rgb(255, 196, 110);
     font-size: 11px;
 }
+.uia-autosave { margin-right: 4px; }
+.uia-autosave > .unity-base-field__label { min-width: 0; padding-right: 4px; color: rgb(200, 202, 208); }
 
 /* ---------- state tabs ---------- */
 .uia-tabs {

@@ -1194,6 +1194,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/Day2
 --- !u!1 &1376796976002367246
 GameObject:
   m_ObjectHideFlags: 0
@@ -1698,6 +1699,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/ClaimButton
 --- !u!114 &5234463429145313332
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3169,6 +3171,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/Day4
 --- !u!1 &3416164815919160031
 GameObject:
   m_ObjectHideFlags: 0
@@ -4487,6 +4490,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/Day1
 --- !u!1 &5167104859352137768
 GameObject:
   m_ObjectHideFlags: 0
@@ -5257,6 +5261,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/Day3
 --- !u!1 &5994437344215800546
 GameObject:
   m_ObjectHideFlags: 0
@@ -6857,6 +6862,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/
 --- !u!114 &1050514821486168701
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8035,6 +8041,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/CloseButton
 --- !u!114 &308570280401350500
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9114,6 +9121,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/Day6
 --- !u!1 &7950816798150266249
 GameObject:
   m_ObjectHideFlags: 0
@@ -9946,6 +9954,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/Day7
 --- !u!1 &8389044502953248725
 GameObject:
   m_ObjectHideFlags: 0
@@ -10815,6 +10824,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: ecb4bb451d94eee45971e8c3208a7f23/Panel/Day5
 --- !u!1 &8930713380838168287
 GameObject:
   m_ObjectHideFlags: 0

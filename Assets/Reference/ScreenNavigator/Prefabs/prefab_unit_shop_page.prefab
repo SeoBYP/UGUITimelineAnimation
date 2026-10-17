@@ -189,6 +189,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: PopExit
+    loop: 0
     tracks:
     - target: {fileID: 9174898284614137540}
       property: 15
@@ -266,6 +267,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 6a76cb4eb62fd5747831e0071cd8f07b/
 --- !u!114 &4494337660343167019
 MonoBehaviour:
   m_ObjectHideFlags: 0

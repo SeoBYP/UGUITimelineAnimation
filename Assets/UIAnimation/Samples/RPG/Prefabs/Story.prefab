@@ -1874,6 +1874,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 4ec57ca54eb66e94f8df6f110c515ab3/
 --- !u!114 &380857596385575572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2343,6 +2344,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 4ec57ca54eb66e94f8df6f110c515ab3/Content/Choices/Choice0
 --- !u!114 &6976190102158855475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3274,6 +3276,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 4ec57ca54eb66e94f8df6f110c515ab3/Content/Choices/Choice1
 --- !u!114 &7133526717922902042
 MonoBehaviour:
   m_ObjectHideFlags: 0

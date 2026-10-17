@@ -245,6 +245,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 404c9bc6a746e524fb649dfc4ff666ec/Content/Rune
 --- !u!114 &7158491293161685664
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1105,6 +1106,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 404c9bc6a746e524fb649dfc4ff666ec/
 --- !u!114 &5513761984320199235
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -529,6 +529,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/GUILDButton
 --- !u!114 &7418113397143623115
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1608,6 +1609,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/STORYButton
 --- !u!114 &8559442287166769598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2170,6 +2172,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/DAILYButton
 --- !u!114 &5874248463460277213
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2656,6 +2659,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/QUESTSButton
 --- !u!114 &5715108344769208656
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2981,6 +2985,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/SHOPButton
 --- !u!114 &4321176438159212801
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3307,6 +3312,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/MAILButton
 --- !u!114 &6690792004603276919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3744,6 +3750,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/MAILButton/Badge
 --- !u!114 &6857144838529744455
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4427,6 +4434,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/RANKButton
 --- !u!114 &4447550608345665543
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4863,6 +4871,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/DAILYButton/Badge
 --- !u!114 &7058353742870025800
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8782,6 +8791,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/
 --- !u!114 &327452670300616020
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9189,6 +9199,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/GemsPill/Value
 --- !u!1 &5440637022266611691
 GameObject:
   m_ObjectHideFlags: 0
@@ -10014,6 +10025,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/BAGButton
 --- !u!114 &6332311710504026573
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10414,6 +10426,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/ADVENTUREButton
 --- !u!114 &3311022378736062567
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10818,6 +10831,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/Hero
 --- !u!114 &7013522924653539336
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11294,6 +11308,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/GoldPill
 --- !u!1 &6750031437198540763
 GameObject:
   m_ObjectHideFlags: 0
@@ -11725,6 +11740,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/SUMMONButton
 --- !u!114 &1627178855627044488
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12049,6 +12065,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/SETTINGSButton
 --- !u!114 &8594562006678159653
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12374,6 +12391,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/HEROESButton
 --- !u!114 &8336055296699256862
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12847,6 +12865,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/GoldPill/Value
 --- !u!1 &7578788156639326649
 GameObject:
   m_ObjectHideFlags: 0
@@ -13077,6 +13096,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/StaminaPill/Value
 --- !u!1 &7838967736721013381
 GameObject:
   m_ObjectHideFlags: 0
@@ -13598,6 +13618,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/QUESTSButton/Badge
 --- !u!114 &4367836167665043475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14005,6 +14026,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/StaminaPill
 --- !u!1 &8136050847726300440
 GameObject:
   m_ObjectHideFlags: 0
@@ -14781,6 +14803,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 337dd3e5ac0d5234ba3132d6c35f15e2/Content/GemsPill
 --- !u!1 &8814305615923314174
 GameObject:
   m_ObjectHideFlags: 0

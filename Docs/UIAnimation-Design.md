@@ -19,7 +19,7 @@
 | R5 | 공용 Prefab 중첩, 부모가 자식 상태 호출 | ✅ | 자식 호출(`UIAnimChildCall`): 부모 시간축의 지정 시간에 자식 상태 재생 (§4.4) |
 | R6 | 상위에서 하위 오버라이드 (현재 Prefab에서만) | ✅ | **트랙 단위** 오버라이드. 바꾼 트랙만 저장하고 나머지는 원본을 따라감. Unity 중첩 Prefab 규칙과 같음 (§8) |
 | R7 | Scroll 리스트와 애니메이션 | ✅ | `UIAnimScrollList` 하나로 스크롤 18가지 형태(리스트·그리드·메이슨리·캐러셀·무한 루프·페이지·배너·휠 피커·섹션 헤더·가변 크기·채팅·아코디언·중첩·탭·접히는 헤더·당겨서 새로고침). 모든 연출은 UI Animation Editor의 상태로 만듦 (§9) |
-| R8 | Play 모드 없이 즉시 미리보기 | ✅ | 씬·Prefab 모드·Play 모드 모두 지원. 정지·저장·Play 진입/종료 시 원래 값으로 복원 (§6.6) |
+| R8 | Play 모드 없이 즉시 미리보기 | ✅ | 씬·Prefab 모드·Play 모드 모두 지원. 정지·저장·Play 진입/종료 시 원래 값으로 복원 (§6.6). Play 중 감을 보며 고친 값은 Prefab·씬에 남김 (§6.7) |
 | R9 | 클라이언트가 타이밍을 원활하게 호출 | ✅ | `PlayAsync`(Unity `Awaitable`, UniTask가 있으면 `PlayUniTaskAsync`)로 끝날 때까지 대기, `Complete`로 건너뛰기, 애니메이션 이벤트 수신 (§7) |
 
 ---
@@ -71,6 +71,7 @@
 | `Editor/UIAnimMenu.cs` | 에디터 디자인의 우클릭 메뉴 |
 | `Editor/UIAnimEaseGraph.cs` | 도착 방식 그래프 (읽기 전용) |
 | `Editor/UIAnimPreview.cs` | Play 모드 없는 미리보기와 복원 |
+| `Editor/UIAnimSave.cs` | Auto Save · Save: 고친 내용을 그 UIAnimation이 사는 곳(Prefab, Play 중 복사본의 원본 Prefab, 씬 오브젝트)에 저장. Prefab 출처(`source`) 기록 (§6.7) |
 | `Editor/UIAnimAudioPreview.cs` | 미리보기 중 사운드 재생 |
 | `Editor/UIAnimationInspector.cs` | `UIAnimation` 인스펙터의 "Open UI Animation Editor" 버튼 |
 | `Editor/UIAnimScrollListEditor.cs` | 스크롤 리스트 인스펙터 (Unity Layout Group과 같은 구성) + 에디터 미리보기 |
@@ -322,13 +323,27 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
   - 미리보기 후 Prefab에 '수정됨'(`*`) 표시가 생깁니다. 값은 정확히 복원되므로 저장해도 내용은 같습니다.
 - **Project 창에서 고른 Prefab 원본**: 원본은 어느 화면에도 그려지지 않으므로, 재생하거나 눈금자를 끌면 그 Prefab을 Prefab 모드로 열고 같은 상태를 미리봅니다(Edit Animation과 같은 동작).
 - **Play 모드**: `AnimationMode` 없이 값을 바로 쓰고, 멈추면 시작 시점의 스냅샷으로 되돌립니다. Hierarchy에서 고른 실행 중인 오브젝트에 그대로 보입니다. Play 모드를 끝낼 때도 멈춥니다.
-- **사운드**: 재생 중에 지나간 사운드를 에디터 오디오로 들려줍니다. 눈금자를 끌 때는 재생하지 않습니다.
-- **시작 상태 자동 결정**: 어떤 상태는 다른 상태가 끝난 모습에서 시작해야 움직임이 보입니다.
-  1. 트리거 이벤트 짝: Exit←Enter, Up←Down, Deselect←Select, ToggleOff←ToggleOn
-  2. 이름 짝 (코드로 재생하는 상태): Open↔Close, Show↔Hide, In↔Out
-- **자동 정지·복원 시점**: 정지 버튼, 다른 `UIAnimation` 선택, 씬/Prefab 저장 직전, 씬 닫기·되돌리기, Play 모드 진입, 스크립트 리로드, 창 닫기.
 
----
+### 6.7 저장 (Auto Save · Save)
+상단 바의 **Auto Save**(기본 켜짐)와 **Save**(창에 포커스가 있을 때 Ctrl+S)는 창에서 고친 내용을 그 UIAnimation이 사는 곳에 저장합니다. 어디에 저장되는지는 두 컨트롤의 툴팁에 나옵니다. 상단 바 오른쪽에는 글자 없이 주황색 점(●)만, 씬의 "*"처럼 화면 값이 저장되지 않은 동안(미리보기 중, 또는 저장 안 한 수정이 있을 때) 보이고, 무엇인지는 점의 툴팁에 나옵니다. Save는 고친 게 없어도 그곳을 저장합니다.
+
+| 편집하는 것 | 저장되는 곳 |
+|---|---|
+| Prefab 모드의 오브젝트 | 그 Prefab |
+| 씬의 오브젝트 (편집 모드) | 저장 대상 아님: Auto Save·Save가 **꺼지고** 이유("saved with scene … (Ctrl+S)")를 툴팁으로 보여 줌. 고친 값은 오브젝트에 바로 들어가고 씬은 변경됨(*), Unity 씬 저장으로 저장. 창의 Ctrl+S도 씬 저장. 자동으로 씬 파일을 쓰면 씬의 다른 저장 안 한 변경까지 저장되기 때문 |
+| Project 창에서 고른 Prefab 원본 | 그 Prefab |
+| Play 중, 실행 중에 만든 Prefab 복사본(화면·목록 아이템) | 원본 Prefab. 같은 Prefab에서 나온 다른 복사본도 바로 같은 값이 됨 |
+| Play 중, 씬에 놓여 있던 오브젝트 | Auto Save·Save 켜짐. Play가 끝날 때 그 씬의 같은 오브젝트에 넣음(Unity는 원래 버림). 오브젝트만 바뀌고 씬은 변경됨(*), 씬 파일은 씬을 저장할 때 |
+
+- Auto Save는 마지막 수정 0.4초 뒤에 저장합니다(값을 끄는 동안 매 프레임 저장하지 않도록). Play를 끝낼 때 남은 것도 저장합니다. 끄면 저장 안 한 수정이 있는 동안 주황색 점이 보이고, Save를 눌러야 저장됩니다. Ctrl+Z도 같은 방식으로 저장됩니다.
+- 씬 파일에 그 오브젝트 값만 골라 쓰는 방법은 쓰지 않습니다. 씬은 파일 하나로 저장되고, 에디터가 연 씬 파일을 밖에서 고치면 Unity가 "밖에서 바뀜, 다시 불러올까?"를 물어 저장 안 한 다른 변경을 잃을 수 있기 때문입니다.
+- 미리보기 중에 Prefab·씬 전체를 저장할 때는 미리보기를 잠깐 멈췄다가(미리보기 값이 저장되지 않게) 같은 시간으로 다시 켭니다.
+- **출처**: Play 중 복사본은 `Instantiate`로 만들어져 Prefab과 연결이 없습니다. 그래서 UIAnimation마다 숨은 값 `source`("Prefab GUID/루트부터의 경로")를 두고, 에디터가 Prefab을 가져올 때마다 적어 둡니다(이미 있던 Prefab은 처음 한 번 일괄, Prefab 파일을 직접 고쳐서 다른 값은 건드리지 않음). 트랙 대상처럼 복사본 안을 가리키는 값은 Prefab(또는 다른 복사본) 안 같은 위치의 오브젝트로 바꿔 넣고, 에셋(사운드 등)은 그대로 둡니다.
+- **중첩 Prefab**: 화면 Prefab 안에 든 다른 Prefab의 부분을 Play 중 고치면, 출처가 바깥 Prefab이므로 바깥 Prefab에 **오버라이드**로 저장되고 안쪽 Prefab은 그대로입니다(R6 "현재 Prefab에서만"과 같음).
+- **Prefab에 없는 컴포넌트**: Play 중 Play On을 처음 정하면 `UIAnimTrigger`가 새로 붙습니다. Prefab 원본은 그 자리에서 컴포넌트를 받을 수 없어서, 이때만 Prefab을 열어(`LoadPrefabContents`) 붙이고 저장합니다. 이 방식은 Awake가 돌아 Unity가 불러올 때 채우는 값 몇 개가 함께 저장될 수 있어서, 이미 있는 컴포넌트는 Prefab 파일을 직접 고칩니다.
+- **씬 오브젝트**: Play 중 고친 값을 `GlobalObjectId`로 기억했다가 Play가 끝나면 씬의 같은 오브젝트에 넣습니다. Play에 들어갈 때 씬을 다시 불러오는 설정이든 아니든 같습니다.
+- **씬 오브젝트인지 복사본인지**: Play 직전에 열린 씬들의 오브젝트 id를 적어 두고(스크립트를 다시 불러와도 남게 `SessionState`), Play 중에는 그 목록에 있으면 씬 오브젝트, 없으면 실행 중에 만든 복사본으로 봅니다. id만으로는 구분이 안 되고(저장된 씬에서는 복사본도 씬 id를 받음), Prefab 연결도 Play 중에는 보이지 않기 때문입니다. 씬에 놓인 Prefab 인스턴스의 부분은 Play 중 id가 (Prefab 안 id XOR 인스턴스 id) 하나로 바뀌므로 두 형태를 함께 적어 둡니다.
+- 코드로 새로 만든 오브젝트(Prefab도 씬도 아님)는 저장할 곳이 없어서, Save 툴팁에 "nowhere"로 알려 줍니다.
 
 ## 7. 클라이언트 API
 
@@ -687,6 +702,8 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 | ✅ | 패키지 샘플 RPG | 원본 재현 두 개는 `Assets/Reference`(참고용). 패키지 샘플은 판타지 RPG 하나(§10): 타이틀부터 로비·영웅·강화·가방·소환·모험·편성·전투·퀘스트·상점·우편·출석·길드 채팅·랭킹·스토리·설정까지. PlayMode 테스트 `RpgPlayModeTests`(로비 메뉴·공유 요소·가방·소환·모험·퀘스트), `RpgScreensPlayModeTests`(나머지 화면), `RpgLayoutPlayModeTests`(모든 화면에서 글자 겹침 없음), `RpgBannerPlayModeTests`(배너가 두 장 사이에 멈추지 않음). 캡처 `RpgCapture`. 만들며 고친 패키지 문제: 글자 효과 중 상자가 커져도 줄바꿈을 다시 하지 않음(`UIAnimTextChars`), 팝업 전환 중 모든 버튼이 비활성 색으로 바뀜(`UIAnimScreenContainer`), 끌기 끝 신호를 못 받으면 목록이 두 장 사이에 멈춤(`UIAnimScrollList`) |
 | ✅ | 글자 효과 최적화 | 배치 정점을 저장해 두고 변형만 적용 → 텍스트 100개 3.64 → 0.98ms ([`Performance.md`](Performance.md) §4.1) |
 | ✅ | Burst 일괄 계산 (PR #17) | 재생 중 이징 트랙 값을 Burst 함수 한 번에 계산. 맥박 2,000개 자체 비용 IL2CPP +0.33 → +0.27ms, Mono +0.80 → +0.50ms ([`Performance.md`](Performance.md) §4.5) |
+| ✅ | 숫자 카운트 트랙 (PR #27) | `TextNumber`(글자 안의 첫 숫자를 셈), 끝 값은 코드에서 `SetEndValue`. RPG 재화·전투력에 적용 (§3.4). 미리보기: Project에서 고른 Prefab은 Prefab 모드로 열어서, Play 모드에서도 동작 |
+| ✅ | Play 중 수정 저장 | Auto Save · Save(창 Ctrl+S): 고친 내용을 Prefab·Play 중 복사본의 원본 Prefab·씬 오브젝트(Play가 끝날 때)에 저장, 다른 실행 중 복사본도 바로 반영. 화면 값이 저장되지 않은 동안 주황 점(설명은 툴팁) (§6.7) |
 | ✅ | 연동 브랜치 자동 최신화 (PR #21, #23) | `main`이 바뀌거나 라이브러리 새 버전이 나오면 `integration/*`에 반영하고 테스트, 통과하면 자동 머지 ([`Branches.md`](Branches.md)) |
 
 ### 13.1 다음: 배포 `0.1.0`
@@ -702,7 +719,7 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 
 | 항목 | 내용 |
 |---|---|
-| Play 모드에서 편집 | Edit Animation / `OpenState`는 Prefab 원본을 엽니다. Play 모드 중 고친 내용은 이미 화면에 있는 아이템에는 반영되지 않고, 새로 만들어지는 아이템부터 반영됩니다 |
+| Play 모드에서 편집 | 실행 중인 복사본은 원본 Prefab과 다른 복사본에, 씬 오브젝트는 Play가 끝날 때 씬에 반영됩니다(§6.7). Prefab 모드에서 원본을 고친 내용은 이미 화면에 있는 복사본에는 반영되지 않고, 새로 만들어지는 것부터 반영됩니다. 같은 부모 아래 이름이 같은 오브젝트가 있으면 첫 번째로 연결됩니다 |
 | 당겨서 새로고침 | 세로 리스트(위에서 아래로 당김)만 지원 |
 | 루프 + 개수 변경 | 루프 리스트는 개수가 바뀌면 보이는 아이템을 모두 다시 만듭니다(인덱스 대응이 바뀌므로). 루프가 아닌 리스트는 남은 아이템을 유지 |
 | 메이슨리 보이는 범위 | 다른 배치는 이진 탐색, 메이슨리는 아이템 전체 검사 (수천 개 이상이면 열별 색인이 필요) |

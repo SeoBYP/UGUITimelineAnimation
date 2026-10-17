@@ -253,11 +253,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: SeoBYP.TimelineAnimation::SeoBYP.TimelineAnimation.UIAnimation
   states:
   - name: On
+    loop: 0
     tracks:
     - target: {fileID: 4032267328304889109}
       property: 2
       start: 1
       relativeToRest: 1
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -326,6 +328,7 @@ MonoBehaviour:
       property: 4
       start: 1
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -396,11 +399,13 @@ MonoBehaviour:
     events: []
     sounds: []
   - name: Off
+    loop: 0
     tracks:
     - target: {fileID: 4032267328304889109}
       property: 2
       start: 1
       relativeToRest: 1
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -469,6 +474,7 @@ MonoBehaviour:
       property: 4
       start: 1
       relativeToRest: 0
+      sizeRelative: 0
       stagger: 0
       durationPerChar: 0
       scramble: 0
@@ -540,6 +546,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: f43051b6408f12540bd618cccc202b0d/
 --- !u!114 &2409745484021457754
 MonoBehaviour:
   m_ObjectHideFlags: 0

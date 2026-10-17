@@ -230,6 +230,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/Header/StaminaPill/Value
 --- !u!1 &1891656487140465870
 GameObject:
   m_ObjectHideFlags: 0
@@ -1033,6 +1034,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/ClaimAllButton
 --- !u!114 &9093995976917458999
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2365,6 +2367,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/
 --- !u!114 &6018258659321517138
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2720,6 +2723,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/Header/GoldPill/Value
 --- !u!1 &5609123210819089812
 GameObject:
   m_ObjectHideFlags: 0
@@ -2974,6 +2978,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/Header/GoldPill
 --- !u!1 &5837081621844351569
 GameObject:
   m_ObjectHideFlags: 0
@@ -3321,6 +3326,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/Header/GemsPill
 --- !u!1 &6227830907069950710
 GameObject:
   m_ObjectHideFlags: 0
@@ -3551,6 +3557,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/Header/GemsPill/Value
 --- !u!1 &6902170397534769315
 GameObject:
   m_ObjectHideFlags: 0
@@ -3843,6 +3850,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/Header/BackButton
 --- !u!114 &6179583809951620699
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4266,6 +4274,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: 35f516024a01d2b49b912b23f0e035b4/Content/Header/StaminaPill
 --- !u!1 &8818869870769208302
 GameObject:
   m_ObjectHideFlags: 0

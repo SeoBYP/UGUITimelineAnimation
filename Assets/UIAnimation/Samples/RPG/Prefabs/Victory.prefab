@@ -2250,6 +2250,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: f0834b438367c534c8efecc9f2ccf854/
 --- !u!114 &8246503652749878681
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2647,6 +2648,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: f0834b438367c534c8efecc9f2ccf854/ContinueButton
 --- !u!114 &222594406356809572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4252,6 +4254,7 @@ MonoBehaviour:
     sounds: []
   audioSource: {fileID: 0}
   overrides: []
+  source: f0834b438367c534c8efecc9f2ccf854/LobbyButton
 --- !u!114 &7857405259791982415
 MonoBehaviour:
   m_ObjectHideFlags: 0
