@@ -212,5 +212,31 @@ namespace SeoBYP.TimelineAnimation.Tests
             UIAnimation.Evaluate(spread, 1f);
             Assert.AreEqual(12f, _text.characterSpacing, 1e-4f);
         }
+
+        [Test]
+        public void 숫자_트랙은_글자의_첫_숫자를_세고_끝값은_코드가_정한다()
+        {
+            _text.text = "21/100";
+            var state = new UIAnimState
+            {
+                name = "Count",
+                tracks = { new UIAnimTrack { target = _text, property = UIAnimProperty.TextNumber, start = UIAnimStart.Current,
+                    keys = new List<UIAnimKey> { Key(0f, Vector4.zero), Key(1f, new Vector4(9999, 0)) } } },
+            };
+            _anim.states.Add(state);
+            _anim.SetEndValue("Count", _text, UIAnimProperty.TextNumber, 1021);
+            _anim.Prepare("Count", UIAnimInterrupt.Cancel, null);
+
+            Assert.AreEqual("21/100", _text.text, "지금 보이는 숫자에서 시작");
+            UIAnimation.Evaluate(state, 0.5f);
+            Assert.AreEqual("521/100", _text.text);
+            UIAnimation.Evaluate(state, 1f);
+            Assert.AreEqual("1,021/100", _text.text, "코드가 정한 끝값, 천 단위 쉼표, 나머지 글자는 그대로");
+            Assert.AreEqual(1021f, UIAnimation.Read(_text, UIAnimProperty.TextNumber).x, "쉼표가 있어도 읽음");
+
+            _text.text = "";
+            UIAnimation.Write(_text, UIAnimProperty.TextNumber, new Vector4(7, 0));
+            Assert.AreEqual("7", _text.text, "숫자가 없으면 숫자만");
+        }
     }
 }

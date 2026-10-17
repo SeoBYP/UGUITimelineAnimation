@@ -80,6 +80,7 @@ namespace SeoBYP.TimelineAnimation.Editor
                 yield return (text, UIAnimProperty.FontSize);
                 yield return (text, UIAnimProperty.CharacterSpacing);
                 yield return (text, UIAnimProperty.TextReveal);
+                yield return (text, UIAnimProperty.TextNumber);
                 yield return (text, UIAnimProperty.CharScale);
                 yield return (text, UIAnimProperty.CharOffset);
                 yield return (text, UIAnimProperty.CharRotation);

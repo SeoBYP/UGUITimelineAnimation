@@ -285,7 +285,7 @@ static class RpgSampleBuilder
         Pic("Icon", pill, Icon(kind switch { RpgCurrency.Kind.Gold => "gold", RpgCurrency.Kind.Gems => "gem", _ => "stamina" }), -96, 0, 56, 56);
         var currency = pill.gameObject.AddComponent<RpgCurrency>();
         currency.kind = kind;
-        currency.text = Label(pill, "Value", "0", 24, 0, 170, 60, 40, Light, TextAlignmentOptions.Right);
+        currency.text = Counter(Label(pill, "Value", "0", 24, 0, 170, 60, 40, Light, TextAlignmentOptions.Right), 0.6f, kind == RpgCurrency.Kind.Stamina ? 100 : 9999);
         pill.gameObject.AddComponent<UIAnimation>().states.Add(State("Bump",
             Keys(pill, UIAnimProperty.Scale, K(0, S(1)), Vibrate(UIAnimCurveType.Punch, 0.4f, S(0.12f, 0.12f), 5, 0.6f)),
             Keys(currency.text, UIAnimProperty.GraphicColor, K(0, Gold), K(0.4f, (Vector4)Light, UIAnimEase.InOutSine))));
@@ -344,6 +344,16 @@ static class RpgSampleBuilder
         track.keys.AddRange(keys);
         UIAnimationEditorWindow.EnsureStartKey(track);
         return track;
+    }
+
+    // A number that counts ("Count": Text Number from what it shows). The end key is what the editor previews; the
+    // script sets the real one before playing (SetEndValue).
+    static TMP_Text Counter(TMP_Text label, float seconds, float preview)
+    {
+        var count = Keys(label, UIAnimProperty.TextNumber, K(0, A(0)), K(seconds, A(preview), UIAnimEase.OutQuad));
+        count.start = UIAnimStart.Current;
+        label.gameObject.AddComponent<UIAnimation>().states.Add(State("Count", count));
+        return label;
     }
 
     static UIAnimTrack Go(Component target, UIAnimProperty property, Vector4 from, Vector4 to, float start, float duration, UIAnimEase ease) =>
@@ -1282,7 +1292,7 @@ static class RpgSampleBuilder
             return Label(panel, "Stat" + i, "0", 0, y, 300, 56, 44, Light, TextAlignmentOptions.Right);
         }).ToArray();
         Label(panel, "PowerTitle", "POWER", 260, 150, 300, 50, 36, Dim);
-        page.power = Label(panel, "Power", "0", 260, 90, 360, 80, 72, Gold);
+        page.power = Counter(Label(panel, "Power", "0", 260, 90, 360, 80, 72, Gold), 0.6f, 9999);
 
         Label(panel, "GearTitle", "EQUIPMENT", -270, -60, 300, 50, 40, Dim, TextAlignmentOptions.Left);
         page.slotIcons = Enumerable.Range(0, 3).Select(i =>
@@ -1463,7 +1473,7 @@ static class RpgSampleBuilder
         var powerBox = Center("PowerBox", content, -520, -440, 480, 100);
         Img(powerBox, Frame("dark"));
         Label(powerBox, "Title", "POWER", -140, 0, 160, 60, 38, Dim);
-        f.power = Label(powerBox, "Value", "0", 70, 0, 280, 80, 64, Gold, TextAlignmentOptions.Left);
+        f.power = Counter(Label(powerBox, "Value", "0", 70, 0, 280, 80, 64, Gold, TextAlignmentOptions.Left), 0.5f, 9999);
         f.battle = Btn(content, "BattleButton", "BATTLE", 560, -440, 360, 120);
         f.battle.GetComponent<UIAnimation>().states.Add(Deny(f.battle));
 

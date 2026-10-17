@@ -19,7 +19,7 @@
 | R5 | 공용 Prefab 중첩, 부모가 자식 상태 호출 | ✅ | 자식 호출(`UIAnimChildCall`): 부모 시간축의 지정 시간에 자식 상태 재생 (§4.4) |
 | R6 | 상위에서 하위 오버라이드 (현재 Prefab에서만) | ✅ | **트랙 단위** 오버라이드. 바꾼 트랙만 저장하고 나머지는 원본을 따라감. Unity 중첩 Prefab 규칙과 같음 (§8) |
 | R7 | Scroll 리스트와 애니메이션 | ✅ | `UIAnimScrollList` 하나로 스크롤 18가지 형태(리스트·그리드·메이슨리·캐러셀·무한 루프·페이지·배너·휠 피커·섹션 헤더·가변 크기·채팅·아코디언·중첩·탭·접히는 헤더·당겨서 새로고침). 모든 연출은 UI Animation Editor의 상태로 만듦 (§9) |
-| R8 | Play 모드 없이 즉시 미리보기 | ✅ | 씬과 Prefab 모드 모두 지원. 정지·저장·Play 진입 시 원래 값으로 복원 (§6.6) |
+| R8 | Play 모드 없이 즉시 미리보기 | ✅ | 씬·Prefab 모드·Play 모드 모두 지원. 정지·저장·Play 진입/종료 시 원래 값으로 복원 (§6.6) |
 | R9 | 클라이언트가 타이밍을 원활하게 호출 | ✅ | `PlayAsync`(Unity `Awaitable`, UniTask가 있으면 `PlayUniTaskAsync`)로 끝날 때까지 대기, `Complete`로 건너뛰기, 애니메이션 이벤트 수신 (§7) |
 
 ---
@@ -122,7 +122,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 | Camera | `CameraBackground`, `CameraOrthoSize` |
 | Graphic (Image, TMP 등) | `GraphicColor`, `GraphicAlpha` |
 | Image (Filled) | `FillAmount` |
-| TMP_Text | `FontSize`, `CharacterSpacing`, `TextReveal` (타자기, 0~1) |
+| TMP_Text | `FontSize`, `CharacterSpacing`, `TextReveal` (타자기, 0~1), `TextNumber` (숫자 세기) |
 | TMP_Text 글자별 | `CharScale`, `CharOffset`, `CharRotation`, `CharColor`, `CharAlpha` |
 | UIEffect (설치돼 있을 때) | `UIEffectToneIntensity`, `…ColorIntensity`, `…Color`, `…SamplingIntensity`, `…TransitionRate`(디졸브 등), `…TransitionColor`, `…EdgeShinyRate`, `…EdgeColor`, `…GradationIntensity/Offset/Rotation/Scale`, `…DetailIntensity`, `…DetailColor` — UIEffect의 Timeline 트랙과 같은 14종 (§7.3) |
 
@@ -147,6 +147,7 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 ### 3.4 텍스트 트랙
 - `TextReveal`: `maxVisibleCharacters`를 0~1 비율로 지정합니다. 리치 텍스트 태그는 글자 수에 포함하지 않습니다.
   - `Scramble`: 아직 안 나온 글자를 무작위 문자로 채웁니다(`UIAnimScramble`, LitMotion `ScrambleMode`와 같은 번호). 원문의 공백은 유지해서 줄바꿈이 튀지 않습니다.
+- `TextNumber` (창에서는 Number (Count)): 글자 안의 **첫 숫자**를 세어 바꾸고 나머지 글자는 그대로 둡니다(`21/100`, `Lv. 3`). 정수, 천 단위 쉼표(`1,234`). Start = Current면 지금 보이는 숫자에서 시작합니다. 끝 숫자가 실행 중에 정해지면(재화·전투력) 코드가 `SetEndValue`로 마지막 키 값을 바꾼 뒤 재생합니다. 창의 마지막 키 값은 미리보기용 값이 됩니다.
 - 글자별 트랙(`Char*`)
   - 키는 **글자 하나의 움직임**입니다.
   - `Stagger`(글자 간격): i번째 글자가 i × stagger초 늦게 시작합니다. 트랙 끝 = 마지막 키 + (글자 수 − 1) × stagger
@@ -319,6 +320,8 @@ UIAnimOverride   { child: UIAnimation, state, tracks: List<UIAnimTrack> }   // �
 - **씬**: 바뀌는 속성을 `AnimationMode`에 등록하고, 값은 샘플링 블록 밖에서 씁니다. 블록을 닫을 때(`EndSampling`) 등록된 속성이 원래 값으로 되돌아가기 때문입니다. 정지하면 복원됩니다.
 - **Prefab 모드**: Scene 뷰가 샘플링 블록 밖에서 쓴 값을 다시 그리지 않아서, 속성을 등록하지 않고 블록 안에서 씁니다. 복원은 시작 시점의 스냅샷으로 합니다.
   - 미리보기 후 Prefab에 '수정됨'(`*`) 표시가 생깁니다. 값은 정확히 복원되므로 저장해도 내용은 같습니다.
+- **Project 창에서 고른 Prefab 원본**: 원본은 어느 화면에도 그려지지 않으므로, 재생하거나 눈금자를 끌면 그 Prefab을 Prefab 모드로 열고 같은 상태를 미리봅니다(Edit Animation과 같은 동작).
+- **Play 모드**: `AnimationMode` 없이 값을 바로 쓰고, 멈추면 시작 시점의 스냅샷으로 되돌립니다. Hierarchy에서 고른 실행 중인 오브젝트에 그대로 보입니다. Play 모드를 끝낼 때도 멈춥니다.
 - **사운드**: 재생 중에 지나간 사운드를 에디터 오디오로 들려줍니다. 눈금자를 끌 때는 재생하지 않습니다.
 - **시작 상태 자동 결정**: 어떤 상태는 다른 상태가 끝난 모습에서 시작해야 움직임이 보입니다.
   1. 트리거 이벤트 짝: Exit←Enter, Up←Down, Deselect←Select, ToggleOff←ToggleOn
@@ -347,6 +350,9 @@ public sealed class UIAnimation : MonoBehaviour
     public void PlayState(string stateName);  // UnityEvent 연결용
     public void Sample(string stateName, float time);   // 재생하지 않고 그 시간의 모습만 (이벤트·사운드 없음)
     public float Duration(string stateName);
+    // 트랙의 끝 값(마지막 키)을 코드에서 정함. 다음 재생부터 계속 적용. 예: 금화 라벨의 "Count"를 새 금액까지
+    public void SetEndValue(string stateName, Component target, UIAnimProperty property, Vector4 value);
+    public void SetEndValue(string stateName, Component target, UIAnimProperty property, float value);
 }
 ```
 
@@ -545,7 +551,7 @@ list.SetCount(10);      // 개수만 변경, 스크롤 위치 유지 (Stick To E
 | `Scroll` | 페이지 18장(`Prefabs/Scroll/Pages`), 아이템 13종(`Prefabs/Scroll/Items`) | 스크롤 형태 18가지를 한 장씩 넘겨 봄(한 장씩 넘기기 + 점 + Prev/Next, 페이지 위 세로 리스트에서 가로로 밀어도 넘어감). 위쪽 도구 막대: 현재 페이지의 아이템 수 슬라이더(0~200), Add / Remove, **Edit Animation**(그 페이지의 상태를 UI Animation Editor로 엶, Play 모드에서도 됨). 아래 표 참고 | — |
 | `Reference/AnimationUI/Scenes/Home`, `Level1` (참고용) | 원본 씬 그대로 + UIAnimation | [Unity-AnimationUI](https://github.com/DhafinFawwaz/Unity-AnimationUI) 데모 재현: 메뉴 → Settings/Upgrade(Back = 역재생), Start(카메라 줌·줄무늬·씬 전환), Level1(박스 등장·Win/Lose). 원본 연출 수치는 원본 씬 YAML에서 추출(`Data/AnimationUI-Demo.json`), 빌더 `AnimationUISampleBuilder` | Unity-AnimationUI Demo |
 | `Reference/ScreenNavigator/Scenes/ScreenNavigatorDemo` (참고용) | 원본 Prefab 8개 그대로(GUID 유지) + UIAnimScreen | [UnityScreenNavigator](https://github.com/Haruma-K/UnityScreenNavigator) 데모 재현(D1·D2): Top → Loading(기록 안 남음) → Home(1초 준비) → Shop(탭 3개 시트 슬라이드, 구매 → Connecting) → 뒤로. 전환은 원본 Timeline·SimpleTransition 수치(원본 파일에서 추출). 일러스트·GUI 그림은 같은 크기·같은 GUID의 **대체 그림**. 모달(D3): Settings(값 저장)·Confirmation·유닛 정보(랭크 탭 시트)·초상화 뷰어(**공유 요소 전환**: 유닛 정보의 초상화 영역 위치·크기 ↔ 뷰어 자리, `Enter`/`Exit` 상태의 상대 쪽 키만 실행 중 채움) | UnityScreenNavigator Demo |
-| **`UIAnimation/Samples/RPG/Scenes/RPG`** (패키지 샘플) | 판타지 RPG: 타이틀·로딩, 로비, 영웅 목록·상세·강화, 가방, 소환, 모험·편성·전투, 퀘스트, 상점, 우편, 길드 채팅, 랭킹, 스토리 + 팝업(아이템 정보, 수량, 소환 결과, 승리, 패배, 구매, 출석, 설정, 확인) + 토스트. 빌더 `Assets/Dev/Editor/RpgSampleBuilder`, 그림 `Tools/rpg_art.py`(틀·배경·효과·막대·배지·말풍선은 직접 그림, 아이콘·영웅 얼굴은 game-icons.net CC BY 3.0 → `Art/CREDITS.md`), 폰트 Passion One(OFL) | 타이틀: 로고 글자 낙하, TAP TO START 깜빡임(반복). 로딩: 막대 채우기(`Progress`, 너비)와 %가 막대 값을 따라감, 룬 회전, 끝나면 로비(타이틀·로딩은 `stack: false`). 로비: 등장(패널·재화·영웅·메뉴·옆 버튼 순차), 영웅 숨쉬기(Loop + Play On: On Enable), 이벤트 배너(루프 + 한 장씩 + 자동 넘김 + 점, Parallax), 알림 배지(우편 개수·출석 !·퀘스트 !, 같은 모양·맥박). 영웅: 그리드 순차 등장·정렬 재생, 카드 → 상세 **공유 요소**, 상세 목록(줄 등장·능력치 바), 스크롤하면 제목 영역 접힘(`UIAnimScrollScrub`). 강화: 상세 위에서 같은 자리로 교차 페이드, UPGRADE → 섬광·레벨 Punch·능력치 색(골드 부족이면 버튼 흔들림), AUTO EQUIP → 장비가 칸에 차례로(`Equip`), 전투력 카운트업. 가방: 탭(`UIAnimPageIndicator`) + 페이지 안 그리드(중첩), 슬롯 → 정보 팝업 공유 요소, USE → 수량 휠(Scrub `Wheel`) → 토스트. 소환: 마법진 회전, x1/x10(젬 부족이면 흔들림), 결과(섬광 → 카드 낙하 → 뒤집기, 4★ 보라 빛, 5★ 흔들림·빛줄기·Punch). 모험·편성·전투: 챕터 캐러셀(Focus), 스테이지 순차 등장·다음 스테이지 맥박, 편성(영웅 넣기 `In`·빼기 역재생, 전투력), BATTLE → 돌진·섬광 → 전투 화면(적 `Hit`·피해 숫자 `Pop`·스킬 재사용 대기 `Cooldown`(FillAmount)·체력 막대, 승리 `Die`/패배 `Lose`, GIVE UP은 확인 팝업) → 결과 팝업(승리: 글자·별·보상·경험치, 패배: 붉은 화면·해골·글자 낙하·팁 타자기). 퀘스트: 섹션 헤더 고정(Sticky), 받기 → 도장 → 재화 카운트업 → 그 줄 접힘(`await ResizeItem`). 상점: 특가 배너 빛·남은 시간, 상품 그리드(남은 수량 배지), 구매 팝업(부족하면 가격 흔들림) → 품절 도장. 우편: 받기 → 보상이 떠오르고 줄이 접힘, 모두 받기 → 전부 동시에 받고 목록이 함께 사라짐(옵션으로 한 통씩), 비면 안내. 출석: 7일 칸, 오늘 칸 반짝임, 받기 → 도장. 길드 채팅: 말풍선(글 길이만큼 폭·높이, Stick To End, 꼬리는 남의 말에만), 입력창(`TMP_InputField`)·SEND, 입력 중 점 세 개. 랭킹: 단상 상승·초상 낙하·왕관, MY RANK → 그 줄로 스크롤·금빛 강조. 스토리: 화자 등장(다른 쪽은 작아짐), 타자(`Type`, 탭하면 Complete), 선택지. 설정: 스위치(On/Off), 볼륨 슬라이더, 초기화 → 확인 팝업 → 토스트(별도 캔버스, 대기열). 입력: EventSystem 한 포인터(`SingleUnifiedPointer`)로 두 버튼 동시 누름 방지 | — (원본 없음) |
+| **`UIAnimation/Samples/RPG/Scenes/RPG`** (패키지 샘플) | 판타지 RPG: 타이틀·로딩, 로비, 영웅 목록·상세·강화, 가방, 소환, 모험·편성·전투, 퀘스트, 상점, 우편, 길드 채팅, 랭킹, 스토리 + 팝업(아이템 정보, 수량, 소환 결과, 승리, 패배, 구매, 출석, 설정, 확인) + 토스트. 빌더 `Assets/Dev/Editor/RpgSampleBuilder`, 그림 `Tools/rpg_art.py`(틀·배경·효과·막대·배지·말풍선은 직접 그림, 아이콘·영웅 얼굴은 game-icons.net CC BY 3.0 → `Art/CREDITS.md`), 폰트 Passion One(OFL) | 타이틀: 로고 글자 낙하, TAP TO START 깜빡임(반복). 로딩: 막대 채우기(`Progress`, 너비)와 %가 막대 값을 따라감, 룬 회전, 끝나면 로비(타이틀·로딩은 `stack: false`). 로비: 등장(패널·재화·영웅·메뉴·옆 버튼 순차), 영웅 숨쉬기(Loop + Play On: On Enable), 이벤트 배너(루프 + 한 장씩 + 자동 넘김 + 점, Parallax), 알림 배지(우편 개수·출석 !·퀘스트 !, 같은 모양·맥박). 영웅: 그리드 순차 등장·정렬 재생, 카드 → 상세 **공유 요소**, 상세 목록(줄 등장·능력치 바), 스크롤하면 제목 영역 접힘(`UIAnimScrollScrub`). 강화: 상세 위에서 같은 자리로 교차 페이드, UPGRADE → 섬광·레벨 Punch·능력치 색(골드 부족이면 버튼 흔들림), AUTO EQUIP → 장비가 칸에 차례로(`Equip`), 전투력 카운트업(라벨의 `Count` = Number 트랙, 재화·편성 전투력도 같음. 끝 숫자만 코드가 `SetEndValue`). 가방: 탭(`UIAnimPageIndicator`) + 페이지 안 그리드(중첩), 슬롯 → 정보 팝업 공유 요소, USE → 수량 휠(Scrub `Wheel`) → 토스트. 소환: 마법진 회전, x1/x10(젬 부족이면 흔들림), 결과(섬광 → 카드 낙하 → 뒤집기, 4★ 보라 빛, 5★ 흔들림·빛줄기·Punch). 모험·편성·전투: 챕터 캐러셀(Focus), 스테이지 순차 등장·다음 스테이지 맥박, 편성(영웅 넣기 `In`·빼기 역재생, 전투력), BATTLE → 돌진·섬광 → 전투 화면(적 `Hit`·피해 숫자 `Pop`·스킬 재사용 대기 `Cooldown`(FillAmount)·체력 막대, 승리 `Die`/패배 `Lose`, GIVE UP은 확인 팝업) → 결과 팝업(승리: 글자·별·보상·경험치, 패배: 붉은 화면·해골·글자 낙하·팁 타자기). 퀘스트: 섹션 헤더 고정(Sticky), 받기 → 도장 → 재화 카운트업 → 그 줄 접힘(`await ResizeItem`). 상점: 특가 배너 빛·남은 시간, 상품 그리드(남은 수량 배지), 구매 팝업(부족하면 가격 흔들림) → 품절 도장. 우편: 받기 → 보상이 떠오르고 줄이 접힘, 모두 받기 → 전부 동시에 받고 목록이 함께 사라짐(옵션으로 한 통씩), 비면 안내. 출석: 7일 칸, 오늘 칸 반짝임, 받기 → 도장. 길드 채팅: 말풍선(글 길이만큼 폭·높이, Stick To End, 꼬리는 남의 말에만), 입력창(`TMP_InputField`)·SEND, 입력 중 점 세 개. 랭킹: 단상 상승·초상 낙하·왕관, MY RANK → 그 줄로 스크롤·금빛 강조. 스토리: 화자 등장(다른 쪽은 작아짐), 타자(`Type`, 탭하면 Complete), 선택지. 설정: 스위치(On/Off), 볼륨 슬라이더, 초기화 → 확인 팝업 → 토스트(별도 캔버스, 대기열). 입력: EventSystem 한 포인터(`SingleUnifiedPointer`)로 두 버튼 동시 누름 방지 | — (원본 없음) |
 | `Popup` | Popup1 (+ 공용 Button1 중첩) | Open(이벤트 `Shown`, 사운드, 닫기 버튼 Hover·Unhover 호출, Hover 2배 빠르게 오버라이드)/Close. `PopupSample`이 코드로 Open/Close 후 Destroy | — |
 
 Scroll 씬 페이지 (각 페이지 = Prefab 하나 + `ScrollDemoPage`가 보일 때 데이터를 채움):
@@ -679,11 +685,20 @@ A~G는 UnityScreenNavigator·Unity-AnimationUI 데모를 그대로 재현해 실
 | ✅ | F. 연동 | F1 UniTask 샘플 · F2 R3 연동(§7.2.1)·샘플 · F3 UIEffect 트랙 14종(§7.3, PR #14). 각각 `integration/*` 브랜치에서 라이브러리 설치 상태로 테스트, 매일 새 버전 자동 확인([`Branches.md`](Branches.md)) |
 | ✅ | G. 제작 편의 비교 (PR #14) | [`Authoring-Comparison.md`](Authoring-Comparison.md) |
 | ✅ | 패키지 샘플 RPG | 원본 재현 두 개는 `Assets/Reference`(참고용). 패키지 샘플은 판타지 RPG 하나(§10): 타이틀부터 로비·영웅·강화·가방·소환·모험·편성·전투·퀘스트·상점·우편·출석·길드 채팅·랭킹·스토리·설정까지. PlayMode 테스트 `RpgPlayModeTests`(로비 메뉴·공유 요소·가방·소환·모험·퀘스트), `RpgScreensPlayModeTests`(나머지 화면), `RpgLayoutPlayModeTests`(모든 화면에서 글자 겹침 없음), `RpgBannerPlayModeTests`(배너가 두 장 사이에 멈추지 않음). 캡처 `RpgCapture`. 만들며 고친 패키지 문제: 글자 효과 중 상자가 커져도 줄바꿈을 다시 하지 않음(`UIAnimTextChars`), 팝업 전환 중 모든 버튼이 비활성 색으로 바뀜(`UIAnimScreenContainer`), 끌기 끝 신호를 못 받으면 목록이 두 장 사이에 멈춤(`UIAnimScrollList`) |
-| ⬜ | 배포 `0.1.0` | Burst 최적화 이후. 샘플 폴더 `Samples` → `Samples~`로 이름 바꾸고 `package.json` "samples"에 등록, 태그, Git URL 설치 확인 |
 | ✅ | 글자 효과 최적화 | 배치 정점을 저장해 두고 변형만 적용 → 텍스트 100개 3.64 → 0.98ms ([`Performance.md`](Performance.md) §4.1) |
 | ✅ | Burst 일괄 계산 (PR #17) | 재생 중 이징 트랙 값을 Burst 함수 한 번에 계산. 맥박 2,000개 자체 비용 IL2CPP +0.33 → +0.27ms, Mono +0.80 → +0.50ms ([`Performance.md`](Performance.md) §4.5) |
+| ✅ | 연동 브랜치 자동 최신화 (PR #21, #23) | `main`이 바뀌거나 라이브러리 새 버전이 나오면 `integration/*`에 반영하고 테스트, 통과하면 자동 머지 ([`Branches.md`](Branches.md)) |
 
-### 13.1 알려진 제한
+### 13.1 다음: 배포 `0.1.0`
+
+위 작업이 모두 끝났으므로 남은 일은 배포뿐입니다. 순서대로:
+
+1. 샘플을 `Samples~`로 내보내기 (Unity가 가져오지 않는 폴더 → 사용자가 Package Manager에서 골라서 가져옴). 이름만 바꾸면 이 저장소에서도 샘플이 사라져 샘플 PlayMode 테스트(RPG 4종·UniTask·R3)와 `RpgSampleBuilder`가 깨지므로, 개발용 원본은 패키지 밖(예: `Assets/UIAnimationSamples`)으로 옮기고 배포 시점에 `Samples~`로 복사하는 방식이 필요. 지금 자리(`Assets/UIAnimation/Samples`)에 두면 Git URL로 설치할 때 샘플(씬·아트·스크립트)이 고르지 않아도 모두 들어감
+2. `package.json`의 `version`을 `0.1.0`으로, `"samples"`에 RPG·UniTask·R3 등록. RPG는 Input System이 필요하고 UniTask·R3는 각 라이브러리가 있어야 동작한다고 설명에 적기
+3. `CHANGELOG.md` 작성, 태그 `v0.1.0`
+4. 빈 프로젝트에서 Git URL(`...UGUITimelineAnimation.git?path=Assets/UIAnimation#v0.1.0`)로 설치 → 컴파일 오류 없음, 샘플 가져와서 재생 확인
+
+### 13.2 알려진 제한
 
 | 항목 | 내용 |
 |---|---|

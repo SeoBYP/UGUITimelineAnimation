@@ -19,10 +19,8 @@ public sealed class RpgUpgradePage : MonoBehaviour, IUIAnimScreenLifecycle
 
     const int GearPower = 350;
 
-    int _hero, _shownPower, _targetPower;
+    int _hero;
     bool[] _equipped = new bool[3];
-    float _count = 1f;
-    int _countFrom;
     UIAnimation _animation;
 
     void Awake()
@@ -46,10 +44,8 @@ public sealed class RpgUpgradePage : MonoBehaviour, IUIAnimScreenLifecycle
             slotIcons[i].sprite = demo.Sprite(GearIcon(hero, i));
             slotIcons[i].GetComponentInParent<UIAnimation>().Sample("Equip", 0f);   // empty
         }
+        power.text = Power().ToString("N0");
         Refresh();
-        _shownPower = _targetPower;
-        _count = 1f;
-        power.text = _shownPower.ToString("N0");
         return UIAnimScreen.Completed();
     }
 
@@ -64,24 +60,18 @@ public sealed class RpgUpgradePage : MonoBehaviour, IUIAnimScreenLifecycle
         cost.text = RpgDemo.UpgradeCost(lv).ToString("N0");
         var scale = lv / (float)hero.level;
         for (var i = 0; i < stats.Length; i++) stats[i].text = Mathf.RoundToInt(RpgData.Stat(hero, i) * scale).ToString("N0");
-        var p = Mathf.RoundToInt((hero.atk + hero.def + hero.hp / 10f + hero.spd) * scale);
+        // The power counts to the new total (the label's "Count").
+        var count = power.GetComponent<UIAnimation>();
+        count.SetEndValue("Count", power, UIAnimProperty.TextNumber, Power());
+        count.Play("Count");
+    }
+
+    int Power()
+    {
+        var hero = RpgData.Heroes[_hero];
+        var p = Mathf.RoundToInt((hero.atk + hero.def + hero.hp / 10f + hero.spd) * RpgDemo.Instance.Level(_hero) / (float)hero.level);
         foreach (var e in _equipped) if (e) p += GearPower;
-        CountTo(p);
-    }
-
-    void CountTo(int value)
-    {
-        _countFrom = _shownPower;
-        _targetPower = value;
-        _count = 0f;
-    }
-
-    void Update()
-    {
-        if (_count >= 1f) return;
-        _count = Mathf.Min(1f, _count + Time.deltaTime / 0.6f);
-        _shownPower = Mathf.RoundToInt(Mathf.Lerp(_countFrom, _targetPower, 1f - (1f - _count) * (1f - _count)));
-        power.text = _shownPower.ToString("N0");
+        return p;
     }
 
     void Upgrade()

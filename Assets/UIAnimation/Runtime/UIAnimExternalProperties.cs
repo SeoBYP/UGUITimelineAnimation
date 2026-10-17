@@ -34,6 +34,6 @@ namespace SeoBYP.TimelineAnimation
         public static bool TryGet(UIAnimProperty property, out Entry entry) => Entries.TryGetValue(property, out entry);
         public static IEnumerable<Entry> All => Entries.Values;
 
-        public static bool IsExternal(UIAnimProperty property) => property >= UIAnimProperty.UIEffectToneIntensity;
+        public static bool IsExternal(UIAnimProperty property) => property is >= UIAnimProperty.UIEffectToneIntensity and <= UIAnimProperty.UIEffectDetailColor;
     }
 }
